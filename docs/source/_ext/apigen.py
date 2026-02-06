@@ -5,7 +5,7 @@ categorizes objects, and generates complete .rst documentation.
 
 Canonical Selection Priority:
 1) Prefer the MOST EXPLICIT (deeper) import path
-   e.g., petromod.grids.Rectilinear2DGrid over petromod.Rectilinear2DGrid
+   e.g., petres.grids.Rectilinear2DGrid over petres.Rectilinear2DGrid
 2) If depth is equal, prefer the longest descriptive name
 3) Final fallback: stable alphabetical order
 """
@@ -29,8 +29,8 @@ class APIGenerator:
         self.source_dir = Path(app.srcdir)
         self.api_dir = self.source_dir / "api"
         
-        # Get package name from config or default to 'petromod'
-        self.package_name = getattr(app.config, 'api_package_name', 'petromod')
+        # Get package name from config or default to 'petres'
+        self.package_name = getattr(app.config, 'api_package_name', 'petres')
         
         # Storage for discovered objects
         self.objects = {}  # canonical_name -> object_info
@@ -222,9 +222,9 @@ class APIGenerator:
         
         Supports nested categories by preserving the namespace hierarchy
         from the canonical export path. For example:
-        - petromod.grids.Rectilinear2DGrid → "Grids"
-        - petromod.interpolators.spatial.InverseDistanceWeightingInterpolator → "Interpolators / Spatial"
-        - petromod.interpolators.NearestNeighborInterpolator → "Interpolators"
+        - petres.grids.Rectilinear2DGrid → "Grids"
+        - petres.interpolators.spatial.InverseDistanceWeightingInterpolator → "Interpolators / Spatial"
+        - petres.interpolators.NearestNeighborInterpolator → "Interpolators"
         """
         # Remove package name prefix
         path_parts = import_path.split('.')
@@ -471,7 +471,7 @@ def generate_api_docs(app):
 def setup(app):
     """Sphinx extension setup."""
     # Add config value for package name
-    app.add_config_value('api_package_name', 'petromod', 'html')
+    app.add_config_value('api_package_name', 'petres', 'html')
     
     # Connect to builder-inited event
     app.connect('builder-inited', generate_api_docs)

@@ -1,11 +1,12 @@
 [project]
-name = "petromod"
+name = "petres"
 version = "0.1.0"
 description = "Add your description here"
 
 license = { file = "LICENSE" }
 classifiers = [
-  "License :: OSI Approved :: Apache Software License"
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+    "Programming Language :: Python :: 3",
 ]
 
 readme = "README.md"

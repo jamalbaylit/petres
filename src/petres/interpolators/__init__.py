@@ -17,7 +17,7 @@ Interpolators:
         Simple nearest neighbor interpolation
 
 Example:
-    >>> from petromod.interpolators import IDWInterpolator
+    >>> from petres.interpolators import IDWInterpolator
     >>> idw = IDWInterpolator(power=2.0, max_neighbors=12)
     >>> idw.fit(well_points, porosity_values)
     >>> grid_porosity = idw.interpolate(grid_points)

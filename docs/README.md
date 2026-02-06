@@ -31,8 +31,8 @@ For each discovered object, generates:
 
 ### 3. Categorization Logic
 Categories are derived from the module where an object is defined:
-- `petromod.grids.rectilinear.Rectilinear2DGrid` → **Grids** category
-- `petromod.interpolators.spatial.IDWInterpolator` → **Interpolators** category
+- `petres.grids.rectilinear.Rectilinear2DGrid` → **Grids** category
+- `petres.interpolators.spatial.IDWInterpolator` → **Interpolators** category
 - Module names are converted to Title Case for display
 
 ### 4. Alias Handling
@@ -103,7 +103,7 @@ uv run sphinx-build -M html source build
 
 ### conf.py Settings
 
-**Package Name** (required if not "petromod"):
+**Package Name** (required if not "petres"):
 ```python
 api_package_name = 'your_package'
 ```
@@ -127,7 +127,7 @@ autodoc_default_options = {
 
 The generator ONLY documents objects in `__all__`. Example:
 
-**src/petromod/__init__.py**:
+**src/petres/__init__.py**:
 ```python
 from .grids.rectilinear import Rectilinear2DGrid
 
@@ -140,7 +140,7 @@ __all__ = [
 ]
 ```
 
-**src/petromod/grids/__init__.py**:
+**src/petres/grids/__init__.py**:
 ```python
 from .rectilinear import Rectilinear2DGrid
 
@@ -155,7 +155,7 @@ For the above example, you get:
 API Reference
 └── Grids (category)
     └── Rectilinear2DGrid (object page)
-        - Aliases: petromod.Grid2D
+        - Aliases: petres.Grid2D
         - Full class documentation
         - All methods and properties
 ```
@@ -165,7 +165,7 @@ API Reference
 ### Adding New Categories
 Just create new subpackages with `__all__`:
 ```python
-# src/petromod/wells/__init__.py
+# src/petres/wells/__init__.py
 from .trajectory import WellTrajectory
 
 __all__ = ["WellTrajectory"]

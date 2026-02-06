@@ -15,9 +15,9 @@ sys.path.insert(0, str(src_dir))
 
 # -- Project information -----------------------------------------------------
 
-project = 'petromod'
-copyright = '2026, Petromod Team'
-author = 'Petromod Team'
+project = 'petres'
+copyright = '2026, Petres Team'
+author = 'Petres Team'
 release = '0.1.0'
 
 # -- General configuration ---------------------------------------------------
@@ -41,7 +41,7 @@ extensions = [
 sys.path.insert(0, str(Path(__file__).parent / '_ext'))
 
 # Configure package name for API generator
-api_package_name = 'petromod'
+api_package_name = 'petres'
 
 # -- Napoleon settings (NumPy style docstrings) ------------------------------
 
@@ -118,6 +118,6 @@ latex_elements = {
 
 # Grouping the document tree into LaTeX files
 latex_documents = [
-    ('index', 'petromod.tex', 'petromod Documentation',
-     'Petromod Team', 'manual'),
+    ('index', 'petres.tex', 'petres Documentation',
+     'Petres Team', 'manual'),
 ]

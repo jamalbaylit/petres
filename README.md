@@ -1,17 +1,17 @@
-# Petromod
+# Petres
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python Version](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
-[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petromod.readthedocs.io)
+[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petres.readthedocs.io)
 
 <!-- Uncomment when published to PyPI
-[![PyPI version](https://badge.fury.io/py/petromod.svg)](https://badge.fury.io/py/petromod)
-[![Downloads](https://pepy.tech/badge/petromod)](https://pepy.tech/project/petromod)
+[![PyPI version](https://badge.fury.io/py/petres.svg)](https://badge.fury.io/py/petres)
+[![Downloads](https://pepy.tech/badge/petres)](https://pepy.tech/project/petres)
 -->
 
 ## Overview
 
-Petromod is a modern Python package for petroleum reservoir modeling and simulation. Built with performance and ease of use in mind, it provides tools for grid generation, fluid property calculations, and reservoir simulation workflows.
+Petres is a modern Python package for petroleum reservoir modeling and simulation. Built with performance and ease of use in mind, it provides tools for grid generation, fluid property calculations, and reservoir simulation workflows.
 
 ## Features
 
@@ -25,7 +25,7 @@ Petromod is a modern Python package for petroleum reservoir modeling and simulat
 ### Quick Install (from PyPI)
 
 ```bash
-pip install petromod
+pip install petres
 ```
 
 ### Install from Source
@@ -33,8 +33,8 @@ pip install petromod
 For development or latest features:
 
 ```bash
-git clone https://github.com/jamalbaylit/petromod.git
-cd petromod
+git clone https://github.com/jamalbaylit/petres.git
+cd petres
 uv pip install -e .
 ```
 
@@ -43,22 +43,23 @@ See the [installation guide](docs/source/getting_started/installation.rst) for d
 ## Quick Start
 
 ```python
-import petromod
+import petres
 
 # Your reservoir modeling code here
 ```
 
-See the [documentation](https://petromod.readthedocs.io) for more examples and tutorials.
+See the [documentation](https://petres.readthedocs.io) for more examples and tutorials.
 
 ## Documentation
 
-Full documentation is available at [petromod.readthedocs.io](https://petromod.readthedocs.io)
+Full documentation is available at [petres.readthedocs.io](https://petres.readthedocs.io)
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+
 ## License
 
-This project is licensed under the Apache License 2.0.
+This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later).
 See the [LICENSE](LICENSE) file for details.

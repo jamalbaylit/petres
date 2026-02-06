@@ -1,1 +1,1 @@
-"""Custom Sphinx extensions for petromod documentation."""
+"""Custom Sphinx extensions for petres documentation."""

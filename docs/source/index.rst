@@ -1,9 +1,9 @@
-.. petromod documentation master file
+.. petres documentation master file
 
-petromod Documentation
+petres Documentation
 ======================
 
-**petromod** is a Python library for petroleum and reservoir modeling.
+**petres** is a Python library for petroleum and reservoir modeling.
 
 .. toctree::
    :maxdepth: 2
@@ -18,14 +18,14 @@ Install the package using pip:
 
 .. code-block:: bash
 
-   pip install petromod
+   pip install petres
 
 Quick Example
 -------------
 
 .. code-block:: python
 
-   from petromod.grids import Rectilinear2DGrid
+   from petres.grids import Rectilinear2DGrid
    import numpy as np
 
    # Create a simple grid
