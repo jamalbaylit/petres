@@ -1,0 +1,9 @@
+# Sphinx build outputs
+build/
+
+# Automatically generated API files
+source/api/
+
+# Python cache
+__pycache__/
+*.pyc
