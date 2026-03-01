@@ -87,7 +87,7 @@ def _construct_cell_corners_vectorized(grid):
     
     pillar_tops = grid.pillars.pillar_top      # (nj+1, ni+1, 3)
     pillar_bots = grid.pillars.pillar_bottom   # (nj+1, ni+1, 3)
-    zcorn = grid.corner_z                      # (2*nk, 2*nj, 2*ni)
+    zcorn = grid.zcorn                      # (2*nk, 2*nj, 2*ni)
     
     # Split ZCORN into cell-top / cell-bottom k-faces
     zt = zcorn[0::2]   # (nk, 2*nj, 2*ni) — top of each cell (shallower)
