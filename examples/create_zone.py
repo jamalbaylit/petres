@@ -21,3 +21,5 @@ horizon2 = Horizon(name="Horizon 2", interpolator=IDWInterpolator(), xy=xy, z=z)
 zone1 = Zone(name="Zone 1", top=horizon1, base=horizon2)
 zone1.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50), color="tan")
 
+
+

@@ -139,9 +139,9 @@ class CornerPointGrid:
         writer = GRDECLWriter()
         writer.write(path=path, coord=coord, zcorn=zcorn, actnum=actnum)
 
-    def show(self, *, backend: str = "pyvista", **kwargs):
-        from petres.viewers import Viewer3D
-        viewer = Viewer3D(backend=backend)
+    def show(self):
+        from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
+        viewer = PyVista3DViewer()
         viewer.add_grid(grid=self)
         viewer.show()
     

@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Self
 import numpy as np
+
+from .._utils._grid import _resolve_xy_sampling
 
 
 @dataclass
@@ -91,7 +95,7 @@ class PillarGrid:
         )
     
     @classmethod
-    def from_eclipse_coord(cls, coord: np.ndarray) -> 'PillarGrid':
+    def from_eclipse_coord(cls, coord: np.ndarray) -> Self:
         """Create PillarGrid from ECLIPSE COORD array."""
         if coord.ndim != 3 or coord.shape[2] != 6:
             raise ValueError(f"COORD array must have shape (nj+1, ni+1, 6), got {coord.shape}")
@@ -99,6 +103,107 @@ class PillarGrid:
         pillar_top = coord[:, :, :3]
         pillar_bottom = coord[:, :, 3:]
         return cls(pillar_top=pillar_top, pillar_bottom=pillar_bottom)
+
+
+    # ------------------------------------------------------------------
+    # Regular / rectilinear constructors
+    # ------------------------------------------------------------------
+    @classmethod
+    def from_rectilinear(
+        cls,
+        *,
+        x: np.ndarray,     # (ni+1,)
+        y: np.ndarray,     # (nj+1,)
+        z_top: float,
+        z_bottom: float,
+    ) -> "PillarGrid":
+        """
+        Create a vertical-pillar grid from explicit node coordinate vectors.
+
+        Parameters
+        ----------
+        x, y
+            1D node coordinates. Shapes must be (ni+1,) and (nj+1,).
+            (i direction varies along x, j direction varies along y).
+        z_top, z_bottom
+            Constant pillar endpoint z-values defining the pillar "envelope".
+            These are NOT horizons. They just bracket the eventual ZCORN.
+
+        Returns
+        -------
+        PillarGrid
+            Vertical pillars with top/bottom endpoints at constant z.
+        """
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+
+        if x.ndim != 1 or x.size < 2:
+            raise ValueError("'x' must be a 1D array with at least 2 values (ni+1).")
+        if y.ndim != 1 or y.size < 2:
+            raise ValueError("'y' must be a 1D array with at least 2 values (nj+1).")
+        if not np.isfinite(z_top) or not np.isfinite(z_bottom):
+            raise ValueError("'z_top' and 'z_bottom' must be finite.")
+        if z_top == z_bottom:
+            raise ValueError("'z_top' and 'z_bottom' must differ.")
+
+        X, Y = np.meshgrid(x, y)  # (nj+1, ni+1)
+
+        Zt = np.full_like(X, float(z_top), dtype=float)
+        Zb = np.full_like(X, float(z_bottom), dtype=float)
+
+        pillar_top = np.stack([X, Y, Zt], axis=2)      # (nj+1, ni+1, 3)
+        pillar_bot = np.stack([X, Y, Zb], axis=2)
+        return cls(pillar_top=pillar_top, pillar_bottom=pillar_bot)
+
+    @classmethod
+    def from_regular(
+        cls,
+        *,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
+        z_top: float = 0.0,
+        z_bottom: float = 100.0,
+    ) -> Self:
+        x, y = _resolve_xy_sampling(
+            xlim=xlim, ylim=ylim, nx=ni, ny=nj, dx=dx, dy=dy
+        )
+        return cls.from_rectilinear(x=x, y=y, z_top=z_top, z_bottom=z_bottom)
+
+    
+    
+    # @classmethod
+    # def from_rectilinear(
+    #     cls,
+    #     x: np.ndarray,  # Shape (ni+1,)
+    #     y: np.ndarray,  # Shape (nj+1,)
+    #     z_top: float,
+    #     z_bottom: float,
+    # ) -> Self:
+    #     """Create PillarGrid from rectilinear coordinates."""
+    #     ni = len(x) - 1
+    #     nj = len(y) - 1
+
+    #     # Create coordinate arrays
+    #     x_grid, y_grid = np.meshgrid(x, y, indexing='ij')
+
+    #     # Create pillar arrays
+    #     pillar_top = np.stack([
+    #         x_grid,
+    #         y_grid,
+    #         np.full_like(x_grid, z_top)
+    #     ], axis=2)
+
+    #     pillar_bottom = np.stack([
+    #         x_grid,
+    #         y_grid,
+    #         np.full_like(x_grid, z_bottom)
+    #     ], axis=2)
+
+    #     return cls(pillar_top=pillar_top, pillar_bottom=pillar_bottom)
 
         
     # # ----------------------------
