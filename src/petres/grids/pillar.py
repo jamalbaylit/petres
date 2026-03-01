@@ -83,164 +83,182 @@ class PillarGrid:
         """Shape of pillar vertex arrays (nj+1, ni+1)."""
         return (self.njv, self.niv)
 
-    # ----------------------------
-    # Pillar geometry
-    # ----------------------------
-
-    def pillar_vector(self, j: int, i: int) -> np.ndarray:
-        """Get direction vector of pillar (j, i).
-        
-        Args:
-            j, i: Pillar indices
-            
-        Returns:
-            np.ndarray: Vector from top to bottom of pillar, shape (3,)
-        """
-        return self.pillar_bottom[j, i] - self.pillar_top[j, i]
-
-    def interpolate_pillar(self, j: int, i: int, t: float) -> np.ndarray:
-        """Interpolate point along pillar at parameter t.
-        
-        Args:
-            j, i: Pillar indices
-            t: Interpolation parameter (0 = top, 1 = bottom)
-            
-        Returns:
-            np.ndarray: Point coordinates (x, y, z), shape (3,)
-        """
-        if not 0.0 <= t <= 1.0:
-            raise ValueError(f"t must be in [0, 1], got {t}")
-        
-        return self.pillar_top[j, i] + t * self.pillar_vector(j, i)
+    def to_eclipse_coord(self) -> np.ndarray:
+        """Return pillars in ECLIPSE COORD format (nj+1, ni+1, 6)."""
+        return np.concatenate(
+            (self.pillar_top, self.pillar_bottom),
+            axis=2
+        )
     
-    def interpolate_at_z(self, j: int, i: int, z: float) -> np.ndarray:
-        """Interpolate (x, y) coordinates along pillar at given z-depth.
-        
-        Args:
-            j, i: Pillar indices
-            z: Z-coordinate
-            
-        Returns:
-            np.ndarray: Point coordinates (x, y, z), shape (3,)
-        """
-        z_top = self.pillar_top[j, i, 2]
-        z_bottom = self.pillar_bottom[j, i, 2]
-        
-        # Handle degenerate case
-        if abs(z_bottom - z_top) < 1e-10:
-            point = self.pillar_top[j, i].copy()
-            point[2] = z
-            return point
-        
-        # Compute parameter t
-        t = (z - z_top) / (z_bottom - z_top)
-        
-        return self.interpolate_pillar(j, i, t)
-
-    def is_vertical(self, j: int, i: int, tol: float = 1e-6) -> bool:
-        """Check if pillar is vertical (x, y constant).
-        
-        Args:
-            j, i: Pillar indices
-            tol: Tolerance for verticality check
-            
-        Returns:
-            bool: True if pillar is vertical within tolerance
-        """
-        top_xy = self.pillar_top[j, i, :2]
-        bottom_xy = self.pillar_bottom[j, i, :2]
-        
-        return np.linalg.norm(bottom_xy - top_xy) < tol
-
-    def get_inclination(self, j: int, i: int) -> float:
-        """Get inclination angle from vertical in degrees.
-        
-        Args:
-            j, i: Pillar indices
-            
-        Returns:
-            float: Angle in degrees (0° = vertical, 90° = horizontal)
-        """
-        vec = self.pillar_vector(j, i)
-        vertical = abs(vec[2])
-        lateral = np.linalg.norm(vec[:2])
-        
-        return np.degrees(np.arctan2(lateral, vertical))
-
-    # ----------------------------
-    # Constructors
-    # ----------------------------
-
     @classmethod
-    def from_rectilinear(
-        cls,
-        x: np.ndarray,  # Shape (ni+1,)
-        y: np.ndarray,  # Shape (nj+1,)
-        z_top: float,
-        z_bottom: float,
-    ) -> 'PillarGrid':
-        """Create vertical pillar grid from rectilinear coordinates.
+    def from_eclipse_coord(cls, coord: np.ndarray) -> 'PillarGrid':
+        """Create PillarGrid from ECLIPSE COORD array."""
+        if coord.ndim != 3 or coord.shape[2] != 6:
+            raise ValueError(f"COORD array must have shape (nj+1, ni+1, 6), got {coord.shape}")
         
-        Args:
-            x: X-coordinates of pillars, shape (ni+1,)
-            y: Y-coordinates of pillars, shape (nj+1,)
-            z_top: Z-coordinate at top
-            z_bottom: Z-coordinate at bottom
-            
-        Returns:
-            PillarGrid with vertical pillars
-        """
-        yy, xx = np.meshgrid(y, x, indexing='ij')
-        
-        njv, niv = xx.shape
-        pillar_top = np.zeros((njv, niv, 3))
-        pillar_bottom = np.zeros((njv, niv, 3))
-        
-        pillar_top[:, :, 0] = xx
-        pillar_top[:, :, 1] = yy
-        pillar_top[:, :, 2] = z_top
-        
-        pillar_bottom[:, :, 0] = xx
-        pillar_bottom[:, :, 1] = yy
-        pillar_bottom[:, :, 2] = z_bottom
-        
-        return cls(pillar_top, pillar_bottom)
+        pillar_top = coord[:, :, :3]
+        pillar_bottom = coord[:, :, 3:]
+        return cls(pillar_top=pillar_top, pillar_bottom=pillar_bottom)
 
-    @classmethod
-    def from_arrays(
-        cls,
-        x: np.ndarray,  # Shape (ni+1, nj+1)
-        y: np.ndarray,  # Shape (ni+1, nj+1)
-        z_top: np.ndarray,     # Shape (ni+1, nj+1) or scalar
-        z_bottom: np.ndarray,  # Shape (ni+1, nj+1) or scalar
-    ) -> 'PillarGrid':
-        """Create pillar grid from coordinate arrays.
         
-        Args:
-            x: X-coordinates, shape (nj+1, ni+1)
-            y: Y-coordinates, shape (nj+1, ni+1)
-            z_top: Z at top (array or scalar)
-            z_bottom: Z at bottom (array or scalar)
-            
-        Returns:
-            PillarGrid instance
-        """
-        if x.shape != y.shape:
-            raise ValueError("x and y must have the same shape")
-        
-        njv, niv = x.shape
-        
-        # Broadcast scalars
-        if np.isscalar(z_top):
-            z_top = np.full((njv, niv), z_top)
-        if np.isscalar(z_bottom):
-            z_bottom = np.full((njv, niv), z_bottom)
-        
-        pillar_top = np.stack([x, y, z_top], axis=-1)
-        pillar_bottom = np.stack([x, y, z_bottom], axis=-1)
-        
-        return cls(pillar_top, pillar_bottom)
+    # # ----------------------------
+    # # Pillar geometry
+    # # ----------------------------
 
-    def __repr__(self) -> str:
-        """String representation."""
-        return f"PillarGrid(shape={self.cell_shape}, n_pillars={self.niv}×{self.njv})"
+    # def pillar_vector(self, j: int, i: int) -> np.ndarray:
+    #     """Get direction vector of pillar (j, i).
+        
+    #     Args:
+    #         j, i: Pillar indices
+            
+    #     Returns:
+    #         np.ndarray: Vector from top to bottom of pillar, shape (3,)
+    #     """
+    #     return self.pillar_bottom[j, i] - self.pillar_top[j, i]
+
+    # def interpolate_pillar(self, j: int, i: int, t: float) -> np.ndarray:
+    #     """Interpolate point along pillar at parameter t.
+        
+    #     Args:
+    #         j, i: Pillar indices
+    #         t: Interpolation parameter (0 = top, 1 = bottom)
+            
+    #     Returns:
+    #         np.ndarray: Point coordinates (x, y, z), shape (3,)
+    #     """
+    #     if not 0.0 <= t <= 1.0:
+    #         raise ValueError(f"t must be in [0, 1], got {t}")
+        
+    #     return self.pillar_top[j, i] + t * self.pillar_vector(j, i)
+    
+    # def interpolate_at_z(self, j: int, i: int, z: float) -> np.ndarray:
+    #     """Interpolate (x, y) coordinates along pillar at given z-depth.
+        
+    #     Args:
+    #         j, i: Pillar indices
+    #         z: Z-coordinate
+            
+    #     Returns:
+    #         np.ndarray: Point coordinates (x, y, z), shape (3,)
+    #     """
+    #     z_top = self.pillar_top[j, i, 2]
+    #     z_bottom = self.pillar_bottom[j, i, 2]
+        
+    #     # Handle degenerate case
+    #     if abs(z_bottom - z_top) < 1e-10:
+    #         point = self.pillar_top[j, i].copy()
+    #         point[2] = z
+    #         return point
+        
+    #     # Compute parameter t
+    #     t = (z - z_top) / (z_bottom - z_top)
+        
+    #     return self.interpolate_pillar(j, i, t)
+
+    # def is_vertical(self, j: int, i: int, tol: float = 1e-6) -> bool:
+    #     """Check if pillar is vertical (x, y constant).
+        
+    #     Args:
+    #         j, i: Pillar indices
+    #         tol: Tolerance for verticality check
+            
+    #     Returns:
+    #         bool: True if pillar is vertical within tolerance
+    #     """
+    #     top_xy = self.pillar_top[j, i, :2]
+    #     bottom_xy = self.pillar_bottom[j, i, :2]
+        
+    #     return np.linalg.norm(bottom_xy - top_xy) < tol
+
+    # def get_inclination(self, j: int, i: int) -> float:
+    #     """Get inclination angle from vertical in degrees.
+        
+    #     Args:
+    #         j, i: Pillar indices
+            
+    #     Returns:
+    #         float: Angle in degrees (0° = vertical, 90° = horizontal)
+    #     """
+    #     vec = self.pillar_vector(j, i)
+    #     vertical = abs(vec[2])
+    #     lateral = np.linalg.norm(vec[:2])
+        
+    #     return np.degrees(np.arctan2(lateral, vertical))
+
+    # # ----------------------------
+    # # Constructors
+    # # ----------------------------
+
+    # @classmethod
+    # def from_rectilinear(
+    #     cls,
+    #     x: np.ndarray,  # Shape (ni+1,)
+    #     y: np.ndarray,  # Shape (nj+1,)
+    #     z_top: float,
+    #     z_bottom: float,
+    # ) -> 'PillarGrid':
+    #     """Create vertical pillar grid from rectilinear coordinates.
+        
+    #     Args:
+    #         x: X-coordinates of pillars, shape (ni+1,)
+    #         y: Y-coordinates of pillars, shape (nj+1,)
+    #         z_top: Z-coordinate at top
+    #         z_bottom: Z-coordinate at bottom
+            
+    #     Returns:
+    #         PillarGrid with vertical pillars
+    #     """
+    #     yy, xx = np.meshgrid(y, x, indexing='ij')
+        
+    #     njv, niv = xx.shape
+    #     pillar_top = np.zeros((njv, niv, 3))
+    #     pillar_bottom = np.zeros((njv, niv, 3))
+        
+    #     pillar_top[:, :, 0] = xx
+    #     pillar_top[:, :, 1] = yy
+    #     pillar_top[:, :, 2] = z_top
+        
+    #     pillar_bottom[:, :, 0] = xx
+    #     pillar_bottom[:, :, 1] = yy
+    #     pillar_bottom[:, :, 2] = z_bottom
+        
+    #     return cls(pillar_top, pillar_bottom)
+
+    # @classmethod
+    # def from_arrays(
+    #     cls,
+    #     x: np.ndarray,  # Shape (ni+1, nj+1)
+    #     y: np.ndarray,  # Shape (ni+1, nj+1)
+    #     z_top: np.ndarray,     # Shape (ni+1, nj+1) or scalar
+    #     z_bottom: np.ndarray,  # Shape (ni+1, nj+1) or scalar
+    # ) -> 'PillarGrid':
+    #     """Create pillar grid from coordinate arrays.
+        
+    #     Args:
+    #         x: X-coordinates, shape (nj+1, ni+1)
+    #         y: Y-coordinates, shape (nj+1, ni+1)
+    #         z_top: Z at top (array or scalar)
+    #         z_bottom: Z at bottom (array or scalar)
+            
+    #     Returns:
+    #         PillarGrid instance
+    #     """
+    #     if x.shape != y.shape:
+    #         raise ValueError("x and y must have the same shape")
+        
+    #     njv, niv = x.shape
+        
+    #     # Broadcast scalars
+    #     if np.isscalar(z_top):
+    #         z_top = np.full((njv, niv), z_top)
+    #     if np.isscalar(z_bottom):
+    #         z_bottom = np.full((njv, niv), z_bottom)
+        
+    #     pillar_top = np.stack([x, y, z_top], axis=-1)
+    #     pillar_bottom = np.stack([x, y, z_bottom], axis=-1)
+        
+    #     return cls(pillar_top, pillar_bottom)
+
+    # def __repr__(self) -> str:
+    #     """String representation."""
+    #     return f"PillarGrid(shape={self.cell_shape}, n_pillars={self.niv}×{self.njv})"
