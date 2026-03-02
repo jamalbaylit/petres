@@ -17,9 +17,13 @@ viewer.show()
 
 zones = [
   Zone("Caprock", top=h1, base=h2).divide(nk=2),
-  Zone("Reservoir", top=h2, base=h3).divide(fractions=[0.2,0.3,0.5]),
+#   Zone("Reservoir", top=h2, base=h3).divide(fractions=[0.2,0.3,0.5]),
   Zone("Base", top=h3, base=h4).divide(nk=2),
 ]
-pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=11, nj=11, z_top=0, z_bottom=10)
+viewer.add_zones(zones, x=np.linspace(0,100,50), y=np.linspace(0,100,50), colormap="viridis", show_layers=True)
+viewer.show()
+
+pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=50, nj=50)
 grid = CornerPointGrid.from_zones(pillars=pillars, zones=zones)
-grid.show()
+
+grid.show(show_inactive=False)

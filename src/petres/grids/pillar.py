@@ -166,10 +166,10 @@ class PillarGrid:
         dx: float | None = None,
         dy: float | None = None,
         z_top: float = 0.0,
-        z_bottom: float = 100.0,
+        z_bottom: float = 1.0,
     ) -> Self:
         x, y = _resolve_xy_sampling(
-            xlim=xlim, ylim=ylim, nx=ni, ny=nj, dx=dx, dy=dy
+            xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy
         )
         return cls.from_rectilinear(x=x, y=y, z_top=z_top, z_bottom=z_bottom)
 

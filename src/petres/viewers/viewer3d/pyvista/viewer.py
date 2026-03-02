@@ -4,13 +4,14 @@ from __future__ import annotations
 from typing import Any, Self
 import pyvista as pv
 import numpy as np
+import warnings
 
-from .layers.corner_point_grid import _add_corner_point_grid
+from .layers.cornerpoint import _add_corner_point_grid
+from .._core.theme import SceneTheme3D, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
 from ...._utils._grid import _resolve_xy_sampling
 from .layers.horizon import _add_horizon
 from ....grids.pillar import PillarGrid
-from .._core.theme import SceneTheme3D
 from ....model.horizon import Horizon
 from .._core.base import Base3DViewer
 from ...._utils._color import Color
@@ -19,16 +20,37 @@ from ....model.zone import Zone
 
 
 class PyVista3DViewer(Base3DViewer):
+    theme: SceneTheme3D
+    camera: Camera3D
+    plotter: pv.Plotter
+
     def __init__(
         self, 
         plotter: pv.Plotter | None = None,
         theme: SceneTheme3D | None = None,
+        camera: Camera3D | None = None,
     ):
-        self.plotter = plotter or pv.Plotter()
-        self._theme = theme or SceneTheme3D()
+        self.set_theme(theme or SceneTheme3D())
+        self.set_camera(camera or Camera3D(
+            view="iso",
+            turn=-45,
+            tilt=50,
+            zoom=1.0,
+            depth_down=True
+        ))
+        self.set_plotter(plotter or pv.Plotter())  
+
+    def set_plotter(self, plotter: pv.Plotter) -> None:
+        assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
+        self.plotter = plotter
 
     def set_theme(self, theme: SceneTheme3D) -> None:
-        self._theme = theme
+        assert isinstance(theme, SceneTheme3D), "`theme` must be a SceneTheme3D instance or None."
+        self.theme = theme
+
+    def set_camera(self, camera: Camera3D) -> None:
+        assert isinstance(camera, Camera3D), "`camera` must be a Camera3D instance or None."
+        self.camera = camera
 
     def apply_theme(self, theme: SceneTheme3D):
         p = self.plotter
@@ -39,9 +61,7 @@ class PyVista3DViewer(Base3DViewer):
             location='outer',
             all_edges=True,
         ) if theme.show_coordinate_axes else p.remove_bounds_axes()
-        
         # p.set_scale(*theme.scale)
-
         # p.camera.up = theme.camera_up
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
 
@@ -50,21 +70,107 @@ class PyVista3DViewer(Base3DViewer):
         self.plotter.reset_camera_clipping_range()
 
     def show(self):
-        self.apply_theme(self._theme)
+        self.apply_theme(self.theme)
+        # self.plotter.set_viewup((-1, 0, 0))
+        # self._set_y_front_slight_top(self.plotter, tilt=0.5)
+        self.apply_camera(self.camera)
         self.plotter.show()
+        self.plotter = pv.Plotter()
         
-    def add_grid(self, grid: CornerPointGrid, **kwargs) -> Self:
+    def add_grid(
+        self, 
+        grid: CornerPointGrid, 
+        *,
+        show_inactive: bool = False, 
+        **kwargs
+    ) -> Self:
         """Add a grid to the current 3D scene (rectilinear, corner-point, etc.)."""
 
         match grid:
             case CornerPointGrid():
-                self._add_corner_point_grid(grid, **kwargs)
+                self._add_corner_point_grid(grid, show_inactive=show_inactive, **kwargs)
             case _:
                 raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
         return self
     
-    def _add_corner_point_grid(self, grid, **kwargs) -> None:
-        return _add_corner_point_grid(self, grid, **kwargs)
+    def apply_camera(self, cam):
+        p = self.plotter
+        # Base view preset
+        if cam.view == "iso":
+            p.view_isometric()
+        elif cam.view == "top":
+            p.view_xy(negative=False)
+        elif cam.view == "bottom":
+            p.view_xy(negative=True)
+        elif cam.view == "front":
+            # front = "Y toward us" is easier with explicit camera, but keep preset for now
+            p.view_yz(negative=False)
+        elif cam.view == "back":
+            p.view_yz(negative=True)
+        elif cam.view == "right":
+            p.view_xz(negative=False)
+        elif cam.view == "left":
+            p.view_xz(negative=True)
+        else:
+            raise ValueError(f"Unknown view: {cam.view}")
+
+        # Depth down on screen (optional)
+        if getattr(cam, "depth_down", False):
+            p.camera.up = (0.0, 0.0, -1.0)
+
+        # Apply intuitive tweaks as RELATIVE offsets
+        if cam.turn:
+            p.camera.azimuth = p.camera.azimuth + cam.turn
+        if cam.tilt:
+            p.camera.elevation = p.camera.elevation + cam.tilt
+        if cam.roll:
+            p.camera.roll = p.camera.roll + cam.roll
+
+        if cam.zoom and cam.zoom != 1.0:
+            p.camera.zoom(cam.zoom)
+
+        p.reset_camera_clipping_range()
+
+
+    def _add_corner_point_grid(self, grid, show_inactive: bool = False, **kwargs) -> None:
+        return _add_corner_point_grid(self, grid, show_inactive=show_inactive, **kwargs)
+    
+    def add_zones(
+            self,
+            zones: list[Zone],
+            *,
+            x: np.ndarray | None = None,
+            y: np.ndarray | None = None,
+            xlim: tuple[float, float] | None = None,
+            ylim: tuple[float, float] | None = None,
+            ni: int | None = None,
+            nj: int | None = None,
+            dx: float | None = None,
+            dy: float | None = None,
+            show_layers: bool = True,
+            colormap: str = "gist_rainbow",
+            **kwargs,
+        ) -> Self:
+            x, y = _resolve_xy_sampling(
+                x=x, y=y,
+                xlim=xlim, ylim=ylim,
+                ni=ni, nj=nj,
+                dx=dx, dy=dy,
+            )
+            # Create a consistent color scheme for zones automatically based on color map
+            try:
+                from matplotlib.pyplot import cm
+            except ImportError:
+                # If matplotlib is not available, use a default color scheme
+                colors = [(i/len(zones), 0.5, 1-i/len(zones)) for i in range(len(zones))]
+                warnings.warn(f"Failed to use colormap '{colormap}'. `matplotlib` is not installed. Install `matplotlib` for better color support. Falling back to basic color scheme.")
+            else:
+                colors = cm.get_cmap(colormap)(np.linspace(0, 1, len(zones)))
+                colors = [tuple(c[:3]) for c in colors]  # Convert to RGB tuples
+
+            for i, zone in enumerate(zones):
+                self.add_zone(zone, x=x, y=y, color=colors[i], show_layers=show_layers, **kwargs)
+            return self
 
     def add_zone(
             self,
@@ -74,8 +180,8 @@ class PyVista3DViewer(Base3DViewer):
             y: np.ndarray | None = None,
             xlim: tuple[float, float] | None = None,
             ylim: tuple[float, float] | None = None,
-            nx: int | None = None,
-            ny: int | None = None,
+            ni: int | None = None,
+            nj: int | None = None,
             dx: float | None = None,
             dy: float | None = None,
             color: Any | None = None,
@@ -85,7 +191,7 @@ class PyVista3DViewer(Base3DViewer):
             x, y = _resolve_xy_sampling(
                 x=x, y=y,
                 xlim=xlim, ylim=ylim,
-                nx=nx, ny=ny,
+                ni=ni, nj=nj,
                 dx=dx, dy=dy,
             )
             color = Color(color).as_rgb() if color is not None else None
@@ -101,8 +207,8 @@ class PyVista3DViewer(Base3DViewer):
         y: np.ndarray | None = None,
         xlim: tuple[float, float] | None = None,
         ylim: tuple[float, float] | None = None,
-        nx: int | None = None,
-        ny: int | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
         color: Any | None = None,
@@ -111,7 +217,7 @@ class PyVista3DViewer(Base3DViewer):
         x, y = _resolve_xy_sampling(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
-            nx=nx, ny=ny,
+            ni=ni, nj=nj,
             dx=dx, dy=dy,
         )
         _add_horizon(self, horizon, x=x, y=y, color=color, **kwargs)
