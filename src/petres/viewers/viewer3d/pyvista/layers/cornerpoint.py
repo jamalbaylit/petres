@@ -1,7 +1,12 @@
 import numpy as np
 import pyvista as pv
 
-def _add_corner_point_grid(backend, grid):
+def _add_corner_point_grid(
+    backend, 
+    grid, 
+    show_inactive: bool = False, 
+    **kwargs
+):
     """
     Add a CornerPointGrid to the PyVista plotter using fully vectorized mesh construction.
     
@@ -29,7 +34,7 @@ def _add_corner_point_grid(backend, grid):
     # ========================================================================
     # Apply active cell filtering (vectorized - NO LOOPS!)
     # ========================================================================
-    if grid.active is not None and not np.all(grid.active):
+    if grid.active is not None and not np.all(grid.active) and not show_inactive:
         # Filter inactive cells using boolean indexing
         active_mask = grid.active  # Shape: (nk, nj, ni)
         cell_corners = cell_corners[active_mask]  # Shape: (n_active, 8, 3)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+
 try:
     from matplotlib.colors import to_rgba
 except Exception:  # optional dependency

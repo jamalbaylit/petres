@@ -139,16 +139,30 @@ class CornerPointGrid:
         writer = GRDECLWriter()
         writer.write(path=path, coord=coord, zcorn=zcorn, actnum=actnum)
 
-    def show(self):
+    def show(self, show_inactive: bool = False):
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
-        viewer.add_grid(grid=self)
+        viewer.add_grid(grid=self, show_inactive=show_inactive)
         viewer.show()
     
     @classmethod
     def from_zones(cls, *, pillars: PillarGrid, zones: Sequence[Zone]) -> Self:
-        zcorn = _build_zcorn_from_zones(pillars=pillars, zones=zones)
-        return cls(pillars=pillars, zcorn=zcorn)
+        """Create CornerPointGrid from zones with gap detection.
+        
+        Parameters
+        ----------
+        pillars : PillarGrid
+            Lateral pillar geometry
+        zones : Sequence[Zone]
+            Zones in stratigraphic order (top to bottom)
+        
+        Returns
+        -------
+        CornerPointGrid
+            Grid with gap-filling cells marked as inactive (ACTNUM=0)
+        """
+        zcorn, actnum = _build_zcorn_from_zones(pillars=pillars, zones=zones)
+        return cls(pillars=pillars, zcorn=zcorn, active=actnum)
     
     # # ----------------------------
     # # Cell geometry
