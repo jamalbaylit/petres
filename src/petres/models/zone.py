@@ -39,10 +39,84 @@ class Zone:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
         viewer.add_zone(
-            self, x=x, y=y, xlim=xlim, ylim=ylim, nx=nx, ny=ny, dx=dx, dy=dy, 
+            self, x=x, y=y, xlim=xlim, ylim=ylim, ni=nx, nj=ny, dx=dx, dy=dy, 
             color=color,
             show_layers=show_layers,
             show_edges=show_edges,
+        )
+        viewer.show()
+
+    def show2d(
+        self,
+        *,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
+        show_top: bool = True,
+        show_base: bool = True,
+        show_thickness: bool = False,
+        cmap: str = "viridis",
+        show_contours: bool = True,
+        contour_levels: int = 10,
+        **kwargs,
+    ):
+        """
+        Show zone in 2D matplotlib view.
+        
+        Parameters
+        ----------
+        x : np.ndarray, optional
+            1D array of x coordinates.
+        y : np.ndarray, optional
+            1D array of y coordinates.
+        xlim : tuple[float, float], optional
+            X-axis limits (min, max).
+        ylim : tuple[float, float], optional
+            Y-axis limits (min, max).
+        ni : int, optional
+            Number of points in x direction.
+        nj : int, optional
+            Number of points in y direction.
+        dx : float, optional
+            Spacing in x direction.
+        dy : float, optional
+            Spacing in y direction.
+        show_top : bool
+            Whether to show top surface (default: True).
+        show_base : bool
+            Whether to show base surface (default: True).
+        show_thickness : bool
+            Whether to show thickness map (default: False).
+        cmap : str
+            Colormap name (default: "viridis").
+        show_contours : bool
+            Whether to show contour lines (default: True).
+        contour_levels : int
+            Number of contour levels (default: 10).
+        **kwargs
+            Additional kwargs passed to the viewer.
+        """
+        from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
+
+        viewer = Matplotlib2DViewer()
+        viewer.add_zone(
+            self, 
+            x=x, y=y, 
+            xlim=xlim, ylim=ylim, 
+            ni=ni, nj=nj, 
+            dx=dx, dy=dy,
+            show_top=show_top,
+            show_base=show_base,
+            show_thickness=show_thickness,
+            cmap=cmap,
+            show_contours=show_contours,
+            contour_levels=contour_levels,
+            **kwargs
         )
         viewer.show()
 

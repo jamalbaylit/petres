@@ -16,6 +16,7 @@ dependencies = [
     "scipy>=1.17.0",
     "matplotlib>=3.10.8",
     "pyvista>=0.47.0",
+    "shapely>=2.1.2",
 ]
 
 [dependency-groups]

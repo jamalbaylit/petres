@@ -12,11 +12,11 @@ from ....grids.cornerpoint import CornerPointGrid
 from ...._utils._grid import _resolve_xy_sampling
 from .layers.horizon import _add_horizon
 from ....grids.pillar import PillarGrid
-from ....model.horizon import Horizon
+from ....models.horizon import Horizon
 from .._core.base import Base3DViewer
 from ...._utils._color import Color
 from .layers.zone import _add_zone
-from ....model.zone import Zone
+from ....models.zone import Zone
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -136,41 +136,41 @@ class PyVista3DViewer(Base3DViewer):
         return _add_corner_point_grid(self, grid, show_inactive=show_inactive, **kwargs)
     
     def add_zones(
-            self,
-            zones: list[Zone],
-            *,
-            x: np.ndarray | None = None,
-            y: np.ndarray | None = None,
-            xlim: tuple[float, float] | None = None,
-            ylim: tuple[float, float] | None = None,
-            ni: int | None = None,
-            nj: int | None = None,
-            dx: float | None = None,
-            dy: float | None = None,
-            show_layers: bool = True,
-            colormap: str = "gist_rainbow",
-            **kwargs,
-        ) -> Self:
-            x, y = _resolve_xy_sampling(
-                x=x, y=y,
-                xlim=xlim, ylim=ylim,
-                ni=ni, nj=nj,
-                dx=dx, dy=dy,
-            )
-            # Create a consistent color scheme for zones automatically based on color map
-            try:
-                from matplotlib.pyplot import cm
-            except ImportError:
-                # If matplotlib is not available, use a default color scheme
-                colors = [(i/len(zones), 0.5, 1-i/len(zones)) for i in range(len(zones))]
-                warnings.warn(f"Failed to use colormap '{colormap}'. `matplotlib` is not installed. Install `matplotlib` for better color support. Falling back to basic color scheme.")
-            else:
-                colors = cm.get_cmap(colormap)(np.linspace(0, 1, len(zones)))
-                colors = [tuple(c[:3]) for c in colors]  # Convert to RGB tuples
+        self,
+        zones: list[Zone],
+        *,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
+        show_layers: bool = True,
+        colormap: str = "gist_rainbow",
+        **kwargs,
+    ) -> Self:
+        x, y = _resolve_xy_sampling(
+            x=x, y=y,
+            xlim=xlim, ylim=ylim,
+            ni=ni, nj=nj,
+            dx=dx, dy=dy,
+        )
+        # Create a consistent color scheme for zones automatically based on color map
+        try:
+            from matplotlib.pyplot import cm
+        except ImportError:
+            # If matplotlib is not available, use a default color scheme
+            colors = [(i/len(zones), 0.5, 1-i/len(zones)) for i in range(len(zones))]
+            warnings.warn(f"Failed to use colormap '{colormap}'. `matplotlib` is not installed. Install `matplotlib` for better color support. Falling back to basic color scheme.")
+        else:
+            colors = cm.get_cmap(colormap)(np.linspace(0, 1, len(zones)))
+            colors = [tuple(c[:3]) for c in colors]  # Convert to RGB tuples
 
-            for i, zone in enumerate(zones):
-                self.add_zone(zone, x=x, y=y, color=colors[i], show_layers=show_layers, **kwargs)
-            return self
+        for i, zone in enumerate(zones):
+            self.add_zone(zone, x=x, y=y, color=colors[i], show_layers=show_layers, **kwargs)
+        return self
 
     def add_zone(
             self,

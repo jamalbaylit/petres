@@ -7,7 +7,7 @@ import numpy as np
 
 
 from ..pillar import PillarGrid
-from ...model.zone import Zone
+from ...models.zone import Zone
 
 
 # def _build_zcorn_from_zones(*, pillars: PillarGrid, zones: Sequence[Zone]) -> np.ndarray:

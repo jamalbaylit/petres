@@ -2,7 +2,7 @@
 
 from petres.grids import CornerPointGrid, PillarGrid
 from petres.interpolators import IDWInterpolator
-from petres.model import Zone, Horizon
+from petres.models import Zone, Horizon
 import numpy as np
 
 # Create continuous horizons (no gaps)
