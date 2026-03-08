@@ -1,4 +1,4 @@
-![Banner](assets/banner.png)
+![Banner](./assets/banner.png)
 
 # Petres
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
