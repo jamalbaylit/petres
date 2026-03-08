@@ -1,12 +1,15 @@
 <h1 align="center">
 
 ![Banner](./assets/banner.png)
+
 </h1>
 
 <div align="center">
+
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![Python Version](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petres.readthedocs.io)
+
 </div>
 
 <!-- Uncomment when published to PyPI
