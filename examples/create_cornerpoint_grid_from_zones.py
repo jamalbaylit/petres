@@ -1,6 +1,6 @@
 from petres.grids import CornerPointGrid, PillarGrid
 from petres.interpolators import IDWInterpolator
-from petres.model import Zone, Horizon
+from petres.models import Zone, Horizon
 from petres.viewers import Viewer3D
 import numpy as np
 
@@ -16,9 +16,9 @@ viewer.add_horizon(h4, x=np.linspace(0,100,50), y=np.linspace(0,100,50), color="
 viewer.show()
 
 zones = [
-  Zone("Caprock", top=h1, base=h2).divide(nk=2),
-#   Zone("Reservoir", top=h2, base=h3).divide(fractions=[0.2,0.3,0.5]),
-  Zone("Base", top=h3, base=h4).divide(nk=2),
+  Zone("Caprock", top=h1, base=h2).divide(fractions=[0.2,0.3,0.5]),
+  # Zone("Reservoir", top=h2, base=h3).divide(fractions=[0.2,0.3,0.5]),
+  Zone("Base", top=h3, base=h4).divide(nk=3),
 ]
 viewer.add_zones(zones, x=np.linspace(0,100,50), y=np.linspace(0,100,50), colormap="viridis", show_layers=True)
 viewer.show()
@@ -27,3 +27,6 @@ pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=50, nj=50)
 grid = CornerPointGrid.from_zones(pillars=pillars, zones=zones)
 
 grid.show(show_inactive=False)
+
+
+grid.to_grdecl("cornerpoint_grid_from_zones.grdecl", overwrite=True)

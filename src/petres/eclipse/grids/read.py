@@ -48,7 +48,7 @@ class GRDECLReader:
             out.append(line)
         return "\n".join(out)
 
-    def read(self, path: str | Path) -> GRDECLData:
+    def read(self, path: str | Path, *, use_actnum: bool = True) -> GRDECLData:
         path = Path(path)
         text = path.read_text(encoding="utf-8", errors="ignore")
         text = self.clean_comments(text)
@@ -68,7 +68,7 @@ class GRDECLReader:
         validate_zcorn_array_shape(zcorn, ni=ni, nj=nj, nk=nk)
 
         actnum = None
-        if self._has_keyword(text, "ACTNUM"):
+        if self._has_keyword(text, "ACTNUM") and use_actnum:
             act = self._get_keyword_array(text, "ACTNUM", dtype=int)
             validate_actnum_array_size(act, ni=ni, nj=nj, nk=nk)
             actnum = act.reshape((nk, nj, ni))

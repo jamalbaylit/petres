@@ -11,9 +11,9 @@ from ...grids.cornerpoint import CornerPointGrid
 from ..._utils._grid import _resolve_xy_sampling
 from ...grids.pillar import PillarGrid
 from ._core.theme import SceneTheme3D
-from ...model.horizon import Horizon
+from ...models.horizon import Horizon
 from ._core.base import Backend3D
-from ...model.zone import Zone
+from ...models.zone import Zone
 
 
 
@@ -74,7 +74,7 @@ class Viewer3D:
         x, y = _resolve_xy_sampling(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
-            nx=nx, ny=ny,
+            ni=nx, nj=ny,
             dx=dx, dy=dy,
         )
         self._call_backend("add_horizon", horizon, x=x, y=y, **kwargs)

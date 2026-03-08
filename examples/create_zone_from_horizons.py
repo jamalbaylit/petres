@@ -1,6 +1,6 @@
 from petres.interpolators import IDWInterpolator
 from petres.viewers import Viewer3D
-from petres.model import Horizon, Zone
+from petres.models import Horizon, Zone
 import numpy as np
 
 

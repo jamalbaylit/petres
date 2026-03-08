@@ -4,7 +4,7 @@ from typing import Any
 import pyvista as pv
 import numpy as np
 
-from .....model.horizon import Horizon
+from .....models.horizon import Horizon
 
 
 def _add_horizon(

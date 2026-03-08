@@ -9,7 +9,8 @@ from .builders.cornerpoint import _build_zcorn_from_zones
 from ..eclipse.grids.write import GRDECLWriter
 from ..eclipse.grids.read import GRDECLReader
 from .pillar import PillarGrid
-from ..model.zone import Zone
+from ..models.zone import Zone
+from ..models.boundary import BoundaryPolygon
 
 @dataclass
 class CornerPointGrid:
@@ -46,10 +47,6 @@ class CornerPointGrid:
     zcorn: np.ndarray                     # Shape (2*nk, 2*nj, 2*ni)
     active: Optional[np.ndarray] = None      # Shape (nk, nj, ni), boolean, or None for all active
     properties: Dict[str, np.ndarray] = field(default_factory=dict)
-    
-    # Cached properties
-    _cell_centers: Optional[np.ndarray] = field(init=False, repr=False, default=None)
-    _cell_volumes: Optional[np.ndarray] = field(init=False, repr=False, default=None)
     
     def __post_init__(self):
         """Validate dimensions."""
@@ -120,10 +117,14 @@ class CornerPointGrid:
         return np.sum(self.active)
 
     @classmethod
-    def from_grdecl(cls, path: str | Path) -> CornerPointGrid:
+    def from_grdecl(
+        cls, path: str | Path,
+        *,
+        use_actnum: bool = True
+    ) -> CornerPointGrid:
         # Local import avoids circular deps and keeps startup light
 
-        data = GRDECLReader().read(path)  # returns raw arrays/spec, not a grid
+        data = GRDECLReader().read(path, use_actnum=use_actnum)  # returns raw arrays/spec, not a grid
         coord = data.coord
         zcorn = data.zcorn
         actnum = data.actnum
@@ -164,6 +165,160 @@ class CornerPointGrid:
         zcorn, actnum = _build_zcorn_from_zones(pillars=pillars, zones=zones)
         return cls(pillars=pillars, zcorn=zcorn, active=actnum)
     
+    def apply_boundary(self, boundary: BoundaryPolygon):
+        """Apply boundary polygon mask to active cells.
+        
+        Cells whose centers fall outside the polygon boundary will be marked
+        as inactive (ACTNUM=0).
+        
+        Parameters
+        ----------
+        boundary : BoundaryPolygon
+            2D boundary polygon in XY plane
+        
+        Notes
+        -----
+        This modifies the active array in-place and clears cached properties.
+        """
+        # Get cell centers (nk, nj, ni, 3)
+        centers = self.cell_centers
+        
+        # Extract XY coordinates and reshape to (n_cells, 2)
+        nk, nj, ni = self.shape
+        xy = centers[..., :2].reshape(-1, 2)  # Shape: (nk*nj*ni, 2)
+        
+        # Check which cells are inside the boundary
+        inside_mask = boundary.contains(xy)  # Shape: (nk*nj*ni,)
+        
+        # Reshape back to grid dimensions
+        inside_mask = inside_mask.reshape(nk, nj, ni)
+        
+        # Update active array: cells outside boundary become inactive
+        # Need to create a writable copy if active is a broadcast array
+        if not self.active.flags.writeable:
+            self.active = np.array(self.active, dtype=bool)
+        
+        self.active &= inside_mask
+        
+
+    def _compute_cell_corners(self) -> np.ndarray:
+        """Compute 3D coordinates of all 8 corners for each cell.
+        
+        Returns:
+            np.ndarray: Shape (nk, nj, ni, 8, 3) where the 8 corners are ordered:
+                0-3: Top face (k-layer top)
+                4-7: Bottom face (k-layer bottom)
+                Each face: (i,j), (i+1,j), (i,j+1), (i+1,j+1)
+        """
+        nk, nj, ni = self.shape
+        corners = np.zeros((nk, nj, ni, 8, 3))
+        
+        # Extract z-coordinates for all 8 corners
+        # Top face (layer k top)
+        z_top_00 = self.zcorn[0::2, 0::2, 0::2]    # (nk, nj, ni) - pillar (j, i)
+        z_top_10 = self.zcorn[0::2, 0::2, 1::2]    # pillar (j, i+1)
+        z_top_01 = self.zcorn[0::2, 1::2, 0::2]    # pillar (j+1, i)
+        z_top_11 = self.zcorn[0::2, 1::2, 1::2]    # pillar (j+1, i+1)
+        
+        # Bottom face (layer k bottom)
+        z_bot_00 = self.zcorn[1::2, 0::2, 0::2]    # pillar (j, i)
+        z_bot_10 = self.zcorn[1::2, 0::2, 1::2]    # pillar (j, i+1)
+        z_bot_01 = self.zcorn[1::2, 1::2, 0::2]    # pillar (j+1, i)
+        z_bot_11 = self.zcorn[1::2, 1::2, 1::2]    # pillar (j+1, i+1)
+        
+        # Get pillar endpoints
+        pt = self.pillars.pillar_top    # Shape (nj+1, ni+1, 3)
+        pb = self.pillars.pillar_bottom  # Shape (nj+1, ni+1, 3)
+        
+        # Interpolate along pillars for each corner
+        # For each pillar, compute t = (z - z_top) / (z_bottom - z_top)
+        # Then position = pillar_top + t * (pillar_bottom - pillar_top)
+        
+        def interpolate_pillar_at_z(pillar_top, pillar_bottom, z):
+            """Interpolate pillar position at given z-coordinates."""
+            z_top = pillar_top[..., 2:3]  # Keep dimension for broadcasting
+            z_bot = pillar_bottom[..., 2:3]
+            
+            # Compute interpolation parameter
+            dz = z_bot - z_top
+            # Handle vertical pillars (avoid division by zero)
+            t = np.where(np.abs(dz) > 1e-10, (z[..., np.newaxis] - z_top) / dz, 0.5)
+            
+            # Interpolate position
+            pos = pillar_top + t * (pillar_bottom - pillar_top)
+            # Override z with exact value
+            pos[..., 2] = z
+            return pos
+        
+        # Top face corners (indices 0-3)
+        corners[:, :, :, 0, :] = interpolate_pillar_at_z(pt[:-1, :-1], pb[:-1, :-1], z_top_00)
+        corners[:, :, :, 1, :] = interpolate_pillar_at_z(pt[:-1, 1:], pb[:-1, 1:], z_top_10)
+        corners[:, :, :, 2, :] = interpolate_pillar_at_z(pt[1:, :-1], pb[1:, :-1], z_top_01)
+        corners[:, :, :, 3, :] = interpolate_pillar_at_z(pt[1:, 1:], pb[1:, 1:], z_top_11)
+        
+        # Bottom face corners (indices 4-7)
+        corners[:, :, :, 4, :] = interpolate_pillar_at_z(pt[:-1, :-1], pb[:-1, :-1], z_bot_00)
+        corners[:, :, :, 5, :] = interpolate_pillar_at_z(pt[:-1, 1:], pb[:-1, 1:], z_bot_10)
+        corners[:, :, :, 6, :] = interpolate_pillar_at_z(pt[1:, :-1], pb[1:, :-1], z_bot_01)
+        corners[:, :, :, 7, :] = interpolate_pillar_at_z(pt[1:, 1:], pb[1:, 1:], z_bot_11)
+        
+        return corners
+
+    @property
+    def cell_centers(self) -> np.ndarray:
+        """Cell centers (average of 8 corners).
+        
+        Returns:
+            np.ndarray: Shape (nk, nj, ni, 3)
+        """
+        corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
+        cell_centers = np.mean(corners, axis=3)  # Average over 8 corners
+        return cell_centers
+    
+    @property
+    def cell_volumes(self) -> np.ndarray:
+        """Cell volumes computed via hexahedral decomposition.
+        
+        Returns:
+            np.ndarray: Shape (nk, nj, ni)
+        """
+        corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
+        
+        # Decompose each hexahedron into 6 tetrahedra using diagonal 0-7
+        # Tetrahedron volume formula: |det([v1-v0, v2-v0, v3-v0])| / 6
+        # Corner ordering (from _compute_cell_corners):
+        #   0-3: Top face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
+        #   4-7: Bottom face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
+        
+        def tet_volume(v0, v1, v2, v3):
+            """Compute signed volume of tetrahedron with vectorized arrays."""
+            # v1-v0, v2-v0, v3-v0 form the edge vectors
+            # Volume = det([v1-v0, v2-v0, v3-v0]) / 6
+            a = v1 - v0
+            b = v2 - v0
+            c = v3 - v0
+            # Compute determinant using scalar triple product: a · (b × c)
+            cross = np.cross(b, c)
+            det = np.sum(a * cross, axis=-1)
+            return det / 6.0
+        
+        # Extract corners for each tetrahedron
+        c0, c1, c2, c3 = corners[..., 0, :], corners[..., 1, :], corners[..., 2, :], corners[..., 3, :]
+        c4, c5, c6, c7 = corners[..., 4, :], corners[..., 5, :], corners[..., 6, :], corners[..., 7, :]
+        
+        # Decompose into 6 tetrahedra using diagonal 0-7
+        vol = np.zeros(corners.shape[:3])  # Shape (nk, nj, ni)
+        vol += tet_volume(c0, c1, c3, c7)
+        vol += tet_volume(c0, c1, c5, c7)
+        vol += tet_volume(c0, c4, c5, c7)
+        vol += tet_volume(c0, c2, c3, c7)
+        vol += tet_volume(c0, c2, c6, c7)
+        vol += tet_volume(c0, c4, c6, c7)
+        
+        # Take absolute value to handle orientation
+        volumes = np.abs(vol)
+        
+        return volumes
     # # ----------------------------
     # # Cell geometry
     # # ----------------------------

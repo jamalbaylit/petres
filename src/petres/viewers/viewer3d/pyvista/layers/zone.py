@@ -4,7 +4,7 @@ from typing import Any
 import pyvista as pv
 import numpy as np
 
-from .....model.zone import Zone
+from .....models.zone import Zone
 from ....._utils._color import Color
 
 
