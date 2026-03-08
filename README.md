@@ -3,12 +3,11 @@
 ![Banner](./assets/banner.png)
 </h1>
 
-<h1 align="center">
+<div align="center">
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![Python Version](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petres.readthedocs.io)
-
-</h1>
+</div>
 
 <!-- Uncomment when published to PyPI
 [![PyPI version](https://badge.fury.io/py/petres.svg)](https://badge.fury.io/py/petres)
