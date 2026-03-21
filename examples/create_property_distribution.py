@@ -1,5 +1,5 @@
 from petres.interpolators import IDWInterpolator
-from petres.grids import CellProperty 
+from petres.grids import GridProperty 
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np

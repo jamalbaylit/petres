@@ -9,7 +9,7 @@ import warnings
 from .layers.cornerpoint import _add_corner_point_grid
 from .._core.theme import SceneTheme3D, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
-from ...._utils._grid import _resolve_xy_sampling
+from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.horizon import _add_horizon
 from ....grids.pillar import PillarGrid
 from ....models.horizon import Horizon
@@ -151,7 +151,7 @@ class PyVista3DViewer(Base3DViewer):
         colormap: str = "gist_rainbow",
         **kwargs,
     ) -> Self:
-        x, y = _resolve_xy_sampling(
+        x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
             ni=ni, nj=nj,
@@ -188,7 +188,7 @@ class PyVista3DViewer(Base3DViewer):
             show_layers: bool = True,
             **kwargs,
         ) -> Self:
-            x, y = _resolve_xy_sampling(
+            x, y = _resolve_xy_vertices(
                 x=x, y=y,
                 xlim=xlim, ylim=ylim,
                 ni=ni, nj=nj,
@@ -214,7 +214,7 @@ class PyVista3DViewer(Base3DViewer):
         color: Any | None = None,
         **kwargs,
     ) -> Self:
-        x, y = _resolve_xy_sampling(
+        x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
             ni=ni, nj=nj,
