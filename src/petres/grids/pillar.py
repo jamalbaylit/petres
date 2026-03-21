@@ -4,7 +4,11 @@ from dataclasses import dataclass
 from typing import Tuple, Self
 import numpy as np
 
-from .._utils._grid import _resolve_xy_sampling
+
+from .._validation import _validate_finite_float
+from .sampling._vertices import _resolve_xy_vertices
+from .sampling._validation import _validate_vertex_array
+
 
 
 @dataclass
@@ -118,12 +122,12 @@ class PillarGrid:
         z_bottom: float,
     ) -> "PillarGrid":
         """
-        Create a vertical-pillar grid from explicit node coordinate vectors.
+        Create a vertical-pillar grid from explicit vertex coordinate vectors.
 
         Parameters
         ----------
         x, y
-            1D node coordinates. Shapes must be (ni+1,) and (nj+1,).
+            1D vertex coordinates. Shapes must be (ni+1,) and (nj+1,).
             (i direction varies along x, j direction varies along y).
         z_top, z_bottom
             Constant pillar endpoint z-values defining the pillar "envelope".
@@ -134,17 +138,14 @@ class PillarGrid:
         PillarGrid
             Vertical pillars with top/bottom endpoints at constant z.
         """
-        x = np.asarray(x, dtype=float)
-        y = np.asarray(y, dtype=float)
+     
+        x = _validate_vertex_array(x, "x")
+        y = _validate_vertex_array(y, "y")
+        z_top = _validate_finite_float(z_top, "z_top")
+        z_bottom = _validate_finite_float(z_bottom, "z_bottom")
 
-        if x.ndim != 1 or x.size < 2:
-            raise ValueError("'x' must be a 1D array with at least 2 values (ni+1).")
-        if y.ndim != 1 or y.size < 2:
-            raise ValueError("'y' must be a 1D array with at least 2 values (nj+1).")
-        if not np.isfinite(z_top) or not np.isfinite(z_bottom):
-            raise ValueError("'z_top' and 'z_bottom' must be finite.")
-        if z_top == z_bottom:
-            raise ValueError("'z_top' and 'z_bottom' must differ.")
+        if z_bottom <= z_top:
+            raise ValueError("'z_bottom' must be greater than 'z_top'.")
 
         X, Y = np.meshgrid(x, y)  # (nj+1, ni+1)
 
@@ -168,10 +169,10 @@ class PillarGrid:
         z_top: float = 0.0,
         z_bottom: float = 1.0,
     ) -> Self:
-        x, y = _resolve_xy_sampling(
+        xv, yv = _resolve_xy_vertices(
             xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy
         )
-        return cls.from_rectilinear(x=x, y=y, z_top=z_top, z_bottom=z_bottom)
+        return cls.from_rectilinear(x=xv, y=yv, z_top=z_top, z_bottom=z_bottom)
 
     
     

@@ -14,7 +14,7 @@ from .._core.base import Base2DViewer
 from ....models.horizon import Horizon
 from ....models.zone import Zone
 from ....models.boundary import BoundaryPolygon
-from ...._utils._grid import _resolve_xy_sampling
+from ....grids.sampling._vertices import _resolve_xy_vertices
 
 
 class Matplotlib2DViewer(Base2DViewer):
@@ -133,7 +133,7 @@ class Matplotlib2DViewer(Base2DViewer):
         if show_colorbar is None:
             show_colorbar = self.theme.show_colorbar
         
-        x, y = _resolve_xy_sampling(
+        x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
             ni=ni, nj=nj,
@@ -209,7 +209,7 @@ class Matplotlib2DViewer(Base2DViewer):
         Self
             Returns self for method chaining.
         """
-        x, y = _resolve_xy_sampling(
+        x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
             ni=ni, nj=nj,

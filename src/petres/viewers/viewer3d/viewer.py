@@ -8,7 +8,7 @@ import warnings
 
 
 from ...grids.cornerpoint import CornerPointGrid
-from ..._utils._grid import _resolve_xy_sampling
+from ...grids.sampling._vertices import _resolve_xy_vertices
 from ...grids.pillar import PillarGrid
 from ._core.theme import SceneTheme3D
 from ...models.horizon import Horizon
@@ -71,7 +71,7 @@ class Viewer3D:
         dy: float | None = None,
         **kwargs,
     ) -> Viewer3D:
-        x, y = _resolve_xy_sampling(
+        x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
             ni=nx, nj=ny,
@@ -94,7 +94,7 @@ class Viewer3D:
         dy: float | None = None,
         **kwargs,
     ) -> Viewer3D:
-        x, y = _resolve_xy_sampling(
+        x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
             nx=nx, ny=ny,

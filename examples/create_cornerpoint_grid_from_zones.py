@@ -27,6 +27,4 @@ pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=50, nj=50)
 grid = CornerPointGrid.from_zones(pillars=pillars, zones=zones)
 
 grid.show(show_inactive=False)
-
-
 grid.to_grdecl("cornerpoint_grid_from_zones.grdecl", overwrite=True)

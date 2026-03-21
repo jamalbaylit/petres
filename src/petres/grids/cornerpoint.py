@@ -4,13 +4,18 @@ from typing import Optional, Dict, Self, Tuple, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 import numpy as np
+import warnings
 
+
+from ..grids.sampling._validation import _validate_vertex_array
+from ..grids.sampling._vertices import _resolve_xyz_vertices
 from .builders.cornerpoint import _build_zcorn_from_zones
 from ..eclipse.grids.write import GRDECLWriter
 from ..eclipse.grids.read import GRDECLReader
 from .pillar import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
+from ..grids.properties import GridProperties, GridProperty
 
 @dataclass
 class CornerPointGrid:
@@ -46,7 +51,11 @@ class CornerPointGrid:
     pillars: PillarGrid
     zcorn: np.ndarray                     # Shape (2*nk, 2*nj, 2*ni)
     active: Optional[np.ndarray] = None      # Shape (nk, nj, ni), boolean, or None for all active
-    properties: Dict[str, np.ndarray] = field(default_factory=dict)
+
+    zone_index: Optional[np.ndarray] = None        # shape (nk, nj, ni), int
+    zone_names: Dict[int, str] = field(default_factory=dict)
+    
+    _properties: dict[str, GridProperty] = field(default_factory=dict, repr=False)
     
     def __post_init__(self):
         """Validate dimensions."""
@@ -54,13 +63,15 @@ class CornerPointGrid:
         nk = self.zcorn.shape[0]//2
         
         expected_corner_shape = (2*nk, 2*nj, 2*ni)
+        expected_cell_shape = (nk, nj, ni)
+        expected_active_shape = expected_cell_shape
+
         if self.zcorn.shape != expected_corner_shape:
             raise ValueError(
                 f"zcorn shape {self.zcorn.shape} != expected {expected_corner_shape}"
             )
         
         # Initialize or validate active array
-        expected_active_shape = (nk, nj, ni)
         if self.active is None:
             # Use broadcast for memory-efficient all-active representation
             self.active = np.broadcast_to(True, expected_active_shape)
@@ -73,18 +84,108 @@ class CornerPointGrid:
                 )
         
         # Validate properties
-        for name, values in self.properties.items():
-            if values.shape != expected_active_shape:
+        for name, values in self._properties.items():
+            if values.shape != expected_cell_shape:
                 raise ValueError(
-                    f"Property '{name}' shape {values.shape} != expected {expected_active_shape}"
+                    f"Property '{name}' shape {values.shape} != expected {expected_cell_shape}"
+                )
+            
+        # self.set_zones(zone_index=self.zone_index, zone_names=self.zone_names)
+    
+    def set_zones(
+        self,
+        zone_index: np.ndarray,
+        zone_names: dict[int, str] | None = None,
+    ) -> None:
+        """
+        Assign zone membership to the grid.
+
+        Parameters
+        ----------
+        zone_index : np.ndarray
+            Integer array of shape (nk, nj, ni) assigning each cell to a zone.
+            Convention:
+                0  -> gap / undefined / unassigned
+                >0 -> valid zone id
+        zone_names : dict[int, str], optional
+            Mapping from zone id to zone name.
+            If not provided, names will be auto-generated as "Zone {id}".
+
+        Raises
+        ------
+        ValueError
+            If shapes mismatch, invalid ids are present, or names are inconsistent.
+        """
+
+        # ----------------------------
+        # 1. Validate zone_index
+        # ----------------------------
+        if zone_index is None:
+            raise ValueError("`zone_index` cannot be None.")
+
+        arr = np.asarray(zone_index, dtype=np.int32)
+
+        if arr.shape != self.shape:
+            raise ValueError(
+                f"`zone_index` shape {arr.shape} != expected {self.shape}"
+            )
+
+        if np.any(arr < 0):
+            raise ValueError("`zone_index` cannot contain negative values.")
+
+        # Extract used zone IDs (exclude 0 = gap)
+        unique_ids = np.unique(arr)
+        unique_ids = unique_ids[unique_ids != 0]
+
+        # ----------------------------
+        # 2. Handle zone_names
+        # ----------------------------
+        if zone_names is None:
+            # Auto-generate names
+            zone_names = {int(i): f"Zone {int(i)}" for i in unique_ids}
+        else:
+            # Ensure dict[int, str]
+            if not isinstance(zone_names, dict):
+                raise ValueError("`zone_names` must be a dict[int, str].")
+
+            # Convert keys to int
+            zone_names = {int(k): str(v) for k, v in zone_names.items()}
+
+            # ---- 2a. Check duplicate names ----
+            names = list(zone_names.values())
+            if len(names) != len(set(names)):
+                duplicates = {n for n in names if names.count(n) > 1}
+                raise ValueError(f"Duplicate zone names detected: {duplicates}")
+
+            # ---- 2b. Check all used IDs have names ----
+            missing = set(unique_ids) - set(zone_names.keys())
+            if missing:
+                raise ValueError(
+                    f"`zone_names` missing definitions for zone ids: {sorted(missing)}"
                 )
 
+            # ---- 2c. Optional: warn about unused names ----
+            unused = set(zone_names.keys()) - set(unique_ids)
+            if unused:
+                warnings.warn(
+                    f"Unused zone ids in `zone_names`: {sorted(unused)}",
+                    UserWarning,
+                )
 
-
+        # ----------------------------
+        # 3. Assign
+        # ----------------------------
+        self.zone_index = arr
+        self.zone_names = zone_names
+        
 
     # ----------------------------
     # Dimensions
     # ----------------------------
+    
+    @property
+    def properties(self) -> GridProperties:
+        return GridProperties(self)
 
     @property
     def ni(self) -> int:
@@ -115,6 +216,64 @@ class CornerPointGrid:
     def n_active(self) -> int:
         """Number of active cells."""
         return np.sum(self.active)
+    
+
+    @property
+    def cell_centers(self) -> np.ndarray:
+        """Cell centers (average of 8 corners).
+        
+        Returns:
+            np.ndarray: Shape (nk, nj, ni, 3)
+        """
+        corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
+        cell_centers = np.mean(corners, axis=3)  # Average over 8 corners
+        return cell_centers
+    
+    @property
+    def cell_volumes(self) -> np.ndarray:
+        """Cell volumes computed via hexahedral decomposition.
+        
+        Returns:
+            np.ndarray: Shape (nk, nj, ni)
+        """
+        corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
+        
+        # Decompose each hexahedron into 6 tetrahedra using diagonal 0-7
+        # Tetrahedron volume formula: |det([v1-v0, v2-v0, v3-v0])| / 6
+        # Corner ordering (from _compute_cell_corners):
+        #   0-3: Top face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
+        #   4-7: Bottom face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
+        
+        def tet_volume(v0, v1, v2, v3):
+            """Compute signed volume of tetrahedron with vectorized arrays."""
+            # v1-v0, v2-v0, v3-v0 form the edge vectors
+            # Volume = det([v1-v0, v2-v0, v3-v0]) / 6
+            a = v1 - v0
+            b = v2 - v0
+            c = v3 - v0
+            # Compute determinant using scalar triple product: a · (b × c)
+            cross = np.cross(b, c)
+            det = np.sum(a * cross, axis=-1)
+            return det / 6.0
+        
+        # Extract corners for each tetrahedron
+        c0, c1, c2, c3 = corners[..., 0, :], corners[..., 1, :], corners[..., 2, :], corners[..., 3, :]
+        c4, c5, c6, c7 = corners[..., 4, :], corners[..., 5, :], corners[..., 6, :], corners[..., 7, :]
+        
+        # Decompose into 6 tetrahedra using diagonal 0-7
+        vol = np.zeros(corners.shape[:3])  # Shape (nk, nj, ni)
+        vol += tet_volume(c0, c1, c3, c7)
+        vol += tet_volume(c0, c1, c5, c7)
+        vol += tet_volume(c0, c4, c5, c7)
+        vol += tet_volume(c0, c2, c3, c7)
+        vol += tet_volume(c0, c2, c6, c7)
+        vol += tet_volume(c0, c4, c6, c7)
+        
+        # Take absolute value to handle orientation
+        volumes = np.abs(vol)
+        
+        return volumes
+    
 
     @classmethod
     def from_grdecl(
@@ -147,6 +306,59 @@ class CornerPointGrid:
         viewer.show()
     
     @classmethod
+    def from_rectilinear(
+        cls,
+        x: np.ndarray,
+        y: np.ndarray,
+        z: np.ndarray
+    ) -> Self:
+        """Create a simple corner-point grid from rectilinear coordinates."""
+        
+        z = _validate_vertex_array(z, "z")
+        pillars = PillarGrid.from_rectilinear(x=x, y=y, z_top=z[0], z_bottom=z[-1])
+        
+        # Create simple ZCORN with flat layers
+        nj, ni = pillars.cell_shape
+        nk = len(z) - 1
+
+        # Naive loop version (for clarity)
+        # zcorn = np.zeros((2*nk, 2*nj, 2*ni))
+        # for k in range(nk):
+        #     zcorn[2*k:2*k+2, :, :] = z[k:k+2][:, np.newaxis, np.newaxis]
+        
+        # Fully vectorized version (optimized)
+        z_planes = np.empty(2 * nk, dtype=z.dtype)
+        z_planes[0::2] = z[:-1]
+        z_planes[1::2] = z[1:]
+
+        zcorn = np.broadcast_to(
+            z_planes[:, None, None],
+            (2 * nk, 2 * nj, 2 * ni),
+        ).copy()
+
+        return cls(pillars=pillars, zcorn=zcorn)
+
+
+    @classmethod
+    def from_regular(
+        cls,
+        *,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        zlim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        nk: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
+        dz: float | None = None,
+        ) -> Self:
+        x, y, z = _resolve_xyz_vertices(
+            xlim=xlim, ylim=ylim, zlim=zlim, ni=ni, nj=nj, nk=nk, dx=dx, dy=dy, dz=dz
+        )
+        return cls.from_rectilinear(x=x, y=y, z=z)
+
+    @classmethod
     def from_zones(cls, *, pillars: PillarGrid, zones: Sequence[Zone]) -> Self:
         """Create CornerPointGrid from zones with gap detection.
         
@@ -162,8 +374,8 @@ class CornerPointGrid:
         CornerPointGrid
             Grid with gap-filling cells marked as inactive (ACTNUM=0)
         """
-        zcorn, actnum = _build_zcorn_from_zones(pillars=pillars, zones=zones)
-        return cls(pillars=pillars, zcorn=zcorn, active=actnum)
+        zcorn, actnum, zone_index, zone_names = _build_zcorn_from_zones(pillars=pillars, zones=zones)
+        return cls(pillars=pillars, zcorn=zcorn, active=actnum, zone_index=zone_index, zone_names=zone_names)
     
     def apply_boundary(self, boundary: BoundaryPolygon):
         """Apply boundary polygon mask to active cells.
@@ -264,61 +476,8 @@ class CornerPointGrid:
         
         return corners
 
-    @property
-    def cell_centers(self) -> np.ndarray:
-        """Cell centers (average of 8 corners).
-        
-        Returns:
-            np.ndarray: Shape (nk, nj, ni, 3)
-        """
-        corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
-        cell_centers = np.mean(corners, axis=3)  # Average over 8 corners
-        return cell_centers
-    
-    @property
-    def cell_volumes(self) -> np.ndarray:
-        """Cell volumes computed via hexahedral decomposition.
-        
-        Returns:
-            np.ndarray: Shape (nk, nj, ni)
-        """
-        corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
-        
-        # Decompose each hexahedron into 6 tetrahedra using diagonal 0-7
-        # Tetrahedron volume formula: |det([v1-v0, v2-v0, v3-v0])| / 6
-        # Corner ordering (from _compute_cell_corners):
-        #   0-3: Top face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
-        #   4-7: Bottom face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
-        
-        def tet_volume(v0, v1, v2, v3):
-            """Compute signed volume of tetrahedron with vectorized arrays."""
-            # v1-v0, v2-v0, v3-v0 form the edge vectors
-            # Volume = det([v1-v0, v2-v0, v3-v0]) / 6
-            a = v1 - v0
-            b = v2 - v0
-            c = v3 - v0
-            # Compute determinant using scalar triple product: a · (b × c)
-            cross = np.cross(b, c)
-            det = np.sum(a * cross, axis=-1)
-            return det / 6.0
-        
-        # Extract corners for each tetrahedron
-        c0, c1, c2, c3 = corners[..., 0, :], corners[..., 1, :], corners[..., 2, :], corners[..., 3, :]
-        c4, c5, c6, c7 = corners[..., 4, :], corners[..., 5, :], corners[..., 6, :], corners[..., 7, :]
-        
-        # Decompose into 6 tetrahedra using diagonal 0-7
-        vol = np.zeros(corners.shape[:3])  # Shape (nk, nj, ni)
-        vol += tet_volume(c0, c1, c3, c7)
-        vol += tet_volume(c0, c1, c5, c7)
-        vol += tet_volume(c0, c4, c5, c7)
-        vol += tet_volume(c0, c2, c3, c7)
-        vol += tet_volume(c0, c2, c6, c7)
-        vol += tet_volume(c0, c4, c6, c7)
-        
-        # Take absolute value to handle orientation
-        volumes = np.abs(vol)
-        
-        return volumes
+
+
     # # ----------------------------
     # # Cell geometry
     # # ----------------------------
