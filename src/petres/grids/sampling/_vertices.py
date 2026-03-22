@@ -27,7 +27,7 @@ def _resolve_1d_vertices(
         )
 
     if using_values:
-        arr = _validate_vertex_array(arr, name)
+        arr = _validate_vertex_array(values, name)
         return arr
 
     # bounds mode

@@ -1,10 +1,15 @@
-import numpy as np
+from typing import Optional
+from ....._utils._color import Color
 import pyvista as pv
+import numpy as np
 
 def _add_corner_point_grid(
     backend, 
     grid, 
     show_inactive: bool = False, 
+    color: Optional[Color] = None,
+    scalars: Optional[np.ndarray] = None,   
+    cmap: Optional[str] = None,             
     **kwargs
 ):
     """
@@ -55,9 +60,44 @@ def _add_corner_point_grid(
     # ========================================================================
     mesh = _build_pyvista_mesh_vectorized(cell_corners, n_cells)
     
-    # Add mesh to plotter
-    backend.plotter.add_mesh(mesh, color='tan', show_edges=True)
+
+    # ========================================================================
+    # Attach scalar values (optional)
+    # ========================================================================
+    if color is not None and scalars is not None:
+        raise ValueError("Use either `color` or `scalars`, not both.")
+
+    if scalars is not None:
+        scalars = np.asarray(scalars)
+
+        # Handle active filtering consistency
+        if grid.active is not None and not np.all(grid.active) and not show_inactive:
+            scalars = scalars[grid.active]
+
+        scalars = scalars.reshape(-1)
+
+        if scalars.shape[0] != n_cells:
+            raise ValueError(
+                f"Scalars size {scalars.shape[0]} does not match number of cells {n_cells}"
+            )
+
+        mesh.cell_data["values"] = scalars
     
+        backend.plotter.add_mesh(
+            mesh,
+            scalars="values",
+            cmap=cmap or "viridis",   # default fallback
+            show_edges=True,
+            **kwargs
+        )
+    else:
+        backend.plotter.add_mesh(
+            mesh,
+            color=Color(color).as_rgb() if color is not None else None,
+            show_edges=True,
+            **kwargs
+        )
+
     return mesh
 
 

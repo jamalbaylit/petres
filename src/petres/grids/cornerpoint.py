@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, Self, Tuple, Sequence
+from typing import Any, Optional, Dict, Self, Tuple, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 import numpy as np
@@ -55,7 +55,7 @@ class CornerPointGrid:
     zone_index: Optional[np.ndarray] = None        # shape (nk, nj, ni), int
     zone_names: Dict[int, str] = field(default_factory=dict)
     
-    _properties: dict[str, GridProperty] = field(default_factory=dict, repr=False)
+    _properties: Dict[str, GridProperty] = field(default_factory=dict, repr=False)
     
     def __post_init__(self):
         """Validate dimensions."""
@@ -84,18 +84,49 @@ class CornerPointGrid:
                 )
         
         # Validate properties
-        for name, values in self._properties.items():
-            if values.shape != expected_cell_shape:
+        for name, prop in self._properties.items():
+            if not isinstance(prop, GridProperty):
+                raise TypeError(
+                    f"Property '{name}' must be a GridProperty, got {type(prop)}."
+                )
+            if prop.values.shape != expected_cell_shape:
                 raise ValueError(
-                    f"Property '{name}' shape {values.shape} != expected {expected_cell_shape}"
+                    f"Property '{name}' shape {prop.values.shape} != expected {expected_cell_shape}"
+                )
+            if prop.grid is not self:
+                raise ValueError(
+                    f"Property '{name}' belongs to a different grid instance."
                 )
             
-        # self.set_zones(zone_index=self.zone_index, zone_names=self.zone_names)
+        self.set_zones(zone_index=self.zone_index, zone_names=self.zone_names)
     
+    def _zone_mask(self, zone: str | Zone) -> np.ndarray:
+        if self.zone_index is None:
+            raise ValueError("Grid has no zones defined.")
+        zone_name = self._normalize_zone_name(zone)
+        zone_id = self._get_zone_id_from_name(zone_name)
+        return self.zone_index == zone_id
+
+
+    @staticmethod
+    def _normalize_zone_name(zone: str | Zone) -> str:
+        if isinstance(zone, Zone):
+            return zone.name
+
+        if not isinstance(zone, str):
+            raise TypeError("`zone` must be str, or `Zone` instance.")
+
+        return zone
+    
+    def _get_zone_id_from_name(self, name: str) -> int:
+        if name not in self._zone_name_to_id:
+            raise ValueError(f"Zone name '{name}' not found in grid zones.")
+        return self._zone_name_to_id[name]
+
     def set_zones(
         self,
-        zone_index: np.ndarray,
-        zone_names: dict[int, str] | None = None,
+        zone_index: np.ndarray | None,
+        zone_names: dict[int, str] | None,
     ) -> None:
         """
         Assign zone membership to the grid.
@@ -117,67 +148,84 @@ class CornerPointGrid:
             If shapes mismatch, invalid ids are present, or names are inconsistent.
         """
 
+        
         # ----------------------------
         # 1. Validate zone_index
         # ----------------------------
         if zone_index is None:
-            raise ValueError("`zone_index` cannot be None.")
-
-        arr = np.asarray(zone_index, dtype=np.int32)
-
-        if arr.shape != self.shape:
-            raise ValueError(
-                f"`zone_index` shape {arr.shape} != expected {self.shape}"
-            )
-
-        if np.any(arr < 0):
-            raise ValueError("`zone_index` cannot contain negative values.")
-
-        # Extract used zone IDs (exclude 0 = gap)
-        unique_ids = np.unique(arr)
-        unique_ids = unique_ids[unique_ids != 0]
-
-        # ----------------------------
-        # 2. Handle zone_names
-        # ----------------------------
-        if zone_names is None:
-            # Auto-generate names
-            zone_names = {int(i): f"Zone {int(i)}" for i in unique_ids}
+            if not zone_names:
+                zone_names = {}
+            else:
+                raise ValueError("`zone_names` provided without `zone_index`.")
         else:
-            # Ensure dict[int, str]
-            if not isinstance(zone_names, dict):
-                raise ValueError("`zone_names` must be a dict[int, str].")
-
-            # Convert keys to int
-            zone_names = {int(k): str(v) for k, v in zone_names.items()}
-
-            # ---- 2a. Check duplicate names ----
-            names = list(zone_names.values())
-            if len(names) != len(set(names)):
-                duplicates = {n for n in names if names.count(n) > 1}
-                raise ValueError(f"Duplicate zone names detected: {duplicates}")
-
-            # ---- 2b. Check all used IDs have names ----
-            missing = set(unique_ids) - set(zone_names.keys())
-            if missing:
+            try:
+                zone_index = np.asarray(zone_index, dtype=np.int32)
+            except Exception as e:
+                raise TypeError(f"Failed to convert `zone_index` to numpy array: {e}") from e
+            
+            if zone_index.shape != self.shape:
                 raise ValueError(
-                    f"`zone_names` missing definitions for zone ids: {sorted(missing)}"
+                    f"`zone_index` shape {zone_index.shape} != expected {self.shape}"
                 )
 
-            # ---- 2c. Optional: warn about unused names ----
-            unused = set(zone_names.keys()) - set(unique_ids)
-            if unused:
-                warnings.warn(
-                    f"Unused zone ids in `zone_names`: {sorted(unused)}",
-                    UserWarning,
-                )
+            if np.any(zone_index < 0):
+                raise ValueError("`zone_index` cannot contain negative values.")
+
+
+            # Extract used zone IDs (exclude 0 = gap)
+            unique_ids = np.unique(zone_index)
+            unique_ids = unique_ids[unique_ids != 0]
+
+
+            # ----------------------------
+            # 2. Handle zone_names
+            # ----------------------------
+            if not zone_names:
+                zone_names = {int(i): f"Zone {int(i)}" for i in unique_ids}
+
+            else:
+                # Ensure dict[int, str]
+                if not isinstance(zone_names, dict):
+                    raise ValueError("`zone_names` must be a dict[int, str].")
+
+                if 0 in zone_names:
+                    raise ValueError("Zone ID 0 is reserved for gaps and cannot be named.")
+                
+                # Convert keys to int
+                zone_names = {int(k): str(v) for k, v in zone_names.items()}
+
+                # ---- 2a. Check duplicate names ----
+                names = list(zone_names.values())
+                if len(names) != len(set(names)):
+                    duplicates = {n for n in names if names.count(n) > 1}
+                    raise ValueError(f"Duplicate zone names detected: {duplicates}")
+
+                # ---- 2b. Check all used IDs have names except 0 (gap) ----
+                missing = set(unique_ids) - set(zone_names.keys())
+                missing.discard(0)  # Allow 0 (gap) to be unnamed
+
+                if missing:
+                    raise ValueError(
+                        f"`zone_names` missing definitions for zone ids: {sorted(missing)}"
+                    )
+
+                # ---- 2c. Optional: warn about unused names ----
+                unused = set(zone_names.keys()) - set(unique_ids)
+                unused.discard(0)  # Allow 0 (gap) to be unused
+
+                if unused:
+                    warnings.warn(
+                        f"Unused zone ids in `zone_names`: {sorted(unused)}",
+                        UserWarning,
+                    )
 
         # ----------------------------
         # 3. Assign
         # ----------------------------
-        self.zone_index = arr
+        self.zone_index = zone_index
         self.zone_names = zone_names
-        
+        self._zone_name_to_id = {v: k for k, v in zone_names.items()}
+
 
     # ----------------------------
     # Dimensions
@@ -299,10 +347,10 @@ class CornerPointGrid:
         writer = GRDECLWriter()
         writer.write(path=path, coord=coord, zcorn=zcorn, actnum=actnum)
 
-    def show(self, show_inactive: bool = False):
+    def show(self, show_inactive: bool = False, color: Any = 'tan', **kwargs) -> None:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
-        viewer.add_grid(grid=self, show_inactive=show_inactive)
+        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, **kwargs)
         viewer.show()
     
     @classmethod

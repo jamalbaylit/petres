@@ -12,10 +12,15 @@ grid = CornerPointGrid.from_regular(
 )
 
 # Assign constant porosity to whole grid
-grid.properties.add_constant("poro", 0.20, eclipse_keyword="PORO")
+porosity = grid.properties.create(
+    "poro",
+    eclipse_keyword="PORO",
+    description="Porosity"
+)
 
+porosity.add_constant(0.20)
+porosity.show(show_inactive=False)
 # Access
-porosity = grid.properties["poro"]
 
 print("Min Value:", porosity.min)
 print("Max Value:", porosity.max)
