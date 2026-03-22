@@ -1,7 +1,7 @@
 # backend.py
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import Any, Self, Optional
 import pyvista as pv
 import numpy as np
 import warnings
@@ -81,14 +81,17 @@ class PyVista3DViewer(Base3DViewer):
         self, 
         grid: CornerPointGrid, 
         *,
-        show_inactive: bool = False, 
+        show_inactive: bool = False,
+        color: Any = None,
+        scalars: Optional[np.ndarray] = None,
+        cmap: Optional[str] = None,
         **kwargs
     ) -> Self:
         """Add a grid to the current 3D scene (rectilinear, corner-point, etc.)."""
 
         match grid:
             case CornerPointGrid():
-                self._add_corner_point_grid(grid, show_inactive=show_inactive, **kwargs)
+                self._add_corner_point_grid(grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color,**kwargs)
             case _:
                 raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
         return self
@@ -132,9 +135,9 @@ class PyVista3DViewer(Base3DViewer):
         p.reset_camera_clipping_range()
 
 
-    def _add_corner_point_grid(self, grid, show_inactive: bool = False, **kwargs) -> None:
-        return _add_corner_point_grid(self, grid, show_inactive=show_inactive, **kwargs)
-    
+    def _add_corner_point_grid(self, grid, show_inactive: bool = False, scalars: Optional[np.ndarray] = None, cmap: Optional[str] = None, color: Optional[Color] = None, **kwargs) -> None:
+        return _add_corner_point_grid(self, grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color, **kwargs)
+
     def add_zones(
         self,
         zones: list[Zone],

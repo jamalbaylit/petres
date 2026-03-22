@@ -3,26 +3,36 @@ from dataclasses import dataclass, field
 from typing import Optional, Tuple, Dict, Union
 import numpy as np
 
-from petres.models.zone import Zone
-
+from ..models.zone import Zone
 
 @dataclass
 class GridProperty:
     """
     Cell-based property defined on a grid with shape (nk, nj, ni).
     """
-    values: np.ndarray
+    grid: "CornerPointGrid"= field(repr=False)
+    values: Optional[np.ndarray] = None 
     name: Optional[str] = None
     eclipse_keyword: Optional[str] = None                 # Eclipse keyword (PORO, PERMX, ...)
     description: Optional[str] = None
 
     def __post_init__(self):
-        assert isinstance(self.values, np.ndarray), f"values must be a numpy array, got {type(self.values)}"
-        assert self.values.ndim == 3, f"Values must be 3D, got shape {self.values.shape}"
-        # make sure keyword has zero space or tab etc.
-        if self.eclipse_keyword is not None:
-            assert self.eclipse_keyword.strip() == self.eclipse_keyword, f"`eclipse_keyword` must not have leading/trailing whitespace, got '{self.eclipse_keyword}'"
-            self.eclipse_keyword = self.eclipse_keyword.upper()
+        if not isinstance(self.name, str):
+            raise TypeError(f"`name` must be str, got {type(self.name)}.")
+        
+        self.name = self.name.strip()
+        if not self.name:
+            raise ValueError("`name` cannot be empty.")
+
+        if self.values is None:
+            self.values = np.full(self.grid.shape, np.nan, dtype=float)
+        else:
+            self.values = np.asarray(self.values)
+
+            if self.values.shape != self.grid.shape:
+                raise ValueError(
+                    f"`values` must match grid shape {self.grid.shape}, got {self.values.shape}."
+                )
 
         if self.eclipse_keyword is not None:
             if not isinstance(self.eclipse_keyword, str):
@@ -38,6 +48,11 @@ class GridProperty:
             if not self.name.strip():
                 raise ValueError("`name` cannot be empty.")
 
+    def show(self, show_inactive: bool = False, cmap: Optional[str] = 'turbo', **kwargs) -> None:
+        from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
+        viewer = PyVista3DViewer()
+        viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
+        viewer.show()
                           
     @property
     def shape(self) -> Tuple[int, int, int]:
@@ -71,120 +86,117 @@ class GridProperty:
     def std(self) -> float: return np.nanstd(self.values)
 
 
-# --------------------------------------------------
-# GridProperties (manager / API)
-# --------------------------------------------------
-
-class GridProperties:
-    def __init__(self, grid: "CornerPointGrid") -> None:
-        self._grid = grid
-
-    # ---------- Public API ----------
+    # ----------------------------
+    # Assignment API
+    # ----------------------------
 
     def add_constant(
         self,
-        name: str,
         value: float | int,
-        zone: Union[str, "Zone", None] = None,
         *,
-        eclipse_keyword: Optional[str] = None,
-        description: Optional[str] = None,
+        zone: str | Zone | None = None,
     ) -> GridProperty:
-        zone_name = self._normalize_zone(zone)
-        mask = self._zone_mask(zone_name)
-
-        prop = self._ensure_property(name, eclipse_keyword, description)
-
-        prop.values[mask] = value
-        return prop
+        if zone is not None:
+            mask = self.grid._zone_mask(zone)
+            self.values[mask] = value
+        else:
+            self.values.fill(value)
+        return self
 
     def add_array(
         self,
-        name: str,
         values: np.ndarray,
-        zone: Union[str, "Zone", None] = None,
-        *,
-        eclipse_keyword: Optional[str] = None,
-        description: Optional[str] = None,
+        zone: str | Zone | None = None,
     ) -> GridProperty:
         values = np.asarray(values)
 
-        if values.shape != self._grid.shape:
+        if values.shape != self.grid.shape:
             raise ValueError(
-                f"`values` shape {values.shape} != grid shape {self._grid.shape}"
+                f"`values` shape {values.shape} != grid shape {self.grid.shape}."
             )
 
-        zone_name = self._normalize_zone(zone)
-        mask = self._zone_mask(zone_name)
+        if zone is not None:
+            mask = self.grid._zone_mask(zone)
+            self.values[mask] = values[mask]
+        else:
+            self.values = values
+        return self
 
-        prop = self._ensure_property(name, eclipse_keyword, description)
 
-        prop.values[mask] = values[mask]
+    
+# ============================================================
+# GridProperties
+# ============================================================
+
+class GridProperties:
+    """
+    Collection-style API for grid properties.
+
+    Examples
+    --------
+    poro = grid.properties.create("poro", eclipse_keyword="PORO")
+    poro.add_constant(0.25, zone="Upper")
+    poro.add_constant(0.18, zone="Middle")
+
+    permx = grid.properties.create("permx", eclipse_keyword="PERMX")
+    permx.add_array(permx_values)
+
+    poro2 = grid.properties["poro"]
+    print(poro2.mean)
+    """
+
+    def __init__(self, grid: "CornerPointGrid") -> None:
+        self._grid = grid
+
+    def create(
+        self,
+        name: str,
+        eclipse_keyword: Optional[str] = None,
+        description: Optional[str] = None,
+        fill_value: float = np.nan,
+    ) -> GridProperty:
+        name = self._normalize_name(name)
+
+        if name in self._grid._properties:
+            raise ValueError(f"Property '{name}' already exists.")
+
+        values = np.full(self._grid.shape, fill_value, dtype=float)
+
+        prop = GridProperty(
+            grid=self._grid,
+            name=name,
+            values=values,
+            eclipse_keyword=eclipse_keyword,
+            description=description,
+        )
+        self._grid._properties[name] = prop
         return prop
 
     def __getitem__(self, name: str) -> GridProperty:
         try:
             return self._grid._properties[name]
-        except KeyError:
-            raise KeyError(f"Property '{name}' does not exist.")
+        except KeyError as e:
+            raise KeyError(f"Property '{name}' does not exist.") from e
+
+    def __contains__(self, name: str) -> bool:
+        return name in self._grid._properties
 
     def names(self) -> list[str]:
         return list(self._grid._properties.keys())
 
-    # ---------- Internal helpers ----------
+    def items(self):
+        return self._grid._properties.items()
 
-    def _ensure_property(
-        self,
-        name: str,
-        eclipse_keyword: Optional[str],
-        description: Optional[str],
-    ) -> GridProperty:
-        if name not in self._grid._properties:
-            values = np.full(self._grid.shape, np.nan, dtype=float)
-            self._grid._properties[name] = GridProperty(
-                values=values,
-                name=name,
-                eclipse_keyword=eclipse_keyword,
-                description=description,
-            )
-        return self._grid._properties[name]
+    def values(self):
+        return self._grid._properties.values()
 
-    def _normalize_zone(self, zone) -> Optional[str]:
-        if zone is None:
-            return None
-
-        # Lazy import style (avoid circular dependency)
-        if hasattr(zone, "name"):
-            zone = zone.name
-
-        if not isinstance(zone, str):
-            raise TypeError("`zone` must be str, Zone, or None")
-
-        zone = zone.strip()
-        if not zone:
-            raise ValueError("`zone` cannot be empty")
-
-        return zone
-
-    def _zone_mask(self, zone_name: Optional[str]) -> np.ndarray:
-        grid = self._grid
-
-        # Start from active cells
-        mask = grid.active.copy()
-
-        if zone_name is None:
-            return mask
-
-        if grid.zone_index is None:
-            raise ValueError("Grid has no zones defined")
-
-        zone_id = self._zone_name_to_id(zone_name)
-        return mask & (grid.zone_index == zone_id)
-
-    def _zone_name_to_id(self, zone_name: str) -> int:
-        for zid, name in self._grid.zone_names.items():
-            if name == zone_name:
-                return zid
-        raise ValueError(f"Zone '{zone_name}' not found")
+    @staticmethod
+    def _normalize_name(name: str) -> str:
+        if not isinstance(name, str):
+            raise TypeError(f"`name` must be str, got {type(name)}.")
+        name = name.strip()
+        if not name:
+            raise ValueError("`name` cannot be empty.")
+        return name
 
 
