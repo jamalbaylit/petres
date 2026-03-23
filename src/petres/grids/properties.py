@@ -1,8 +1,13 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Any, Callable, Callable, Optional, Sequence, Tuple, Dict, Union
-import numpy as np
 
+from typing import Any, Callable, Callable, Literal, Optional, Sequence, Tuple, Dict, Union
+from dataclasses import dataclass, field
+import numpy as np
+import warnings
+
+from .._validation import _validate_nonempty_string
+from ..interpolators.base import BaseInterpolator
+from ..models.wells import VerticalWell
 from ..models.zone import Zone
 
 @dataclass
@@ -480,6 +485,182 @@ class GridProperty:
         return self
 
 
+    # ----------------------------
+    # Well-based assignment
+    # ---------------------------- 
+    
+    def from_wells(
+        self,
+        wells: Sequence["VerticalWell"],
+        interpolator,
+        *,
+        source: str | None = None,
+        mode: Literal["xy", "xyz"] = "xy",
+        zone: str | Zone | None = None,
+        location: Literal["center", "top", "bottom"] = "center",
+        include_inactive: bool = False,
+    ) -> "GridProperty":
+        """
+        Populate this property by interpolating well samples.
+
+        Parameters
+        ----------
+        wells : sequence of VerticalWell
+            Wells containing property samples.
+        interpolator :
+            Interpolator instance with `fit(points, values)` and `predict(query)` methods.
+        source : str | None, optional
+            Sample property name to read from wells. Defaults to `self.name`.
+        location : {"center", "top", "bottom"}, default "center"
+            Grid cell location used as interpolation target.
+        zone : str | Zone | None, optional
+            Restrict assignment to a zone.
+        include_inactive : bool, default False
+            If False, only active cells are assigned.
+        mode : {"xy", "xyz"}, default "xy"
+            If "xyz", every sample must have depth values.
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+        """
+        source = self.name if source is None else source
+        _validate_nonempty_string(source, "source")
+
+        
+        if mode not in ("xy", "xyz"):
+            raise ValueError(f"Unsupported mode {mode!r}. Supported: 'xy', 'xyz'.")
+
+        if not isinstance(interpolator, BaseInterpolator):
+            raise TypeError("`interpolator` must be an instance of BaseInterpolator.")
+         
+        if not wells:
+            raise ValueError("`wells` cannot be empty.")
+        
+        if not all(isinstance(well, VerticalWell) for well in wells):
+            raise TypeError("All items in `wells` must be instances of VerticalWell.")
+        
+            
+
+        coords, values = self._collect_well_samples(
+            wells=wells,
+            source=source,
+            mode=mode,
+        )
+
+        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        n_target = int(np.count_nonzero(mask))
+        if n_target == 0:
+            warnings.warn(
+                "No target cells found for interpolation; no changes made to property values.",
+                UserWarning,
+            )
+            return self
+
+        targets = self._interpolation_targets(location=location)
+
+        if mode == "xy":
+            query = targets[..., :2][mask]
+        elif mode == "xyz":
+            query = targets[mask]
+        else:
+            raise RuntimeError(f"Unexpected interpolation mode: {mode!r}")
+
+        interpolator.fit(coords, values)
+        predicted = np.asarray(interpolator.predict(query), dtype=float)
+
+        if predicted.shape != (n_target,):
+            raise ValueError(
+                f"Interpolator returned shape {predicted.shape}; "
+                f"expected ({n_target},)."
+            )
+
+        self.values[mask] = predicted
+        return self
+
+    def _collect_well_samples(
+        self,
+        wells: Sequence["VerticalWell"],
+        source: str,
+        mode: Literal["xy", "xyz"],
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Collect well samples into interpolation coordinate/value arrays.
+
+        Returns
+        -------
+        coords : ndarray
+            Shape (n, 2) for XY mode or (n, 3) for XYZ mode.
+        values : ndarray
+            Shape (n,).
+        """
+        coords_list: list[list[float]] = []
+        values_list: list[float] = []
+
+        require_z = mode == "xyz"
+
+        for well in wells:
+            depth_map = well.samples.get(source)
+            existing_mode = well._sample_modes.get(source)
+
+            if not depth_map:
+                continue
+
+            if require_z and existing_mode != "depth":
+                raise ValueError(
+                    f"Well '{well.name}' has sample '{source}' without depth values, "
+                    "try `mode='xyz'`."
+                )
+            
+            for z, value in depth_map.items():
+                if mode == "xy":
+                    coords_list.append([well.x, well.y])
+                else:
+                    coords_list.append([well.x, well.y, z])
+
+                values_list.append(value)
+
+        if not coords_list:
+            raise ValueError(f"No samples found for source '{source}' in given wells.")
+
+        coords = np.asarray(coords_list, dtype=float)
+        values = np.asarray(values_list, dtype=float)
+
+        has_duplicates = np.unique(coords, axis=0).shape[0] != coords.shape[0]
+        if has_duplicates:
+            raise ValueError("Duplicate sample locations detected. Please ensure each sample has a unique (x, y) for mode 'xy' or (x, y, z) coordinate for mode 'xyz'.")
+      
+        return coords, values
+
+    def _interpolation_targets(
+        self,
+        location: Literal["center", "top", "bottom"] = "center",
+    ) -> np.ndarray:
+        """
+        Return interpolation target coordinates of shape (nk, nj, ni, 3).
+        """
+        match location:
+            case "center":
+                return self.grid.cell_centers
+
+            case "top" | "bottom":
+                corners = self.grid._compute_cell_corners()   # (nk, nj, ni, 8, 3)
+                xy = np.mean(corners[..., :, :2], axis=-2)   # (nk, nj, ni, 2)
+
+                zcorn = corners[..., 2]                      # (nk, nj, ni, 8)
+                z_top = np.min(zcorn[..., :4], axis=-1)
+                z_bottom = np.max(zcorn[..., 4:], axis=-1)
+                z = z_top if location == "top" else z_bottom
+
+                return np.concatenate([xy, z[..., np.newaxis]], axis=-1)
+
+            case _:
+                raise ValueError(
+                    f"Unsupported location {location!r}. "
+                    "Supported values are: 'center', 'top', 'bottom'."
+                )
+            
     
 # ============================================================
 # GridProperties
