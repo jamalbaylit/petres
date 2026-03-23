@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Optional, Tuple, Dict, Union
+from typing import Any, Callable, Callable, Optional, Sequence, Tuple, Dict, Union
 import numpy as np
 
 from ..models.zone import Zone
@@ -89,6 +89,363 @@ class GridProperty:
     # ----------------------------
     # Assignment API
     # ----------------------------
+    def add_normal(
+        self,
+        mean: float,
+        std: float,
+        *,
+        zone: str | Zone | None = None,
+        include_inactive: bool = False,
+        min: float | None = None,
+        max: float | None = None,
+        seed: int | None = None,
+    ):
+        """
+        Add normally distributed random noise to this property.
+
+        Parameters
+        ----------
+        mean : float
+            Mean of the normal distribution.
+        std : float
+            Standard deviation of the normal distribution.
+        min : float, optional
+            Minimum value after adding noise (clipping).
+        max : float, optional
+            Maximum value after adding noise (clipping).
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+        """
+        if std < 0:
+            raise ValueError(f"`std` must be >= 0, got {std}.")
+
+        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        n = int(np.count_nonzero(mask))
+
+        rng = np.random.default_rng(seed)
+        values = rng.normal(mean, std, size=n)
+
+        if min is not None:
+            values = np.maximum(values, min)
+        if max is not None:
+            values = np.minimum(values, max)
+
+        self.values[mask] = values
+        return self
+
+    def apply(
+        self,
+        func: Callable[..., Any],
+        *,
+        source: str | "GridProperty" | Sequence[str | "GridProperty"] = "z_center",
+        zone: Optional[str | Zone] = None,
+        include_inactive: bool = False,
+    ) -> "GridProperty":
+        """
+        Apply a function to geometric sources and/or existing properties,
+        then assign the result into this property.
+
+        Parameters
+        ----------
+        func : callable
+            Function applied to the resolved source arrays.
+        source : str | GridProperty | sequence of these, default "z_center"
+            Input source(s) for the function.
+
+            Supported built-in string sources:
+            - "x"         : cell-center x coordinate
+            - "y"         : cell-center y coordinate
+            - "z"         : cell-center z coordinate
+            - "top"       : top z of cell
+            - "bottom"    : bottom z of cell
+            - "thickness" : cell thickness
+
+            You may also pass another GridProperty, or a tuple/list mixing them.
+
+        zone : str | Zone | None, optional
+            Restrict assignment to a zone.
+        include_inactive : bool, default False
+            If False, only active cells are assigned.
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+
+        Examples
+        --------
+        poro.apply(lambda z: 0.32 - 0.00015 * z, source="z_center")
+
+        perm.apply(lambda p: 1000 * p**3, source=poro)
+
+        perm.apply(
+            lambda z, p: (1000 * p**3) * np.exp(-z / 3000.0),
+            source=("z_center", poro),
+        )
+        """
+        if not callable(func):
+            raise TypeError("`func` must be callable (e.g. a function or lambda).")
+
+        if isinstance(source, (str, GridProperty)):
+            sources = (source,)
+        elif isinstance(source, Sequence):
+            if len(source) == 0:
+                raise ValueError("`source` cannot be empty.")
+            sources = tuple(source)
+        else:
+            raise TypeError(
+                "`source` must be str, GridProperty, or a sequence of them."
+            )
+
+        resolved = [self._resolve_source(src) for src in sources]
+        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+
+        # Validate resolved source shapes
+        for arr in resolved:
+            if arr.shape[:3] != self.grid.shape:
+                raise ValueError(
+                    f"Resolved source has invalid leading shape {arr.shape[:3]}; "
+                    f"expected {self.grid.shape}."
+                )
+
+        # Slice only target cells for efficient evaluation
+        inputs = []
+        for arr in resolved:
+            if arr.ndim == 3:
+                inputs.append(arr[mask])          # (n,)
+            elif arr.ndim == 4:
+                inputs.append(arr[mask, :])       # (n, m)
+            else:
+                raise ValueError(
+                    f"Resolved source must have ndim 3 or 4, got {arr.ndim}."
+                )
+
+        result = func(*inputs)
+        result = np.asarray(result)
+
+        n_target = int(np.count_nonzero(mask))
+
+        # Allow scalar return
+        if result.shape == ():
+            result = np.full(n_target, result, dtype=float)
+
+        # Allow vector return for scalar-like sources
+        elif result.shape == (n_target,):
+            result = result.astype(float, copy=False)
+
+        else:
+            raise ValueError(
+                f"`func` must return either a scalar or shape ({n_target},), "
+                f"got {result.shape}."
+            )
+
+        self.values[mask] = result
+        return self
+
+    def fill(
+        self,
+        value: float | int,
+        *,
+        zone: Optional[str | Zone] = None,
+        include_inactive: bool = False,
+    ) -> GridProperty:
+        """
+        Fill this property with a constant value.
+
+        Parameters
+        ----------
+        value : float or int
+            Value to assign.
+        zone : str | Zone | None, optional
+            Restrict assignment to a zone.
+        include_inactive : bool, default False
+            If False, only active cells are assigned.
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+        """
+        if not isinstance(value, (int, float)):
+            raise TypeError("`value` must be a float or int.")
+
+        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        self.values[mask] = value
+        return self
+    def _target_mask(
+        self,
+        zone: str | Zone | None = None,
+        include_inactive: bool = False,
+    ) -> np.ndarray:
+        """
+        Return boolean mask of target cells.
+        """
+        mask = np.ones(self.grid.shape, dtype=bool)
+
+        if not include_inactive:
+            mask &= np.asarray(self.grid.active, dtype=bool)
+
+        if zone is not None:
+            mask &= self.grid._zone_mask(zone)
+
+        return mask
+    
+    def _resolve_source(
+        self,
+        source: str | "GridProperty",
+    ) -> np.ndarray:
+        """
+        Resolve one source to a full-grid ndarray.
+
+        source can be:
+        - built-in geometry source name
+        - another GridProperty
+        """
+        if isinstance(source, str):
+            return self._geometry_source(source)
+
+        if isinstance(source, GridProperty):
+            if source.grid is not self.grid:
+                raise ValueError(
+                    "Source GridProperty must belong to the same grid."
+                )
+            return source.values
+
+        raise TypeError(
+            "`source` entries must be either str or GridProperty."
+        )
+    
+    def _geometry_source(self, source: str) -> np.ndarray:
+        """
+        Resolve built-in geometric source names to full-grid arrays.
+
+        Supported
+        ---------
+        "x"         : cell-center x coordinate
+        "y"         : cell-center y coordinate
+        "z"         : cell-center z coordinate
+        "top"       : top z of cell
+        "bottom"    : bottom z of cell
+        "thickness" : cell thickness
+        """
+        centers = self.grid.cell_centers  # (nk, nj, ni, 3)
+
+        match source:
+            case "x":
+                return centers[..., 0]
+
+            case "y":
+                return centers[..., 1]
+
+            case "z":
+                return centers[..., 2]
+
+            case "top" | "bottom" | "thickness":
+                corners = self.grid._compute_cell_corners()  # (nk, nj, ni, 8, 3)
+                zcorn = corners[..., 2]                    # (nk, nj, ni, 8)
+
+                z_top = np.min(zcorn[..., :4], axis=-1)
+                z_bottom = np.max(zcorn[..., 4:], axis=-1)
+
+                match source:
+                    case "top":
+                        return z_top
+                    case "bottom":
+                        return z_bottom
+                    case "thickness":
+                        return np.abs(z_bottom - z_top)
+
+            case _:
+                raise ValueError(
+                    f"Unsupported source {source!r}. "
+                    f"Supported built-in sources are: "
+                    f"'x', 'y', 'z', 'top', 'bottom', 'thickness'."
+                )
+            
+    def add_lognormal(
+        self,
+        mean: float,
+        std: float,
+        *,
+        zone: str | Zone | None = None,
+        include_inactive: bool = False,
+        min: float | None = None,
+        max: float | None = None,
+        seed: int | None = None,
+    ) -> "GridProperty":
+        """
+        Fill property by sampling from a lognormal distribution.
+
+        Parameters
+        ----------
+        mean : float
+            Mean in linear space (e.g. permeability mean).
+        std : float
+            Standard deviation in linear space.
+        zone : str | Zone | None, optional
+            Restrict to zone.
+        include_inactive : bool, default False
+            If False, only active cells are assigned.
+        min : float | None
+            Optional lower bound.
+        max : float | None
+            Optional upper bound.
+        seed : int | None
+            Random seed.
+
+        Notes
+        -----
+        Internally converts linear mean/std to log-space parameters.
+        """
+        if mean <= 0:
+            raise ValueError("`mean` must be > 0 for lognormal distribution.")
+        if std < 0:
+            raise ValueError("`std` must be >= 0.")
+
+        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        n = int(np.count_nonzero(mask))
+
+        if n == 0:
+            return self
+
+        # Convert linear → log space
+        variance = std**2
+        sigma_log = np.sqrt(np.log(1 + variance / mean**2))
+        mu_log = np.log(mean) - 0.5 * sigma_log**2
+
+        rng = np.random.default_rng(seed)
+        values = rng.lognormal(mean=mu_log, sigma=sigma_log, size=n)
+
+        # Optional clipping
+        if min is not None:
+            values = np.maximum(values, min)
+        if max is not None:
+            values = np.minimum(values, max)
+
+        self.values[mask] = values
+        return self
+
+    def add_uniform(
+        self,
+        low: float,
+        high: float,
+        *,
+        zone: str | Zone | None = None,
+        include_inactive: bool = False,
+        seed: int | None = None,
+    ) -> "GridProperty":
+        if high < low:
+            raise ValueError(f"`high` must be >= `low`, got {high} < {low}.")
+
+        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        n = int(np.count_nonzero(mask))
+
+        rng = np.random.default_rng(seed)
+        self.values[mask] = rng.uniform(low, high, size=n)
+        return self
 
     def add_constant(
         self,
