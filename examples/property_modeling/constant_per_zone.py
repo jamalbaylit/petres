@@ -34,8 +34,8 @@ porosity = grid.properties.create(
     description="Porosity"
 )
 
-porosity.add_constant(0.20, zone="Caprock")
-porosity.add_constant(0.5, zone="Base")
+porosity.fill(0.20, zone="Caprock")
+porosity.fill(0.5, zone="Base")
 
 porosity.show(show_inactive=False)
 
