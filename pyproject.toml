@@ -17,6 +17,7 @@ dependencies = [
     "matplotlib>=3.10.8",
     "pyvista>=0.47.0",
     "shapely>=2.1.2",
+    "pykrige>=1.7.3",
 ]
 
 [dependency-groups]
