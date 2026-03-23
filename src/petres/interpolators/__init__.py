@@ -24,10 +24,23 @@ Example:
 """
 
 from .spatial.inverse_distance import InverseDistanceWeightingInterpolator
+from .spatial.kriging import OrdinaryKrigingInterpolator, UniversalKrigingInterpolator
+from .spatial.radial_basis import RadialBasisFunctionInterpolator
 
 # Convenient aliases for public API
 IDWInterpolator = InverseDistanceWeightingInterpolator
-
+RBFInterpolator = RadialBasisFunctionInterpolator
+OKInterpolator = OrdinaryKrigingInterpolator
+UKInterpolator = UniversalKrigingInterpolator
 __all__ = [
     'IDWInterpolator',
+    'RBFInterpolator',
+    'OKInterpolator',
+    'UKInterpolator',
+
+    'InverseDistanceWeightingInterpolator',
+    'RadialBasisFunctionInterpolator',
+    'OrdinaryKrigingInterpolator',
+    'UniversalKrigingInterpolator',
+
 ]
