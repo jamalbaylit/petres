@@ -89,7 +89,7 @@ class GridProperty:
     # ----------------------------
     # Assignment API
     # ----------------------------
-    def add_normal(
+    def fill_normal(
         self,
         mean: float,
         std: float,
@@ -365,7 +365,7 @@ class GridProperty:
                     f"'x', 'y', 'z', 'top', 'bottom', 'thickness'."
                 )
             
-    def add_lognormal(
+    def fill_lognormal(
         self,
         mean: float,
         std: float,
@@ -428,7 +428,7 @@ class GridProperty:
         self.values[mask] = values
         return self
 
-    def add_uniform(
+    def fill_uniform(
         self,
         low: float,
         high: float,
@@ -447,7 +447,7 @@ class GridProperty:
         self.values[mask] = rng.uniform(low, high, size=n)
         return self
 
-    def add_constant(
+    def fill(
         self,
         value: float | int,
         *,
@@ -460,7 +460,7 @@ class GridProperty:
             self.values.fill(value)
         return self
 
-    def add_array(
+    def from_array(
         self,
         values: np.ndarray,
         zone: str | Zone | None = None,
@@ -492,11 +492,11 @@ class GridProperties:
     Examples
     --------
     poro = grid.properties.create("poro", eclipse_keyword="PORO")
-    poro.add_constant(0.25, zone="Upper")
-    poro.add_constant(0.18, zone="Middle")
+    poro.fill(0.25, zone="Upper")
+    poro.fill(0.18, zone="Middle")
 
     permx = grid.properties.create("permx", eclipse_keyword="PERMX")
-    permx.add_array(permx_values)
+    permx.from_array(permx_values)
 
     poro2 = grid.properties["poro"]
     print(poro2.mean)

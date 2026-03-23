@@ -18,7 +18,7 @@ porosity = grid.properties.create(
     description="Porosity"
 )
 
-porosity.add_constant(0.20)
+porosity.fill(0.20)
 porosity.show(show_inactive=False)
 
 
@@ -28,11 +28,5 @@ permeability = grid.properties.create(
     eclipse_keyword="PERM",
     description="Permeability"
 )
-permeability.apply(lambda poro: 100 * poro**3, source=porosity)
+permeability.apply(lambda poro: 100 * poro**3, source="top")
 permeability.show(show_inactive=False)
-
-
-
-
-porosity.add_normal(mean=0.24, std=0.03, min=0.0, max=0.35)
-porosity.show(show_inactive=False)

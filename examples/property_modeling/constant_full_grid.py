@@ -18,7 +18,7 @@ porosity = grid.properties.create(
     description="Porosity"
 )
 
-porosity.add_constant(0.20)
+porosity.fill(0.20)
 porosity.show(show_inactive=False)
 # Access
 
