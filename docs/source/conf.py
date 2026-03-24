@@ -59,6 +59,10 @@ exclude_patterns = [
 ]
 
 root_doc = "index"
+numfig = True
+numfig_format = {
+    "figure": "Figure %s",
+}
 
 # Configure package name for API generator
 api_package_name = "petres"

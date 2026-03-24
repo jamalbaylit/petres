@@ -15,6 +15,15 @@ Structured vs Unstructured Grids
 The most fundamental classification is based on grid connectivity—how
 cells are indexed and how neighbor relationships are defined.
 
+.. _fig-structured-vs-unstructured:
+
+.. figure:: ../_static/fundamentals/structured-vs-unstructured.svg
+   :align: center
+   :width: 75%
+   :class: adaptive-theme-svg
+
+   Structured vs unstructured grid comparison.
+
 In a **structured grid**, cells are arranged in a regular
 three-dimensional layout. Each cell is uniquely identified by a triplet
 of indices ``(i, j, k)``, which directly encode its spatial position.
@@ -25,6 +34,10 @@ be stored explicitly.
 This regular topology enables efficient memory usage and fast traversal
 of grid cells, making structured grids particularly well suited for
 finite-difference formulations commonly used in reservoir simulation.
+
+As shown in :numref:`fig-structured-vs-unstructured`, structured grids
+rely on index-based neighborhood relationships, while unstructured grids
+store connectivity explicitly.
 
 In contrast, an **unstructured grid** does not follow a regular indexing
 scheme. Cells are identified by unique IDs, and connectivity must be
@@ -54,6 +67,8 @@ higher resolution is required to capture critical flow behavior.
 Non-uniform grids therefore provide greater modeling flexibility while
 maintaining compatibility with structured grid frameworks.
 
+.. _fig-uniform-vs-nonuniform:
+
 .. figure:: ../_static/fundamentals/uniform-vs-nonuniform.svg
    :align: center
    :width: 75%
@@ -61,23 +76,31 @@ maintaining compatibility with structured grid frameworks.
 
    Uniform vs non-uniform grid spacing comparison.
 
+As illustrated in :numref:`fig-uniform-vs-nonuniform`, non-uniform
+spacing concentrates resolution where physics or geometry require it.
+
 Conforming vs Non-Conforming Grids
 ----------------------------------
 
 Grid conformity describes how cell faces align between neighboring cells
 and plays an important role in numerical consistency.
 
+.. _fig-conforming-vs-nonconforming:
+
 .. figure:: ../_static/fundamentals/conforming-vs-nonconforming.svg
    :align: center
    :width: 70%
    :class: adaptive-theme-svg
 
-   Non-conforming grid example showing mismatched face connectivity between adjacent cells.
+   Conforming vs non-conforming grid comparison showing mismatched face connectivity between adjacent cells.
+
+See :numref:`fig-conforming-vs-nonconforming` for a visual comparison of
+aligned versus mismatched face connectivity across neighboring cells.
 
 In a **conforming grid**, each cell face matches exactly one neighboring
 face. The geometric alignment between cells is consistent across the
 grid, which simplifies flux calculations and supports efficient numerical
-schemes. Typical examples include: **Cartesian**, **Rectilinear**, and **Corner-Point** grids.
+schemes. Typical examples include: **cartesian**, **rectilinear**, and **corner-point** grids.
 
 In a **non-conforming grid**, a single cell face may connect to multiple
 neighboring faces, resulting in partial or mismatched alignment. This
