@@ -1,6 +1,6 @@
 <div align="center">
 
-![Banner](./assets/banner.svg)
+![Banner](./assets/banner-high.png)
 
 
 
