@@ -1,0 +1,46 @@
+{% extends "!page.html" %}
+
+{% block footer %}
+{% set footer_copyright = "Copyright © " ~ (copyright | default("", true)) %}
+{{ super() }}
+<div id="page-loader" aria-hidden="true">
+  <div class="loader-spinner" role="status" aria-label="Loading"></div>
+</div>
+<script id="footer-copyright" type="application/json">{{ footer_copyright | tojson }}</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const leftDetails = document.querySelector(".bottom-of-page .left-details");
+    if (!leftDetails) {
+      return;
+    }
+
+    const copyrightScript = document.getElementById("footer-copyright");
+    const copyrightText = copyrightScript ? JSON.parse(copyrightScript.textContent) : "";
+    leftDetails.innerHTML = "";
+
+    const copyright = document.createElement("div");
+    copyright.className = "copyright";
+    copyright.textContent = copyrightText;
+    leftDetails.appendChild(copyright);
+
+    const pageLoader = document.getElementById("page-loader");
+    if (!pageLoader) {
+      return;
+    }
+
+    const hideLoader = function () {
+      pageLoader.classList.add("is-hidden");
+      window.setTimeout(function () {
+        pageLoader.remove();
+      }, 320);
+    };
+
+    if (document.readyState === "complete") {
+      hideLoader();
+    } else {
+      window.addEventListener("load", hideLoader, { once: true });
+      window.addEventListener("pageshow", hideLoader, { once: true });
+    }
+  });
+</script>
+{% endblock footer %}

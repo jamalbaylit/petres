@@ -1,44 +1,39 @@
-.. petres documentation master file
+Petres Documentation
+====================
 
-petres Documentation
-======================
+Petres is an open-source Python reservoir modeling library focused on
+geological surfaces, zones, corner-point grids, property modeling,
+visualization, and simulator-oriented workflows.
 
-**petres** is a Python library for petroleum and reservoir modeling.
+The documentation is organized to guide you from first steps to advanced usage:
+
+- **Getting Started** – install Petres and run your first example
+- **Fundamentals** – understand reservoir grids and core concepts
+- **Tutorials** – step-by-step workflows
+- **Examples** – practical use cases
+- **API Reference** – detailed class and function documentation
+
+
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents
+   :caption: Getting Started
 
-   api/index
-
-Getting Started
----------------
-
-Install the package using pip:
-
-.. code-block:: bash
-
-   pip install petres
-
-Quick Example
--------------
-
-.. code-block:: python
-
-   from petres.grids import Rectilinear2DGrid
-   import numpy as np
-
-   # Create a simple grid
-   x = np.linspace(0, 100, 11)
-   y = np.linspace(0, 50, 6)
-   active = np.ones((5, 10), dtype=bool)
+   getting_started/installation
+   getting_started/quickstart
    
-   grid = Rectilinear2DGrid(x, y, active)
-   print(f"Grid shape: {grid.cell_shape}")
 
-Indices and tables
-==================
+.. toctree::
+   :maxdepth: 2
+   :caption: Fundamentals
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   fundamentals/grid_classification
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: User Guide
+
+   tutorials
+   examples
+   api/index
