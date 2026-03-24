@@ -55,3 +55,9 @@ body[data-theme="dark"] .adaptive-theme-svg img {
         filter: invert(1) hue-rotate(180deg);
     }
 }
+
+a.adaptive-theme-svg + figcaption,
+a.adaptive-theme-svg + figcaption .caption-number,
+a.adaptive-theme-svg + figcaption .caption-text {
+    font-style: italic;
+}

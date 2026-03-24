@@ -9,6 +9,15 @@
 <script id="footer-copyright" type="application/json">{{ footer_copyright | tojson }}</script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    document
+      .querySelectorAll("a.adaptive-theme-svg + figcaption .caption-number")
+      .forEach(function (captionNumber) {
+        const normalized = captionNumber.textContent.trimEnd();
+        captionNumber.textContent = normalized.endsWith(".")
+          ? normalized + " "
+          : normalized + ". ";
+      });
+
     const leftDetails = document.querySelector(".bottom-of-page .left-details");
     if (!leftDetails) {
       return;
