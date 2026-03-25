@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import numpy as np
 
+
 @dataclass
 class Rectilinear2DGrid:
     """2D structured rectilinear grid with lazy-evaluated cell centers.

@@ -1,49 +1,77 @@
 # Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
+
 
 # -- Path setup --------------------------------------------------------------
 
-# Add src directory to Python path for autodoc
-root_dir = Path(__file__).parent.parent.parent
-src_dir = root_dir / 'src'
-sys.path.insert(0, str(src_dir))
+DOCS_SOURCE_DIR = Path(__file__).resolve().parent
+DOCS_DIR = DOCS_SOURCE_DIR.parent
+PROJECT_ROOT = DOCS_DIR.parent
+SRC_DIR = PROJECT_ROOT / "src"
+EXT_DIR = DOCS_SOURCE_DIR / "_ext"
+TEMPLATES_DIR = DOCS_SOURCE_DIR / "_templates"
+
+sys.path.insert(0, str(SRC_DIR))
+sys.path.insert(0, str(EXT_DIR))
+# sys.path.insert(0, str(TEMPLATES_DIR))
+
 
 # -- Project information -----------------------------------------------------
 
-project = 'petres'
-copyright = '2026, Petres Team'
-author = 'Petres Team'
-release = '0.1.0'
+project = "petres"
+author = "Tayfun Jamalbayli"
+START_YEAR = 2026
+YEAR = date.today().year
+
+copyright = (
+    f"{START_YEAR}, {author}"
+    if START_YEAR == YEAR
+    else f"{START_YEAR}–{YEAR}, {author}"
+)
+release = "0.1.0"
+
 
 # -- General configuration ---------------------------------------------------
 
 extensions = [
-    # Core Sphinx extensions
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
-    
-    # Third-party extensions
-    'sphinx_design',
-    
-    # Custom extension for automatic API generation
-    'apigen',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
+    "sphinx_design",
+    "sphinx_copybutton",
+    "apigen",
+    "exampledocs",
 ]
 
-# Add custom extension directory
-sys.path.insert(0, str(Path(__file__).parent / '_ext'))
+templates_path = ["_templates"]
+
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+]
+
+root_doc = "index"
+numfig = True
+numtables = True
+numfig_format = {
+    "figure": "Figure %s",
+    "table": "Table %s",
+}
 
 # Configure package name for API generator
-api_package_name = 'petres'
+api_package_name = "petres"
 
-# -- Napoleon settings (NumPy style docstrings) ------------------------------
+
+# -- Napoleon settings -------------------------------------------------------
 
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
@@ -59,65 +87,84 @@ napoleon_use_rtype = True
 napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
+
 # -- Autodoc settings --------------------------------------------------------
 
 autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__',
-    'show-inheritance': True,
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
+    "show-inheritance": True,
 }
 
-autodoc_typehints = 'description'
-autodoc_typehints_description_target = 'documented'
-autodoc_class_signature = 'separated'
-autodoc_member_order = 'bysource'
+autodoc_typehints = "description"
+autodoc_typehints_description_target = "documented"
+autodoc_class_signature = "separated"
+autodoc_member_order = "bysource"
+autoclass_content = "both"
 
-# Don't skip __init__ docstrings
-autoclass_content = 'both'
 
 # -- Autosummary settings ----------------------------------------------------
 
-autosummary_generate = False  # We generate manually via apigen
+autosummary_generate = False
+
 
 # -- Intersphinx settings ----------------------------------------------------
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = 'furo'
+html_theme = "furo"
+# html_theme = "shibuya"
+html_title = "Documentation"
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
+html_show_sphinx = False
+main_color1 = "#000096"
+main_color2 = "#BFFF00"
+main_color2_soft = main_color2 + "40"  # Adding transparency for softer color
+main_color1_soft = main_color1 + "70"  # Adding transparency for softer color
 
 html_theme_options = {
+    "light_logo": "logo-lockup-light.svg",
+    "dark_logo": "logo-lockup-dark.svg",
+    "footer_icons": [],
     "light_css_variables": {
-        "color-brand-primary": "#2b5b84",
-        "color-brand-content": "#2b5b84",
+        "color-brand-primary": main_color1,
+        "color-brand-content": main_color1,
+        "color-highlight-on-target": main_color2_soft,
+        "color-heading-1": main_color1,
+        # "color-heading-2": main_color1,
     },
     "dark_css_variables": {
-        "color-brand-primary": "#5b9bd5",
-        "color-brand-content": "#5b9bd5",
+        "color-brand-primary": main_color2,
+        "color-brand-content": main_color2,
+        "color-highlight-on-target": main_color1_soft,
+        "color-heading-1": main_color2,
+        "color-heading-2": "#FFFFFF",
     },
 }
 
-html_title = f"{project} Documentation"
-html_static_path = ['_static']
 
 # -- Options for other builders ---------------------------------------------
 
-# LaTeX settings
 latex_elements = {
-    'papersize': 'letterpaper',
-    'pointsize': '10pt',
+    "papersize": "letterpaper",
+    "pointsize": "10pt",
 }
 
-# Grouping the document tree into LaTeX files
 latex_documents = [
-    ('index', 'petres.tex', 'petres Documentation',
-     'Petres Team', 'manual'),
+    ("index", "petres.tex", "Documentation", f"{author}", "manual"),
 ]
+
+
+
+# pygments_style = "one-dark"
+# pygments_dark_style = "one-dark"

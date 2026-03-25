@@ -1,0 +1,100 @@
+.footer .theme-info {
+    display: none;
+}
+
+#page-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--color-background-primary) 92%, transparent);
+    backdrop-filter: blur(2px);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+#page-loader.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#page-loader .loader-spinner {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    border: 3px solid var(--color-background-border);
+    border-top-color: var(--color-brand-primary);
+    animation: petres-loader-spin 0.8s linear infinite;
+}
+
+@keyframes petres-loader-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #page-loader {
+        transition: none;
+    }
+
+    #page-loader .loader-spinner {
+        animation-duration: 1.6s;
+    }
+}
+
+body[data-theme="dark"] .adaptive-theme-svg img {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) .adaptive-theme-svg img {
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
+
+a.adaptive-theme-svg + figcaption,
+a.adaptive-theme-svg + figcaption .caption-number,
+a.adaptive-theme-svg + figcaption .caption-text {
+    font-style: italic;
+}
+
+
+
+
+
+/* Custom Coloring */
+h1 { color: var(--color-heading-1); }
+h2 { color: var(--color-heading-2); }
+
+
+
+table caption{
+    margin-bottom: .5rem;
+    font-style: italic;
+    font-size: unset;
+}
+
+
+/* eclipse  */
+.eclipse-keyword-table td,
+.eclipse-keyword-table th {
+    text-align: center;
+    vertical-align: middle;
+}
+
+
+.sidebar-logo{
+    max-width: 80%;
+    margin-left: 0;
+}
+
+
+/* Override Definition column (2nd column) */
+/* .eclipse-keyword-table td:nth-child(2),
+.eclipse-keyword-table th:nth-child(2) {
+    text-align: left;
+} */
