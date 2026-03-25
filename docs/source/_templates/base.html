@@ -1,0 +1,27 @@
+{% extends "!base.html" %}
+
+{%- block htmltitle -%}
+  <title>
+    {%- if pagename == master_doc %}
+      {{ project }}
+    {%- else %}
+      {{ project }} | {{ title|striptags }} 
+    {%- endif %}
+  </title>
+{%- endblock -%}
+
+
+{% block extrahead %}
+  {{ super() }}
+
+  <link rel="icon"
+        href="{{ pathto(favicon_light, 1) }}"
+        type="image/svg+xml"
+        media="(prefers-color-scheme: light)">
+
+  <link rel="icon"
+        href="{{ pathto(favicon_dark, 1) }}"
+        type="image/svg+xml"
+        media="(prefers-color-scheme: dark)">
+
+{% endblock %}
