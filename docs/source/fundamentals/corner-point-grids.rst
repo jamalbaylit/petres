@@ -90,8 +90,8 @@ corner coordinates. A complete grid cell is constructed by applying this
 interpolation to all eight corners using the appropriate pillar and
 corner depth values.
 
-ECLIPSE Corner-Point Grid Representation
-===========================
+Representation in ECLIPSE
+-------------------------
 
 In ECLIPSE simulator, Corner-Point grids are defined using ``DIMENS``, ``COORD``, ``ZCORN`` keywords, and optionally ``ACTNUM`` keyword.
 This set of keywords that separately describe topology, geometry, and cell activity.
@@ -122,7 +122,7 @@ This set of keywords that separately describe topology, geometry, and cell activ
 .. _eclipse-dimens:
 
 DIMENS
-------
+~~~~~~
 
 The ``DIMENS`` keyword specifies the grid dimensions
 and defined in ``RUNSPEC`` section of the ECLIPSE input file.
@@ -146,9 +146,8 @@ In the ECLIPSE input file, the dimensions are defined in the order :math:`(N_i, 
 
 
 .. _eclipse-coord:
-
 COORD
------
+~~~~~
 
 The ``COORD`` keyword defines the geometry of grid pillars by specifying
 the top and bottom endpoints of each pillar. 
@@ -170,9 +169,8 @@ Accordingly, the logical shape of the ``COORD`` array is :math:`(N_j + 1,\; N_i 
 and the total number of stored values is :math:`6 (N_i + 1)(N_j + 1)`.
 
 .. _eclipse-zcorn:
-
 ZCORN
------
+~~~~~
 
 The ``ZCORN`` keyword stores the corner depth values for all grid cells.
 For a grid of size :math:`(N_i, N_j, N_k)`, the total number of entries is :math:`8 N_i N_j N_k`.
@@ -199,7 +197,7 @@ geometries such as faults and pinch-outs.
    Example of :math:`(i, j, k)` cell corner indexing in ``ZCORN`` (here :math:`N_j = 1`).
 
 ACTNUM
-------
+~~~~~~
 
 The ``ACTNUM`` keyword defines the activity status of each grid cell.
 
