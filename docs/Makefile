@@ -4,7 +4,7 @@ SPHINXOPTS    ?=
 SPHINXBUILD   ?= uv run --group docs sphinx-build
 PYTHON        ?= uv run --group docs python
 SOURCEDIR     = source
-BUILDDIR      = build
+BUILDDIR      ?= build
 APIDIR        = source/api
 GENERATEDDIR  = source/_generated
 
