@@ -1,16 +1,13 @@
 version: 2
 
 build:
-  os: ubuntu-22.04
+  os: ubuntu-24.04
   tools:
-    python: "3.11"
-
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
-
-sphinx:
-  configuration: docs/conf.py
+    python: "3.10"
+  jobs:
+    install:
+      - pip install uv
+      - uv sync --group docs
+    build:
+      html:
+        - cd docs && make html BUILDDIR=$READTHEDOCS_OUTPUT

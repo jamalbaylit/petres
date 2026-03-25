@@ -9,7 +9,7 @@
     display: grid;
     place-items: center;
     background: color-mix(in srgb, var(--color-background-primary) 92%, transparent);
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(7px);
     opacity: 1;
     visibility: visible;
     transition: opacity 0.28s ease, visibility 0.28s ease;
@@ -68,7 +68,11 @@ a.adaptive-theme-svg + figcaption .caption-text {
 
 /* Custom Coloring */
 h1 { color: var(--color-heading-1); }
-h2 { color: var(--color-heading-2); }
+h2 { 
+    color: var(--color-heading-2); 
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
 
 
 
@@ -85,7 +89,9 @@ table caption{
     text-align: center;
     vertical-align: middle;
 }
-
+a{
+    transition: color 0.2s;
+}
 
 .sidebar-logo{
     max-width: 80%;
