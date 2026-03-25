@@ -44,6 +44,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
     "sphinx_design",
     "sphinx_copybutton",
     "apigen",
@@ -60,8 +61,10 @@ exclude_patterns = [
 
 root_doc = "index"
 numfig = True
+numtables = True
 numfig_format = {
     "figure": "Figure %s",
+    "table": "Table %s",
 }
 
 # Configure package name for API generator
@@ -124,18 +127,28 @@ html_title = "Documentation"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_show_sphinx = False
+main_color1 = "#000096"
+main_color2 = "#BFFF00"
+main_color2_soft = main_color2 + "40"  # Adding transparency for softer color
+main_color1_soft = main_color1 + "70"  # Adding transparency for softer color
 
 html_theme_options = {
     "light_logo": "logo-lockup-light.svg",
     "dark_logo": "logo-lockup-dark.svg",
     "footer_icons": [],
     "light_css_variables": {
-        "color-brand-primary": "#622b84",
-        "color-brand-content": "#7d2b84",
+        "color-brand-primary": main_color1,
+        "color-brand-content": main_color1,
+        "color-highlight-on-target": main_color2_soft,
+        "color-heading-1": main_color1,
+        # "color-heading-2": main_color1,
     },
     "dark_css_variables": {
-        "color-brand-primary": "#5b9bd5",
-        "color-brand-content": "#5b9bd5",
+        "color-brand-primary": main_color2,
+        "color-brand-content": main_color2,
+        "color-highlight-on-target": main_color1_soft,
+        "color-heading-1": main_color2,
+        "color-heading-2": "#FFFFFF",
     },
 }
 
@@ -150,6 +163,7 @@ latex_elements = {
 latex_documents = [
     ("index", "petres.tex", "Documentation", f"{author}", "manual"),
 ]
+
 
 
 # pygments_style = "one-dark"

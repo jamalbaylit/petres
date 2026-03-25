@@ -10,7 +10,7 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     document
-      .querySelectorAll("a.adaptive-theme-svg + figcaption .caption-number")
+      .querySelectorAll(".caption-number")
       .forEach(function (captionNumber) {
         const normalized = captionNumber.textContent.trimEnd();
         captionNumber.textContent = normalized.endsWith(".")

@@ -12,7 +12,7 @@ appropriate grid for a given reservoir simulation problem.
 Structured vs Unstructured Grids
 --------------------------------
 
-The most fundamental classification is based on grid connectivity—how
+The most fundamental classification is based on grid connectivity, defining how
 cells are indexed and how neighbor relationships are defined.
 
 .. _fig-structured-vs-unstructured:
@@ -26,9 +26,9 @@ cells are indexed and how neighbor relationships are defined.
 
 In a **structured grid**, cells are arranged in a regular
 three-dimensional layout. Each cell is uniquely identified by a triplet
-of indices ``(i, j, k)``, which directly encode its spatial position.
+of indices :math:`(i, j, k)`, which directly encode its spatial position.
 Neighboring cells are implicitly defined through index adjacency
-(e.g., ``i±1``, ``j±1``, ``k±1``), meaning connectivity does not need to
+(e.g., :math:`i±1`, :math:`j±1`, :math:`k±1`), meaning connectivity does not need to
 be stored explicitly.
 
 This regular topology enables efficient memory usage and fast traversal
@@ -55,7 +55,7 @@ Another important distinction relates to grid spacing, which determines
 how cell dimensions vary across the domain.
 
 In a **uniform grid**, spacing remains constant along each axis. The
-distances ``Δx``, ``Δy``, and ``Δz`` are fixed, resulting in cells of
+distances :math:`\Delta x`, :math:`\Delta y`, and :math:`\Delta z` are fixed, resulting in cells of
 identical size throughout the model. This simplicity leads to predictable
 numerical behavior and straightforward implementation.
 
@@ -79,11 +79,13 @@ maintaining compatibility with structured grid frameworks.
 As illustrated in :numref:`fig-uniform-vs-nonuniform`, non-uniform
 spacing concentrates resolution where physics or geometry require it.
 
+.. _conforming-vs-nonconforming-grids:
+
 Conforming vs Non-Conforming Grids
 ----------------------------------
 
 Grid conformity describes how cell faces align between neighboring cells
-and plays an important role in numerical consistency.
+and plays an important role in numerical consistency (:numref:`fig-conforming-vs-nonconforming`).
 
 .. _fig-conforming-vs-nonconforming:
 
@@ -94,13 +96,10 @@ and plays an important role in numerical consistency.
 
    Conforming vs non-conforming grid comparison showing mismatched face connectivity between adjacent cells.
 
-See :numref:`fig-conforming-vs-nonconforming` for a visual comparison of
-aligned versus mismatched face connectivity across neighboring cells.
-
 In a **conforming grid**, each cell face matches exactly one neighboring
 face. The geometric alignment between cells is consistent across the
 grid, which simplifies flux calculations and supports efficient numerical
-schemes. Typical examples include: **cartesian**, **rectilinear**, and **corner-point** grids.
+schemes. Typical examples include: :ref:`Cartesian <cartesian-grids>`, :ref:`Rectilinear <rectilinear-grids>`, and :ref:`Regular <regular-grids>` grids.
 
 In a **non-conforming grid**, a single cell face may connect to multiple
 neighboring faces, resulting in partial or mismatched alignment. This
