@@ -128,9 +128,10 @@ html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_show_sphinx = False
 main_color1 = "#000096"
+main_color1_bright = "#006cff"
 main_color2 = "#BFFF00"
 main_color2_soft = main_color2 + "40"  # Adding transparency for softer color
-main_color1_soft = main_color1 + "70"  # Adding transparency for softer color
+main_color1_soft = main_color1_bright + "40"  # Adding transparency for softer color
 
 html_theme_options = {
     "light_logo": "logo-lockup-light.svg",
@@ -139,14 +140,26 @@ html_theme_options = {
     "light_css_variables": {
         "color-brand-primary": main_color1,
         "color-brand-content": main_color1,
+        'color-link--visited': main_color1,
+        'color-link--visited--hover': main_color1_bright,
+
         "color-highlight-on-target": main_color2_soft,
+        "color-admonition-title-background--note": main_color1_soft,
+        "color-admonition-title--note": main_color1,
+        
         "color-heading-1": main_color1,
         # "color-heading-2": main_color1,
     },
     "dark_css_variables": {
         "color-brand-primary": main_color2,
         "color-brand-content": main_color2,
+        'color-link--visited': main_color2,
+        'color-link--visited--hover': main_color2_soft,
+
         "color-highlight-on-target": main_color1_soft,
+        "color-admonition-title-background--note": main_color2_soft,
+        "color-admonition-title--note": main_color2,
+
         "color-heading-1": main_color2,
         "color-heading-2": "#FFFFFF",
     },
