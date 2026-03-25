@@ -23,7 +23,7 @@ sys.path.insert(0, str(EXT_DIR))
 
 # -- Project information -----------------------------------------------------
 
-project = "petres"
+project = "Petres"
 author = "Tayfun Jamalbayli"
 START_YEAR = 2026
 YEAR = date.today().year
@@ -123,7 +123,7 @@ intersphinx_mapping = {
 
 html_theme = "furo"
 # html_theme = "shibuya"
-html_title = f"{project} — Documentation"
+html_title = f"Documentation"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_show_sphinx = False
@@ -132,7 +132,7 @@ main_color1_bright = "#006cff"
 main_color2 = "#BFFF00"
 main_color2_soft = main_color2 + "40"  # Adding transparency for softer color
 main_color1_soft = main_color1_bright + "20"  # Adding transparency for softer color
-html_favicon = "_static/logo-mark-dark.svg"
+# html_favicon = "_static/logo-mark-light.svg"
 FAVICON_LIGHT = "_static/logo-mark-light.svg"
 FAVICON_DARK = "_static/logo-mark-dark.svg"
 
@@ -188,3 +188,4 @@ latex_documents = [
 
 # pygments_style = "one-dark"
 # pygments_dark_style = "one-dark"
+
