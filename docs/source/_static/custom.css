@@ -76,12 +76,6 @@ h2 {
 
 
 
-table caption{
-    margin-bottom: .5rem;
-    font-style: italic;
-    font-size: unset;
-}
-
 
 /* eclipse  */
 .eclipse-keyword-table td,
@@ -98,6 +92,29 @@ a{
     margin-left: 0;
 }
 
+
+
+
+table caption{
+    margin-bottom: .5rem;
+    font-style: italic;
+    font-size: unset;
+}
+
+table.docutils{
+    border-radius: unset;
+    box-shadow: unset;
+}
+table.docutils td:first-child, table.docutils th:first-child {
+    border-left: 1px solid var(--color-table-border);;
+}
+table.docutils td:last-child, table.docutils th:last-child{
+    border-right: 1px solid var(--color-table-border);
+}
+
+table.docutils th{
+    border-top: 1px solid var(--color-table-border);;
+}
 
 /* Override Definition column (2nd column) */
 /* .eclipse-keyword-table td:nth-child(2),

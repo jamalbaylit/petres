@@ -131,8 +131,15 @@ main_color1 = "#000096"
 main_color1_bright = "#006cff"
 main_color2 = "#BFFF00"
 main_color2_soft = main_color2 + "40"  # Adding transparency for softer color
-main_color1_soft = main_color1_bright + "40"  # Adding transparency for softer color
+main_color1_soft = main_color1_bright + "20"  # Adding transparency for softer color
+# html_favicon = "_static/logo-mark-dark.svg"
+FAVICON_LIGHT = "_static/logo-mark-light.svg"
+FAVICON_DARK = "_static/logo-mark-dark.svg"
 
+html_context = {
+    "favicon_light": FAVICON_LIGHT,
+    "favicon_dark": FAVICON_DARK,
+}
 html_theme_options = {
     "light_logo": "logo-lockup-light.svg",
     "dark_logo": "logo-lockup-dark.svg",
