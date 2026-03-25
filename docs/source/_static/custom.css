@@ -61,3 +61,33 @@ a.adaptive-theme-svg + figcaption .caption-number,
 a.adaptive-theme-svg + figcaption .caption-text {
     font-style: italic;
 }
+
+
+
+
+
+/* Custom Coloring */
+h1 { color: var(--color-heading-1); }
+h2 { color: var(--color-heading-2); }
+
+
+
+table caption{
+    margin-bottom: .5rem;
+    font-style: italic;
+    font-size: unset;
+}
+
+
+/* eclipse  */
+.eclipse-keyword-table td,
+.eclipse-keyword-table th {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Override Definition column (2nd column) */
+/* .eclipse-keyword-table td:nth-child(2),
+.eclipse-keyword-table th:nth-child(2) {
+    text-align: left;
+} */

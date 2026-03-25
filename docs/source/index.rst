@@ -27,7 +27,10 @@ The documentation is organized to guide you from first steps to advanced usage:
    :maxdepth: 2
    :caption: Fundamentals
 
-   fundamentals/grid_classification
+   fundamentals/grid-classification
+   fundamentals/grid-types
+   fundamentals/corner-point-grids
+   
 
 
 .. toctree::
