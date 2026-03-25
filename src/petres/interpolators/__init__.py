@@ -23,30 +23,24 @@ Example:
     >>> grid_porosity = idw.interpolate(grid_points)
 """
 
-from .base import InterpolatorBase
 from .spatial.inverse_distance import InverseDistanceWeightingInterpolator
-from .spatial.linear import LinearInterpolator
-from .spatial.radial_basis import RadialBasisFunctionInterpolator, RBF_KERNELS
-from .spatial.nearest_neighbor import NearestNeighborInterpolator
-
+from .spatial.kriging import OrdinaryKrigingInterpolator, UniversalKrigingInterpolator
+from .spatial.radial_basis import RadialBasisFunctionInterpolator
 
 # Convenient aliases for public API
 IDWInterpolator = InverseDistanceWeightingInterpolator
 RBFInterpolator = RadialBasisFunctionInterpolator
-NNInterpolator = NearestNeighborInterpolator
-
+OKInterpolator = OrdinaryKrigingInterpolator
+UKInterpolator = UniversalKrigingInterpolator
 __all__ = [
-    # Base class
-    # 'InterpolatorBase',
-    # Full names
-    'InverseDistanceWeightingInterpolator',
-    'LinearInterpolator',
-    'RadialBasisFunctionInterpolator',
-    # 'NearestNeighborInterpolator',
-    # Convenient aliases
     'IDWInterpolator',
     'RBFInterpolator',
-    'NNInterpolator',
-    # Constants
-    'RBF_KERNELS',
+    'OKInterpolator',
+    'UKInterpolator',
+
+    'InverseDistanceWeightingInterpolator',
+    'RadialBasisFunctionInterpolator',
+    'OrdinaryKrigingInterpolator',
+    'UniversalKrigingInterpolator',
+
 ]

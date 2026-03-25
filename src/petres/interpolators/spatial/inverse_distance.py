@@ -1,325 +1,162 @@
-"""Inverse Distance Weighting (IDW) interpolation.
-
-Implements Shepard's method for spatial interpolation using weighted averages
-based on inverse distance to known points. Commonly used in geostatistics and
-reservoir modeling for property interpolation.
-"""
-
-from dataclasses import dataclass, field
-from typing import Optional, Tuple, Union
+from __future__ import annotations
+from typing import Literal
 import numpy as np
-from scipy.spatial import cKDTree
 
-from ..base import InterpolatorBase
+from ..base import BaseInterpolator
 
 
-@dataclass
-class InverseDistanceWeightingInterpolator(InterpolatorBase):
+
+class InverseDistanceWeightingInterpolator(BaseInterpolator):
     """
     Inverse Distance Weighting (IDW) interpolator.
-    
-    Uses Shepard's method: w_i = 1 / d_i^p where d_i is distance to point i,
-    and p is the power parameter (typically 2).
-    
-    Attributes:
-        power (float): Power parameter for distance weighting (default: 2.0)
-                      Higher values give more weight to nearby points
-        max_neighbors (Optional[int]): Maximum number of neighbors to use
-                                       None means use all points
-        radius (Optional[float]): Search radius for neighbors (None = unlimited)
-        min_neighbors (int): Minimum neighbors required for interpolation
-        epsilon (float): Small value to avoid division by zero
-        smoothing (float): Smoothing parameter added to distances (default: 0.0)
-        use_kdtree (bool): Use KD-tree for efficient nearest neighbor search
-    
-    Example:
-        >>> # Interpolate well log data to grid
-        >>> idw = InverseDistanceWeightingInterpolator(power=2.0, max_neighbors=12)
-        >>> idw.fit(well_points, well_values)
-        >>> grid_values = idw.interpolate(grid_points)
+
+    Parameters
+    ----------
+    power:
+        Weight exponent p. Larger values make the interpolation more local.
+        Common values: 1.0–3.0 (default: 2.0).
+    eps:
+        Small value to avoid division-by-zero / stabilize near-zero distances.
+    neighbors:
+        If provided, uses only the k nearest sample points for each query point.
+        This makes prediction faster for large datasets and keeps it local.
+        If None, uses all samples.
+    mode:
+        - "average": normalized weighted average (standard IDW)
+        - "sum": unnormalized sum of weighted values (rarely desired; mostly for debugging)
     """
-    
-    power: float = 2.0
-    max_neighbors: Optional[int] = None
-    radius: Optional[float] = None
-    min_neighbors: int = 1
-    epsilon: float = 1e-10
-    smoothing: float = 0.0
-    use_kdtree: bool = True
-    
-    # Private attributes
-    _points: Optional[np.ndarray] = field(init=False, repr=False, default=None)
-    _values: Optional[np.ndarray] = field(init=False, repr=False, default=None)
-    _kdtree: Optional[cKDTree] = field(init=False, repr=False, default=None)
-    _is_fitted: bool = field(init=False, repr=False, default=False)
-    
-    def __post_init__(self):
-        """Validate parameters."""
-        if self.power <= 0:
-            raise ValueError(f"power must be > 0, got {self.power}")
-        if self.min_neighbors < 1:
-            raise ValueError(f"min_neighbors must be >= 1, got {self.min_neighbors}")
-        if self.max_neighbors is not None and self.max_neighbors < self.min_neighbors:
+
+    def __init__(
+        self,
+        power: float = 2.0,
+        eps: float = 1e-12,
+        neighbors: int | None = None,
+        mode: Literal["average", "sum"] = "average",
+        dtype: np.dtype | str = np.float64,
+    ):
+        super().__init__()
+
+        if power <= 0:
+            raise ValueError(f"`power` must be > 0. Got {power}.")
+        if eps <= 0:
+            raise ValueError(f"`eps` must be > 0. Got {eps}.")
+        if neighbors is not None and neighbors <= 0:
+            raise ValueError(f"`neighbors` must be a positive int or None. Got {neighbors}.")
+        if mode not in ("average", "sum"):
+            raise ValueError(f"`mode` must be 'average' or 'sum'. Got {mode!r}.")
+
+        self.power = float(power)
+        self.eps = float(eps)
+        self.neighbors = int(neighbors) if neighbors is not None else None
+        self.mode: Literal["average", "sum"] = mode
+        self.dtype = np.dtype(dtype)
+
+        # fitted state
+        self._X: np.ndarray | None = None  # (n, dim)
+        self._y: np.ndarray | None = None  # (n,)
+
+    def _fit_impl(self, coordinates: np.ndarray, values: np.ndarray) -> None:
+        X = np.asarray(coordinates, dtype=self.dtype)
+        y = np.asarray(values, dtype=self.dtype)
+
+        if X.ndim != 2:
+            raise ValueError(f"`coordinates` must be 2D of shape (n_samples, dim). Got shape {X.shape}.")
+        if y.ndim != 1:
+            raise ValueError(f"`values` must be 1D of shape (n_samples,). Got shape {y.shape}.")
+        if X.shape[0] != y.shape[0]:
             raise ValueError(
-                f"max_neighbors ({self.max_neighbors}) must be >= min_neighbors ({self.min_neighbors})"
+                f"Number of samples mismatch: coordinates has {X.shape[0]}, values has {y.shape[0]}."
             )
-        if self.smoothing < 0:
-            raise ValueError(f"smoothing must be >= 0, got {self.smoothing}")
-        if self.epsilon <= 0:
-            raise ValueError(f"epsilon must be > 0, got {self.epsilon}")
-    
-    def fit(self, points: np.ndarray, values: np.ndarray) -> 'InverseDistanceWeightingInterpolator':
-        """
-        Fit interpolator to known data points.
-        
-        Args:
-            points: Known point coordinates, shape (n_points, ndim)
-            values: Values at known points, shape (n_points,) or (n_points, n_features)
-        
-        Returns:
-            self: Fitted interpolator
-        
-        Raises:
-            ValueError: If inputs have incompatible shapes
-        """
-        points = np.asarray(points, dtype=np.float64)
-        values = np.asarray(values, dtype=np.float64)
-        
-        if points.ndim != 2:
-            raise ValueError(f"points must be 2D array, got shape {points.shape}")
-        
-        if values.ndim == 1:
-            if points.shape[0] != values.shape[0]:
-                raise ValueError(
-                    f"points and values must have same length: "
-                    f"{points.shape[0]} != {values.shape[0]}"
-                )
-        elif values.ndim == 2:
-            if points.shape[0] != values.shape[0]:
-                raise ValueError(
-                    f"points and values must have same first dimension: "
-                    f"{points.shape[0]} != {values.shape[0]}"
-                )
-        else:
-            raise ValueError(f"values must be 1D or 2D array, got shape {values.shape}")
-        
-        if points.shape[0] < self.min_neighbors:
+        if X.shape[0] == 0:
+            raise ValueError("Cannot fit with zero samples.")
+
+        if self.neighbors is not None and self.neighbors > X.shape[0]:
             raise ValueError(
-                f"Need at least {self.min_neighbors} points, got {points.shape[0]}"
+                f"`neighbors`={self.neighbors} cannot be greater than n_samples={X.shape[0]}."
             )
-        
-        self._points = points.copy()
-        self._values = values.copy()
-        
-        # Build KD-tree for efficient nearest neighbor search
-        if self.use_kdtree:
-            self._kdtree = cKDTree(self._points)
-        
+
+        if not np.isfinite(X).all():
+            raise ValueError("`coordinates` contains NaN/Inf.")
+        if not np.isfinite(y).all():
+            raise ValueError("`values` contains NaN/Inf.")
+
+        self._X = X
+        self._y = y
         self._is_fitted = True
-        return self
-    
-    def interpolate(self, target_points: np.ndarray) -> np.ndarray:
-        """
-        Interpolate values at target points.
-        
-        Args:
-            target_points: Target coordinates, shape (n_targets, ndim)
-        
-        Returns:
-            Interpolated values, shape (n_targets,) or (n_targets, n_features)
-        
-        Raises:
-            RuntimeError: If interpolator not fitted
-            ValueError: If target_points has wrong dimensionality
-        """
-        if not self._is_fitted:
-            raise RuntimeError("Interpolator must be fitted before interpolation")
-        
-        target_points = np.asarray(target_points, dtype=np.float64)
-        
-        if target_points.ndim != 2:
-            raise ValueError(f"target_points must be 2D array, got shape {target_points.shape}")
-        
-        if target_points.shape[1] != self._points.shape[1]:
+
+    def _predict_impl(self, coordinates: np.ndarray) -> np.ndarray:
+        self._check_fitted()
+        assert self._X is not None and self._y is not None
+
+        Q = np.asarray(coordinates, dtype=self.dtype)
+        if Q.ndim != 2:
+            raise ValueError(f"`coordinates` must be 2D of shape (n_points, dim). Got shape {Q.shape}.")
+        if Q.shape[1] != self._X.shape[1]:
             raise ValueError(
-                f"target_points dimensionality ({target_points.shape[1]}) must match "
-                f"fitted points ({self._points.shape[1]})"
+                f"Dim mismatch: query dim={Q.shape[1]} but fitted dim={self._X.shape[1]}."
             )
-        
-        n_targets = target_points.shape[0]
-        output_shape = (n_targets,) if self._values.ndim == 1 else (n_targets, self._values.shape[1])
-        result = np.zeros(output_shape, dtype=np.float64)
-        
-        for i in range(n_targets):
-            result[i] = self._interpolate_single(target_points[i])
-        
-        return result
-    
-    def _interpolate_single(self, target: np.ndarray) -> Union[float, np.ndarray]:
-        """Interpolate value at a single target point."""
-        # Find neighbors
-        if self.use_kdtree and self._kdtree is not None:
-            distances, indices = self._query_neighbors_kdtree(target)
-        else:
-            distances, indices = self._query_neighbors_bruteforce(target)
-        
-        # Handle exact match
-        if distances[0] < self.epsilon:
-            return self._values[indices[0]].copy()
-        
-        # Check minimum neighbors
-        if len(indices) < self.min_neighbors:
-            # Fallback: use nearest neighbor or NaN
-            if len(indices) > 0:
-                return self._values[indices[0]].copy()
+        if Q.shape[0] == 0:
+            return np.asarray([], dtype=self.dtype)
+
+        if not np.isfinite(Q).all():
+            raise ValueError("Query `coordinates` contains NaN/Inf.")
+
+        # Compute squared distances: (m, n)
+        # Using (a-b)^2 = a^2 + b^2 - 2ab for efficiency.
+        X = self._X
+        y = self._y
+
+        Q2 = np.sum(Q * Q, axis=1, keepdims=True)          # (m, 1)
+        X2 = np.sum(X * X, axis=1, keepdims=True).T        # (1, n)
+        d2 = Q2 + X2 - 2.0 * (Q @ X.T)                     # (m, n)
+        d2 = np.maximum(d2, 0.0)                           # numeric guard
+        d = np.sqrt(d2, dtype=self.dtype)
+
+        # Exact-match handling: if any distance is ~0, return that sample's value.
+        # (No need to compute weights for those rows.)
+        zero_mask = d <= self.eps  # (m, n)
+        has_exact = zero_mask.any(axis=1)  # (m,)
+
+        out = np.empty(Q.shape[0], dtype=self.dtype)
+
+        # Rows with exact matches
+        if np.any(has_exact):
+            rows = np.where(has_exact)[0]
+            # If multiple exact matches (duplicate coordinates), average their values
+            for i in rows:
+                out[i] = y[zero_mask[i]].mean(dtype=self.dtype)
+
+        # Rows without exact matches
+        rows = np.where(~has_exact)[0]
+        if rows.size == 0:
+            return out
+
+        d_sub = d[rows]  # (m2, n)
+
+        if self.neighbors is None:
+            # Weights: w = 1 / (d^p)
+            w = 1.0 / np.power(d_sub + self.eps, self.power, dtype=self.dtype)  # (m2, n)
+            if self.mode == "sum":
+                out[rows] = w @ y
             else:
-                return np.nan if self._values.ndim == 1 else np.full(self._values.shape[1], np.nan)
-        
-        # Compute weights
-        weights = self._compute_weights(distances)
-        
-        # Normalize weights
-        weight_sum = np.sum(weights)
-        if weight_sum < self.epsilon:
-            # Degenerate case: use nearest neighbor
-            return self._values[indices[0]].copy()
-        
-        weights /= weight_sum
-        
-        # Weighted average
-        if self._values.ndim == 1:
-            return np.sum(weights * self._values[indices])
+                denom = np.sum(w, axis=1)
+                out[rows] = (w @ y) / denom
+            return out
+
+        # KNN IDW: select k nearest for each query row
+        k = self.neighbors
+        # argpartition gets k smallest distances per row (unordered)
+        idx = np.argpartition(d_sub, kth=k - 1, axis=1)[:, :k]  # (m2, k)
+
+        # gather distances and values
+        d_knn = np.take_along_axis(d_sub, idx, axis=1)          # (m2, k)
+        y_knn = y[idx]                                          # (m2, k)
+
+        w = 1.0 / np.power(d_knn + self.eps, self.power, dtype=self.dtype)  # (m2, k)
+
+        if self.mode == "sum":
+            out[rows] = np.sum(w * y_knn, axis=1)
         else:
-            return np.sum(weights[:, np.newaxis] * self._values[indices], axis=0)
-    
-    def _query_neighbors_kdtree(self, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Query neighbors using KD-tree."""
-        k = self.max_neighbors if self.max_neighbors is not None else len(self._points)
-        k = min(k, len(self._points))
-        
-        if self.radius is not None:
-            # Query within radius
-            distances, indices = self._kdtree.query(
-                target, k=k, distance_upper_bound=self.radius
-            )
-            # Filter out invalid results
-            valid = np.isfinite(distances)
-            distances = distances[valid]
-            indices = indices[valid]
-        else:
-            # Query k nearest
-            distances, indices = self._kdtree.query(target, k=k)
-        
-        return distances, indices
-    
-    def _query_neighbors_bruteforce(self, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Query neighbors using brute force distance computation."""
-        # Compute all distances
-        distances = np.linalg.norm(self._points - target, axis=1)
-        
-        # Apply radius filter if specified
-        if self.radius is not None:
-            valid = distances <= self.radius
-            distances = distances[valid]
-            indices = np.where(valid)[0]
-        else:
-            indices = np.arange(len(distances))
-        
-        # Sort by distance
-        sort_idx = np.argsort(distances)
-        distances = distances[sort_idx]
-        indices = indices[sort_idx]
-        
-        # Limit to max_neighbors
-        if self.max_neighbors is not None:
-            distances = distances[:self.max_neighbors]
-            indices = indices[:self.max_neighbors]
-        
-        return distances, indices
-    
-    def _compute_weights(self, distances: np.ndarray) -> np.ndarray:
-        """Compute inverse distance weights."""
-        # Add smoothing to avoid singularities
-        smoothed_distances = distances + self.smoothing
-        
-        # Inverse distance weighting
-        weights = 1.0 / np.power(smoothed_distances, self.power)
-        
-        return weights
-    
-    def validate(self) -> bool:
-        """
-        Validate that interpolator is properly configured and fitted.
-        
-        Returns:
-            True if valid, False otherwise
-        """
-        if not self._is_fitted:
-            return False
-        
-        if self._points is None or self._values is None:
-            return False
-        
-        if len(self._points) != len(self._values):
-            return False
-        
-        return True
-    
-    def cross_validate(self, k_folds: int = 5) -> float:
-        """
-        Perform k-fold cross-validation.
-        
-        Args:
-            k_folds: Number of folds for cross-validation
-        
-        Returns:
-            Mean absolute error across all folds
-        """
-        if not self._is_fitted:
-            raise RuntimeError("Interpolator must be fitted before cross-validation")
-        
-        n_points = len(self._points)
-        indices = np.arange(n_points)
-        np.random.shuffle(indices)
-        
-        fold_size = n_points // k_folds
-        errors = []
-        
-        for fold in range(k_folds):
-            # Split data
-            test_start = fold * fold_size
-            test_end = (fold + 1) * fold_size if fold < k_folds - 1 else n_points
-            test_idx = indices[test_start:test_end]
-            train_idx = np.concatenate([indices[:test_start], indices[test_end:]])
-            
-            # Fit on training data
-            temp_interp = InverseDistanceWeightingInterpolator(
-                power=self.power,
-                max_neighbors=self.max_neighbors,
-                radius=self.radius,
-                min_neighbors=self.min_neighbors,
-                epsilon=self.epsilon,
-                smoothing=self.smoothing,
-                use_kdtree=self.use_kdtree
-            )
-            temp_interp.fit(self._points[train_idx], self._values[train_idx])
-            
-            # Predict on test data
-            predictions = temp_interp.interpolate(self._points[test_idx])
-            
-            # Compute error
-            error = np.mean(np.abs(predictions - self._values[test_idx]))
-            errors.append(error)
-        
-        return np.mean(errors)
-    
-    def __repr__(self) -> str:
-        """String representation."""
-        status = "fitted" if self._is_fitted else "not fitted"
-        n_points = len(self._points) if self._is_fitted else 0
-        return (
-            f"InverseDistanceWeightingInterpolator(power={self.power}, "
-            f"max_neighbors={self.max_neighbors}, "
-            f"radius={self.radius}, "
-            f"status={status}, n_points={n_points})"
-        )
+            out[rows] = np.sum(w * y_knn, axis=1) / np.sum(w, axis=1)
+
+        return out

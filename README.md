@@ -1,7 +1,14 @@
-# Petres
+<div align="center">
+
+![Banner](./assets/banner-high.png)
+
+
+
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![Python Version](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petres.readthedocs.io)
+
+</div>
 
 <!-- Uncomment when published to PyPI
 [![PyPI version](https://badge.fury.io/py/petres.svg)](https://badge.fury.io/py/petres)
