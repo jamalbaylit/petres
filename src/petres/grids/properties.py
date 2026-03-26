@@ -127,7 +127,7 @@ class GridProperty:
         if std < 0:
             raise ValueError(f"`std` must be >= 0, got {std}.")
 
-        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
         n = int(np.count_nonzero(mask))
 
         rng = np.random.default_rng(seed)
@@ -205,8 +205,8 @@ class GridProperty:
                 "`source` must be str, GridProperty, or a sequence of them."
             )
 
-        resolved = [self._resolve_source(src) for src in sources]
-        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        resolved = [self.grid._resolve_source(src) for src in sources]
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
 
         # Validate resolved source shapes
         for arr in resolved:
@@ -277,98 +277,10 @@ class GridProperty:
         if not isinstance(value, (int, float)):
             raise TypeError("`value` must be a float or int.")
 
-        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
         self.values[mask] = value
         return self
-    def _target_mask(
-        self,
-        zone: str | Zone | None = None,
-        include_inactive: bool = False,
-    ) -> np.ndarray:
-        """
-        Return boolean mask of target cells.
-        """
-        mask = np.ones(self.grid.shape, dtype=bool)
-
-        if not include_inactive:
-            mask &= np.asarray(self.grid.active, dtype=bool)
-
-        if zone is not None:
-            mask &= self.grid._zone_mask(zone)
-
-        return mask
     
-    def _resolve_source(
-        self,
-        source: str | "GridProperty",
-    ) -> np.ndarray:
-        """
-        Resolve one source to a full-grid ndarray.
-
-        source can be:
-        - built-in geometry source name
-        - another GridProperty
-        """
-        if isinstance(source, str):
-            return self._geometry_source(source)
-
-        if isinstance(source, GridProperty):
-            if source.grid is not self.grid:
-                raise ValueError(
-                    "Source GridProperty must belong to the same grid."
-                )
-            return source.values
-
-        raise TypeError(
-            "`source` entries must be either str or GridProperty."
-        )
-    
-    def _geometry_source(self, source: str) -> np.ndarray:
-        """
-        Resolve built-in geometric source names to full-grid arrays.
-
-        Supported
-        ---------
-        "x"         : cell-center x coordinate
-        "y"         : cell-center y coordinate
-        "z"         : cell-center z coordinate
-        "top"       : top z of cell
-        "bottom"    : bottom z of cell
-        "thickness" : cell thickness
-        """
-        centers = self.grid.cell_centers  # (nk, nj, ni, 3)
-
-        match source:
-            case "x":
-                return centers[..., 0]
-
-            case "y":
-                return centers[..., 1]
-
-            case "z":
-                return centers[..., 2]
-
-            case "top" | "bottom" | "thickness":
-                corners = self.grid._compute_cell_corners()  # (nk, nj, ni, 8, 3)
-                zcorn = corners[..., 2]                    # (nk, nj, ni, 8)
-
-                z_top = np.min(zcorn[..., :4], axis=-1)
-                z_bottom = np.max(zcorn[..., 4:], axis=-1)
-
-                match source:
-                    case "top":
-                        return z_top
-                    case "bottom":
-                        return z_bottom
-                    case "thickness":
-                        return np.abs(z_bottom - z_top)
-
-            case _:
-                raise ValueError(
-                    f"Unsupported source {source!r}. "
-                    f"Supported built-in sources are: "
-                    f"'x', 'y', 'z', 'top', 'bottom', 'thickness'."
-                )
             
     def fill_lognormal(
         self,
@@ -410,7 +322,7 @@ class GridProperty:
         if std < 0:
             raise ValueError("`std` must be >= 0.")
 
-        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
         n = int(np.count_nonzero(mask))
 
         if n == 0:
@@ -445,7 +357,7 @@ class GridProperty:
         if high < low:
             raise ValueError(f"`high` must be >= `low`, got {high} < {low}.")
 
-        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
         n = int(np.count_nonzero(mask))
 
         rng = np.random.default_rng(seed)
@@ -549,7 +461,7 @@ class GridProperty:
             mode=mode,
         )
 
-        mask = self._target_mask(zone=zone, include_inactive=include_inactive)
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
         n_target = int(np.count_nonzero(mask))
         if n_target == 0:
             warnings.warn(

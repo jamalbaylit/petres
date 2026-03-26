@@ -168,11 +168,3 @@ reservoir grid systems, designed both as a reference and as educational material
    api/index
 
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Developer Guide
-   :hidden:
-
-   developer/setup
-   developer/testing
-   developer/documentation
