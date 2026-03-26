@@ -144,7 +144,7 @@ reservoir grid systems, designed both as a reference and as educational material
    :maxdepth: 2
    :caption: Getting Started
    :hidden:
-   
+
    getting_started/installation
    getting_started/quickstart
 
@@ -158,7 +158,6 @@ reservoir grid systems, designed both as a reference and as educational material
    fundamentals/grid-types
    fundamentals/corner-point-grids
 
-
 .. toctree::
    :maxdepth: 2
    :caption: User Guide
@@ -167,3 +166,13 @@ reservoir grid systems, designed both as a reference and as educational material
    tutorials
    examples
    api/index
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Guide
+   :hidden:
+
+   developer/setup
+   developer/testing
+   developer/documentation
