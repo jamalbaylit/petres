@@ -143,6 +143,8 @@ html_context = {
 html_theme_options = {
     "light_logo": "logo-lockup-light.svg",
     "dark_logo": "logo-lockup-dark.svg",
+    
+
     "footer_icons": [],
     "light_css_variables": {
         "color-brand-primary": main_color1,
@@ -156,6 +158,7 @@ html_theme_options = {
         
         "color-heading-1": main_color1,
         # "color-heading-2": main_color1,
+
     },
     "dark_css_variables": {
         "color-brand-primary": main_color2,
@@ -169,6 +172,8 @@ html_theme_options = {
 
         "color-heading-1": main_color2,
         "color-heading-2": "#FFFFFF",
+
+
     },
 }
 

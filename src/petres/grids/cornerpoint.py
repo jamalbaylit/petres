@@ -347,10 +347,11 @@ class CornerPointGrid:
         writer = GRDECLWriter()
         writer.write(path=path, coord=coord, zcorn=zcorn, actnum=actnum)
 
-    def show(self, show_inactive: bool = False, color: Any = 'tan', **kwargs) -> None:
+    def show(self, show_inactive: bool = False, color: Any = 'tan', scalars: str | None = None, **kwargs) -> None:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
-        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, **kwargs)
+        scalars = self._resolve_source(scalars)
+        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, **kwargs)
         viewer.show()
     
     @classmethod
@@ -525,7 +526,96 @@ class CornerPointGrid:
         return corners
 
 
+    def _target_mask(
+        self,
+        zone: str | Zone | None = None,
+        include_inactive: bool = False,
+    ) -> np.ndarray:
+        """
+        Return boolean mask of target cells.
+        """
+        mask = np.ones(self.shape, dtype=bool)
 
+        if not include_inactive:
+            mask &= np.asarray(self.active, dtype=bool)
+
+        if zone is not None:
+            mask &= self._zone_mask(zone)
+
+        return mask
+    
+    def _resolve_source(
+        self,
+        source: str | "GridProperty",
+    ) -> np.ndarray:
+        """
+        Resolve one source to a full-grid ndarray.
+
+        source can be:
+        - built-in geometry source name
+        - another GridProperty
+        """
+        if isinstance(source, str):
+            return self._geometry_source(source)
+
+        if isinstance(source, GridProperty):
+            if source.grid is not self:
+                raise ValueError(
+                    "Source GridProperty must belong to the same grid."
+                )
+            return source.values
+
+        raise TypeError(
+            "`source` entries must be either str or GridProperty."
+        )
+    
+    def _geometry_source(self, source: str) -> np.ndarray:
+        """
+        Resolve built-in geometric source names to full-grid arrays.
+
+        Supported
+        ---------
+        "x"         : cell-center x coordinate
+        "y"         : cell-center y coordinate
+        "z"         : cell-center z coordinate
+        "top"       : top z of cell
+        "bottom"    : bottom z of cell
+        "thickness" : cell thickness
+        """
+        centers = self.cell_centers  # (nk, nj, ni, 3)
+
+        match source:
+            case "x":
+                return centers[..., 0]
+
+            case "y":
+                return centers[..., 1]
+
+            case "z":
+                return centers[..., 2]
+
+            case "top" | "bottom" | "thickness":
+                corners = self._compute_cell_corners()  # (nk, nj, ni, 8, 3)
+                zcorn = corners[..., 2]                    # (nk, nj, ni, 8)
+
+                z_top = np.min(zcorn[..., :4], axis=-1)
+                z_bottom = np.max(zcorn[..., 4:], axis=-1)
+
+                match source:
+                    case "top":
+                        return z_top
+                    case "bottom":
+                        return z_bottom
+                    case "thickness":
+                        return np.abs(z_bottom - z_top)
+
+            case _:
+                raise ValueError(
+                    f"Unsupported source {source!r}. "
+                    f"Supported built-in sources are: "
+                    f"'x', 'y', 'z', 'top', 'bottom', 'thickness'."
+                )
+            
     # # ----------------------------
     # # Cell geometry
     # # ----------------------------
