@@ -1,13 +1,26 @@
-name: Publish to PyPI
+name: Publish package
 
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v*"
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        required: true
+        default: "testpypi"
+        type: choice
+        options:
+          - testpypi
+          - pypi
 
 permissions:
   contents: read
+
+concurrency:
+  group: publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -16,17 +29,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Build distributions
         run: |
@@ -35,24 +48,58 @@ jobs:
           twine check dist/*
 
       - name: Upload built distributions
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: python-dist
           path: dist/
 
-  publish:
-    name: Publish distributions
+  publish-testpypi:
+    name: Publish to TestPyPI
     runs-on: ubuntu-latest
     needs: build
     permissions:
       id-token: write
-
     environment:
-      name: pypi
+      name: testpypi
+    if: >
+      (github.event_name == 'push' &&
+       (contains(github.ref_name, 'rc') ||
+        contains(github.ref_name, 'a') ||
+        contains(github.ref_name, 'b'))) ||
+      (github.event_name == 'workflow_dispatch' &&
+       inputs.target == 'testpypi')
 
     steps:
       - name: Download built distributions
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
+        with:
+          name: python-dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+    if: >
+      (github.event_name == 'push' &&
+       !contains(github.ref_name, 'rc') &&
+       !contains(github.ref_name, 'a') &&
+       !contains(github.ref_name, 'b')) ||
+      (github.event_name == 'workflow_dispatch' &&
+       inputs.target == 'pypi')
+
+    steps:
+      - name: Download built distributions
+        uses: actions/download-artifact@v6
         with:
           name: python-dist
           path: dist/
