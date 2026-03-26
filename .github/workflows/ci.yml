@@ -66,7 +66,7 @@ jobs:
 
       - name: Build distributions
         run: |
-          uv pip install build twine
+          uv pip install --system build twine
           python -m build
           twine check dist/*
 
