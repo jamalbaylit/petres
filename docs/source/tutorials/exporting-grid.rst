@@ -4,44 +4,57 @@ Exporting Grid Models
 Overview
 --------
 
-Petres grids can be exported to simulator-compatible formats for use in
-reservoir simulation workflows.
+Currently, Petres supports exporting grids to the Eclipse ``.GRDECL`` file format,
+which is especially used for :ref:`Corner-Point grids <corner-point-grids>`.
 
-The primary supported format is the **Eclipse-style GRDECL** format, which
-is widely used in:
-
-- Eclipse
-- Petrel
-- Other corner-point grid based simulators
-
-Exporting a grid typically includes:
+Exporting a grid to ``.GRDECL`` file typically includes:
 
 - Grid geometry (``SPECGRID``, ``COORD``, ``ZCORN``)
 - Active cell mask (``ACTNUM``)
 - Optional grid properties (e.g., ``PORO``, ``PERMX``)
 
-.. seealso::
-
-   - :doc:`corner-point-grid-creation`
-   - :doc:`grid-modeling-from-horizons-and-zones`
-   - :doc:`grid-properties`
-
+.. note::
+    For a comprehensive understanding of the underlying keywords, refer to the :ref:`Corner-Point Grid Representation in ECLIPSE <corner-point-grid-representation-in-eclipse>` section.
 
 Exporting Grid Geometry
-----------------------
+-----------------------
 
-A corner-point grid can be exported directly to a GRDECL file:
+:class:`~petres.grids.cornerpoint.CornerPointGrid` can be exported directly to a ``.GRDECL`` file:
 
 .. code-block:: python
 
    grid.to_grdecl("model.grdecl")
 
-This writes the core grid definition including:
+.. note::
+   The exported GRDECL file can be incorporated into an Eclipse simulation
+   by including it within the ``GRID`` section of the simulation DATA file using the
+   ``INCLUDE`` keyword:
 
-- ``SPECGRID``: grid dimensions
-- ``COORD``: pillar coordinates
-- ``ZCORN``: cell corner depths
+   .. code-block:: text
 
+      GRID
+
+      INCLUDE
+      'path/to/example.grdecl' /
+
+   The GRDECL file contains the grid definition (e.g., ``COORD``, ``ZCORN``,
+   ``ACTNUM``) and typically includes a ``SPECGRID`` keyword. However,
+   ``SPECGRID`` is used only for internal consistency checks and does not
+   replace the required grid declaration in the ``RUNSPEC`` section.
+
+   Therefore, the grid dimensions must be explicitly defined using the
+   ``DIMENS`` keyword in ``RUNSPEC`` section:
+
+   .. code-block:: text
+
+      RUNSPEC
+
+      DIMENS
+      Ni Nj Nk /
+
+   where ``Ni``, ``Nj``, and ``Nk`` denote the number of grid cells in the
+   i, j, and k directions, respectively. These values must be consistent
+   with the dimensions of the exported grid.
 
 Exporting Grid Properties
 -------------------------
@@ -111,20 +124,17 @@ Ensure that property arrays match the grid shape exactly:
 
 - Expected shape: ``(nk, nj, ni)``
 
----
 
 **Incorrect Depth Convention**
 
 Most simulators expect depth to be **positive downward**.
 
----
 
 **Coordinate Orientation**
 
 Grid orientation must follow a consistent coordinate system.
 Incorrect orientation may lead to flipped geometries in simulators.
 
----
 
 **Inactive Cell Handling**
 

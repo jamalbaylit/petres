@@ -91,6 +91,7 @@ corner coordinates. A complete grid cell is constructed by applying this
 interpolation to all eight corners using the appropriate pillar and
 corner depth values.
 
+.. _corner-point-grid-representation-in-eclipse:
 Representation in Eclipse
 -------------------------
 

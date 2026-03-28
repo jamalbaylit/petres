@@ -369,13 +369,47 @@ class CornerPointGrid:
         pillars = PillarGrid.from_eclipse_coord(coord)
         return cls(pillars=pillars, zcorn=zcorn, active=actnum)
 
-    def to_grdecl(self, path: str | Path):
+    def to_grdecl(
+        self, 
+        path: str | Path, 
+        *,
+        properties: Optional[Sequence[str]] = None,
+        include_actnum: bool = True,
+    ) -> None:
         """Export grid to GRDECL format."""
         coord = self.pillars.to_eclipse_coord()
         zcorn = self.zcorn
-        actnum = self.active.astype(int)
+        actnum = self.active.astype(int) if include_actnum else None
         writer = GRDECLWriter()
-        writer.write(path=path, coord=coord, zcorn=zcorn, actnum=actnum)
+        if properties is None:
+            properties = list(self._properties.keys())
+        else:
+            try:
+                properties = tuple(properties)
+            except Exception as e:
+                raise TypeError(f"`properties` must be a sequence of property names.") from e
+        
+        property_values = []
+        property_names = []
+        for prop_name in properties:
+            prop = self.properties[prop_name]
+            eclipse_keyword = prop.eclipse_keyword
+            if eclipse_keyword is None:
+                raise ValueError(
+                    f"Property '{prop_name}' does not have an associated Eclipse keyword."
+                    "Make sure to define the property with an `eclipse_keyword` or choose a different property."
+                )
+            property_values.append(prop.values)
+            property_names.append(prop.eclipse_keyword)
+
+        writer.write(
+            path=path, 
+            coord=coord, 
+            zcorn=zcorn, 
+            actnum=actnum, 
+            property_values=property_values, 
+            property_names=property_names,
+        )
 
     def show(
         self, 
