@@ -7,9 +7,11 @@ import numpy as np
 import warnings
 
 
+
 from ..grids.sampling._validation import _validate_vertex_array
 from ..grids.sampling._vertices import _resolve_xyz_vertices
 from .builders.cornerpoint import _build_zcorn_from_zones
+from ..errors import MissingEclipseKeywordError
 from ..eclipse.grids.write import GRDECLWriter
 from ..eclipse.grids.read import GRDECLReader
 from .pillar import PillarGrid
@@ -390,25 +392,23 @@ class CornerPointGrid:
                 raise TypeError(f"`properties` must be a sequence of property names.") from e
         
         property_values = []
-        property_names = []
+        property_keywords = []
         for prop_name in properties:
             prop = self.properties[prop_name]
             eclipse_keyword = prop.eclipse_keyword
             if eclipse_keyword is None:
-                raise ValueError(
-                    f"Property '{prop_name}' does not have an associated Eclipse keyword."
-                    "Make sure to define the property with an `eclipse_keyword` or choose a different property."
-                )
+                raise MissingEclipseKeywordError(property_name=prop_name)
+                
             property_values.append(prop.values)
-            property_names.append(prop.eclipse_keyword)
+            property_keywords.append(prop.eclipse_keyword)
 
-        writer.write(
+        return writer.write(
             path=path, 
             coord=coord, 
             zcorn=zcorn, 
             actnum=actnum, 
             property_values=property_values, 
-            property_names=property_names,
+            property_keywords=property_keywords,
         )
 
     def show(

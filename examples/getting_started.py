@@ -16,7 +16,7 @@ coord = grid.pillars.to_eclipse_coord()
 grid.show(scalars='z')
 porosity = grid.properties.create(
     "porosity",
-    eclipse_keyword="PORO",
+    # eclipse_keyword="PORO",
 )
 
 porosity.fill_normal(mean=0.2, std=0.05, seed=42)
@@ -24,5 +24,5 @@ porosity.fill_normal(mean=0.2, std=0.05, seed=42)
 porosity.show()
 
 
-grid.to_grdecl("example_grid.grdecl", include_actnum=False)
-porosity.to_grdecl("example_porosity.grdecl", include_actnum=False)
+# grid.to_grdecl("example_grid.grdecl", include_actnum=False)
+porosity.to_grdecl("porosity.grdecl")
