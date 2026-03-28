@@ -100,12 +100,25 @@ class PillarGrid:
     
     @classmethod
     def from_eclipse_coord(cls, coord: np.ndarray) -> Self:
-        """Create PillarGrid from Eclipse COORD array."""
-        if coord.ndim != 3 or coord.shape[2] != 6:
-            raise ValueError(f"COORD array must have shape (nj+1, ni+1, 6), got {coord.shape}")
-        
-        pillar_top = coord[:, :, :3]
-        pillar_bottom = coord[:, :, 3:]
+        """Create PillarGrid from Eclipse COORD array.
+
+        Parameters
+        ----------
+        coord : ndarray of shape (nj+1, ni+1, 6)
+            COORD array storing pillar top and bottom points as
+            (x_top, y_top, z_top, x_bottom, y_bottom, z_bottom).
+        """
+        coord = np.asarray(coord)
+
+        if coord.ndim != 3:
+            raise ValueError(f"COORD must be 3D, got ndim={coord.ndim}")
+
+        if coord.shape[2] != 6:
+            raise ValueError(
+                f"Last dimension must be 6 (x1,y1,z1,x2,y2,z2), got {coord.shape[2]}"
+            )
+        pillar_top = coord[:, :, :3].copy()
+        pillar_bottom = coord[:, :, 3:].copy()
         return cls(pillar_top=pillar_top, pillar_bottom=pillar_bottom)
 
 

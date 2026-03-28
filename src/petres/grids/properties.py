@@ -15,9 +15,9 @@ class GridProperty:
     """
     Cell-based property defined on a grid with shape (nk, nj, ni).
     """
+    name: str = field(repr=True)
     grid: "CornerPointGrid"= field(repr=False)
     values: Optional[np.ndarray] = None 
-    name: Optional[str] = None
     eclipse_keyword: Optional[str] = None                 # Eclipse keyword (PORO, PERMX, ...)
     description: Optional[str] = None
 
@@ -491,6 +491,18 @@ class GridProperty:
         self.values[mask] = predicted
         return self
 
+    def to_grdecl(
+        self, 
+        path: str,
+        *,
+        include_actnum: bool = True,
+    ) -> None:
+        return self.grid.to_grdecl(
+            path=path, 
+            properties=[self.name], 
+            include_actnum=include_actnum
+        )
+
     def _collect_well_samples(
         self,
         wells: Sequence["VerticalWell"],
@@ -601,6 +613,7 @@ class GridProperties:
     def create(
         self,
         name: str,
+        *,
         eclipse_keyword: Optional[str] = None,
         description: Optional[str] = None,
         fill_value: float = np.nan,
@@ -631,12 +644,15 @@ class GridProperties:
     def __contains__(self, name: str) -> bool:
         return name in self._grid._properties
 
+    @property
     def names(self) -> list[str]:
         return list(self._grid._properties.keys())
 
+    @property
     def items(self):
         return self._grid._properties.items()
 
+    @property
     def values(self):
         return self._grid._properties.values()
 
