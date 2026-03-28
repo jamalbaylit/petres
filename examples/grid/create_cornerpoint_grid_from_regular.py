@@ -9,9 +9,10 @@ grid = CornerPointGrid.from_regular(
     nj=20,
     nk=3,
 )
-grid.show()
 
+print(grid.summary())
 
+grid.show(scalars="active")
 
 
 # Alternatively, you can specify cell sizes instead of number of cells:

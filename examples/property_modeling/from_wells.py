@@ -6,7 +6,8 @@ import numpy as np
 well1 = VerticalWell(name="Well 1", x=20, y=78)
 well3 = VerticalWell(name="Well 3", x=32, y=55)
 
-well1.add_sample('porosity', 100, 3)
+well1.add_sample('porosity', 100, 10)
+# well3.add_sample('porosity', 50)
 well1.add_sample('porosity', 50, 12)
 well1.add_sample('porosity', 25, 20)
 

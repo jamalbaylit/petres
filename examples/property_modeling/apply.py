@@ -28,5 +28,6 @@ permeability = grid.properties.create(
     eclipse_keyword="PERM",
     description="Permeability"
 )
-permeability.apply(lambda poro: 100 * poro**3, source="top")
+
+permeability.apply(lambda poro, z: 100 * poro**3+z, source=(porosity, "z"))
 permeability.show(show_inactive=False)

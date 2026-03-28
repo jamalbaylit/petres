@@ -17,7 +17,7 @@ from .validation import (
 
 class GRDECLWriter:
     """
-    Export corner-point grid to GRDECL format (Schlumberger Petrel / ECLIPSE).
+    Export corner-point grid to GRDECL format (Schlumberger Petrel / Eclipse).
 
     Parameters
     ----------
@@ -127,7 +127,7 @@ class GRDECLWriter:
         """Write file header with metadata."""
         now = datetime.now()
         date_str = now.strftime("%A, %B %d %Y %H:%M:%S")
-        f.write(f"-- Format      : Generic ECLIPSE style (ASCII) grid geometry and properties (*.GRDECL)\n")
+        f.write(f"-- Format      : Generic Eclipse style (ASCII) grid geometry and properties (*.GRDECL)\n")
         f.write(f"-- Exported by : Petres\n")
         f.write(f"-- Date        : {date_str}\n")
         f.write(f"-- Grid        : 3D Grid ({ni}X{nj}X{nk})\n")
@@ -159,7 +159,7 @@ class GRDECLWriter:
         coord shape: (ny+1, nx+1, 6)
         """
 
-        # Flatten in ECLIPSE order
+        # Flatten in Eclipse order
         flat = coord.reshape(-1, ncol)
 
         f.write("COORD\n")
@@ -180,7 +180,7 @@ class GRDECLWriter:
         """
         zcorn shape: (2*nz, 2*ny, 2*nx)
         """
-        # ECLIPSE requires Fortran ordering
+        # Eclipse requires Fortran ordering
         flat = zcorn.reshape(-1, ncol)
 
         f.write("ZCORN\n")
@@ -289,7 +289,7 @@ class GRDECLWriter:
         else:
             data = prop_array
 
-        # ECLIPSE flattening
+        # Eclipse flattening
         flat = data.reshape(-1, ncol)
 
         # Integer vs float formatting
@@ -309,7 +309,7 @@ class GRDECLWriter:
         """Write array values with proper formatting."""
         
         if format_style == "columns":
-            # Write 6 values per line (standard ECLIPSE format)
+            # Write 6 values per line (standard Eclipse format)
             values_per_line = 6
             
             for i, val in enumerate(values):

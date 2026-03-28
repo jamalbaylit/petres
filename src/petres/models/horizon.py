@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Iterable, Optional
 import numpy as np
 
 
@@ -143,11 +143,13 @@ class Horizon:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-        color: Any | None = None,
+        color: Any | None = 'tan',
+        scalars: bool = True,
+        cmap: Optional[str] = 'turbo',
     ):
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
-        viewer.add_horizon(self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, color=color)
+        viewer.add_horizon(self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, color=color, scalars=scalars, cmap=cmap)
         viewer.show()
 
     def show2d(

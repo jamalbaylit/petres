@@ -49,6 +49,7 @@ extensions = [
     "sphinx_copybutton",
     "apigen",
     "exampledocs",
+    "furo_nav_sections",
 ]
 
 templates_path = ["_templates"]
@@ -60,6 +61,7 @@ exclude_patterns = [
 ]
 
 root_doc = "index"
+furo_nav_sections_maxdepth = 3
 numfig = True
 numtables = True
 numfig_format = {

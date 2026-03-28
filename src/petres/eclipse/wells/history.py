@@ -35,7 +35,7 @@ class WCONHISTRecord:
     """
     One WCONHIST row for one well at one time step.
 
-    Use None to mean '*' (ECLIPSE default).
+    Use None to mean '*' (Eclipse default).
     """
     well_name: str
     well_status: WellStatus = WellStatus.OPEN
@@ -74,11 +74,11 @@ class WCONHISTStep:
 
 class WCONHISTWriter:
     """
-    Write WCONHIST blocks (and optionally DATES) in ECLIPSE SCHEDULE format.
+    Write WCONHIST blocks (and optionally DATES) in Eclipse SCHEDULE format.
 
     Design goals:
     - User passes typed records (safe, validated).
-    - Writer emits correct ECLIPSE text.
+    - Writer emits correct Eclipse text.
     - None -> '*' mapping is consistent.
     """
 

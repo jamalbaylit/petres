@@ -27,7 +27,7 @@ class GRDECLData:
 
 class GRDECLReader:
     """
-    Reads GRDECL (ECLIPSE) grid keywords:
+    Reads GRDECL (Eclipse) grid keywords:
     - SPECGRID (NI, NJ, NK)
     - COORD
     - ZCORN

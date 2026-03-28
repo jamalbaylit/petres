@@ -1,3 +1,4 @@
+.. _corner-point-grids:
 Corner-Point Grid
 =================
 
@@ -90,14 +91,14 @@ corner coordinates. A complete grid cell is constructed by applying this
 interpolation to all eight corners using the appropriate pillar and
 corner depth values.
 
-Representation in ECLIPSE
+Representation in Eclipse
 -------------------------
 
-In ECLIPSE simulator, Corner-Point grids are defined using ``DIMENS``, ``COORD``, ``ZCORN`` keywords, and optionally ``ACTNUM`` keyword.
+In Hopsin  simulator, Corner-Point grids are defined using ``DIMENS``, ``COORD``, ``ZCORN`` keywords, and optionally ``ACTNUM`` keyword.
 This set of keywords that separately describe topology, geometry, and cell activity.
 
 
-.. list-table:: Description of ECLIPSE Corner-Point grid keywords.
+.. list-table:: Description of Eclipse Corner-Point grid keywords.
    :header-rows: 1
    :widths: 10 30 30 30
    :class: eclipse-keyword-table
@@ -125,7 +126,7 @@ DIMENS
 ~~~~~~
 
 The ``DIMENS`` keyword specifies the grid dimensions
-and defined in ``RUNSPEC`` section of the ECLIPSE input file.
+and defined in ``RUNSPEC`` section of the Eclipse input file.
 It defines the number of grid cells in each coordinate direction
 required to correctly reconstruct the grid topology.
 
@@ -133,7 +134,7 @@ required to correctly reconstruct the grid topology.
 - :math:`N_j` — number of cells in the :math:`j` (y) direction  
 - :math:`N_k` — number of layers in the :math:`k` (z) direction
 
-In the ECLIPSE input file, the dimensions are defined in the order :math:`(N_i, N_j, N_k)`:
+In the Eclipse input file, the dimensions are defined in the order :math:`(N_i, N_j, N_k)`:
 
 .. code-block:: text
 

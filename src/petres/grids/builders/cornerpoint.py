@@ -18,7 +18,7 @@ from ...models.zone import Zone
 
 # def _build_zcorn_from_zones(*, pillars: PillarGrid, zones: Sequence[Zone]) -> tuple[np.ndarray, np.ndarray]:
 #     """
-#     Build ECLIPSE-style ZCORN array of shape (2*nk, 2*nj, 2*ni)
+#     Build Eclipse-style ZCORN array of shape (2*nk, 2*nj, 2*ni)
 #     by stacking zone internal interfaces (Zone.levels) in stratigraphic order.
     
 #     This function is fully vectorized for performance.
@@ -146,7 +146,7 @@ from ...models.zone import Zone
 #         )
     
 #     # ----------------------------
-#     # 3. Pack into ECLIPSE ZCORN format (vectorized)
+#     # 3. Pack into Eclipse ZCORN format (vectorized)
 #     # ----------------------------
 #     # ZCORN shape: (2*nk, 2*nj, 2*ni)
 #     # Each cell (k, j, i) has 8 corners stored in a specific pattern
@@ -199,7 +199,7 @@ def _build_zcorn_from_zones(
     zones: Sequence[Zone],
 ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray, dict[int, str]]:
     """
-    Build ECLIPSE-style ZCORN and ACTNUM from stratigraphic zones.
+    Build Eclipse-style ZCORN and ACTNUM from stratigraphic zones.
 
     Also returns cell-wise zone membership:
     - zone_index[k, j, i] = zone id
