@@ -43,7 +43,24 @@ class GRDECLWriter:
         - properties: Optional dictionary of property arrays {name: array}
         """
 
+    def write_property(
+        self,
+        path: str | Path,
+        *,
+        values: np.ndarray,
+        keyword: str
+    ) -> None:
+        """
+        Export a single grid property to GRDECL format.
         
+        Parameters:
+        - path: Output file path
+        - values: Array of property values to export
+        - keyword: Eclipse keyword for the property (e.g., 'PORO', 'PERMX')
+        """
+        with open(path, 'w') as f:
+            f = GRDECLWriter._write_array(f, keyword, values, rle=True)
+
     def write(
         self,
         *,
@@ -52,7 +69,7 @@ class GRDECLWriter:
         zcorn: np.ndarray, 
         actnum: np.ndarray | None = None,
         property_values: Optional[Dict[str, np.ndarray]] = None,
-        property_names: Optional[List[str]] = None,
+        property_keywords: Optional[List[str]] = None,
         rle: bool = True,
         units: str = "FEET",
         mapunits: str = "FEET",
@@ -109,7 +126,7 @@ class GRDECLWriter:
             
             # Properties
             if property_values:
-                for idx, prop_name in enumerate(property_names):
+                for idx, prop_name in enumerate(property_keywords):
                     prop_array = property_values[idx]
                     f = GRDECLWriter._write_array(f, prop_name, prop_array, rle=rle)
 
@@ -173,6 +190,13 @@ class GRDECLWriter:
             return GRDECLWriter._write_array_raw(f, keyword, array, ncol, type, decimals)
 
     @staticmethod
+    def _normalize_keyword(keyword: str) -> str:
+        """Normalize property name to valid Eclipse keyword format."""
+        if not isinstance(keyword, str):
+            raise TypeError(f"Keyword must be a string, got {type(keyword)}.")
+        return keyword.strip().upper()
+
+    @staticmethod
     def _write_array_raw(
         f: TextIO, 
         keyword: str,
@@ -182,10 +206,11 @@ class GRDECLWriter:
         decimals: int | None = None
     ) -> None:
         flat = np.asarray(array, dtype=type).ravel(order="C")
+        keyword = GRDECLWriter._normalize_keyword(keyword)
 
         fmt = GRDECLWriter._get_fmt(flat, decimals)
         flat2d = flat.reshape(-1, ncol)
-        f.write(f"\n{keyword.upper()}\n")
+        f.write(f"\n{keyword}\n")
         np.savetxt(f, flat2d, fmt=fmt)
         f.write("/\n\n")
         return f
@@ -206,8 +231,8 @@ class GRDECLWriter:
             flat = np.round(flat, decimals)
 
         lengths, values = GRDECLWriter._rle(flat)
-
-        f.write(f"\n{keyword.upper()}\n")
+        keyword = GRDECLWriter._normalize_keyword(keyword)
+        f.write(f"\n{keyword}\n")
         GRDECLWriter._rle_writer(f, lengths, values, ncol)
         f.write("/\n\n")
         return f

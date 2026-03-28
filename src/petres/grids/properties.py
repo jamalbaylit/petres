@@ -7,6 +7,8 @@ import warnings
 
 from .._validation import _validate_nonempty_string
 from ..interpolators.base import BaseInterpolator
+from ..errors import MissingEclipseKeywordError
+from ..eclipse.grids.write import GRDECLWriter
 from ..models.wells import VerticalWell
 from ..models.zone import Zone
 
@@ -42,7 +44,7 @@ class GridProperty:
         if self.eclipse_keyword is not None:
             if not isinstance(self.eclipse_keyword, str):
                 raise TypeError("`eclipse_keyword` must be a string or None.")
-            keyword = self.eclipse_keyword.strip().upper()
+            keyword = GRDECLWriter._normalize_keyword(self.eclipse_keyword)
             if not keyword:
                 raise ValueError("`eclipse_keyword` cannot be empty.")
             self.eclipse_keyword = keyword
@@ -494,13 +496,15 @@ class GridProperty:
     def to_grdecl(
         self, 
         path: str,
-        *,
-        include_actnum: bool = True,
     ) -> None:
-        return self.grid.to_grdecl(
-            path=path, 
-            properties=[self.name], 
-            include_actnum=include_actnum
+        writer = GRDECLWriter()
+        if self.eclipse_keyword is None:
+            raise MissingEclipseKeywordError(property_name=self.name)
+        
+        writer.write_property( 
+            path,
+            values = self.values,
+            keyword = self.eclipse_keyword
         )
 
     def _collect_well_samples(
@@ -666,3 +670,5 @@ class GridProperties:
         return name
 
 
+# class UndefinedEclipseKeywordError(ValueError):
+    
