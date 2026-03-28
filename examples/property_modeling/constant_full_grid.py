@@ -13,7 +13,7 @@ grid = CornerPointGrid.from_regular(
 
 # Assign constant porosity to whole grid
 porosity = grid.properties.create(
-    "poro",
+    name="poro",
     eclipse_keyword="PORO",
     description="Porosity"
 )

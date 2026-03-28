@@ -27,19 +27,19 @@ class Zone:
         y: np.ndarray | None = None,
         xlim: tuple[float, float] | None = None,
         ylim: tuple[float, float] | None = None,
-        nx: int | None = None,
-        ny: int | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
 
-        color: Any | None = None,
+        color: Any | None = 'gray',
         show_layers: bool = True,
         show_edges: bool = True,
     ):
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
         viewer.add_zone(
-            self, x=x, y=y, xlim=xlim, ylim=ylim, ni=nx, nj=ny, dx=dx, dy=dy, 
+            self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
             color=color,
             show_layers=show_layers,
             show_edges=show_edges,

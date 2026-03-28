@@ -112,7 +112,7 @@ class Matplotlib2DViewer(Base2DViewer):
         y : np.ndarray
             1D array of y coordinates.
         cmap : str, optional
-            Colormap name (default: uses theme colormap).
+            Colormap name (default: uses theme cmap).
         show_contours : bool
             Whether to show contour lines (default: True).
         contour_levels : int
@@ -128,7 +128,7 @@ class Matplotlib2DViewer(Base2DViewer):
             Returns self for method chaining.
         """
         if cmap is None:
-            cmap = self.theme.colormap
+            cmap = self.theme.cmap
         
         if show_colorbar is None:
             show_colorbar = self.theme.show_colorbar
@@ -194,7 +194,7 @@ class Matplotlib2DViewer(Base2DViewer):
         show_thickness : bool
             Whether to show thickness map (default: False).
         cmap : str, optional
-            Colormap name (default: uses theme colormap).
+            Colormap name (default: uses theme cmap).
         show_contours : bool
             Whether to show contour lines (default: True).
         contour_levels : int

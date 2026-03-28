@@ -48,12 +48,10 @@ def _add_corner_point_grid(
         if n_cells == 0:
             raise ValueError("No active cells found in the grid")
         
-        print(f"Active cells: {n_cells:,} / {nk*nj*ni:,} ({100*n_cells/(nk*nj*ni):.1f}%)")
     else:
         # All cells active - reshape from 4D to 2D
         n_cells = nk * nj * ni
         cell_corners = cell_corners.reshape(n_cells, 8, 3)
-        print(f"Total cells: {n_cells:,} (all active)")
     
     # ========================================================================
     # Build PyVista mesh (vectorized)
@@ -64,11 +62,8 @@ def _add_corner_point_grid(
     # ========================================================================
     # Attach scalar values (optional)
     # ========================================================================
-    if color is not None and scalars is not None:
-        raise ValueError("Use either `color` or `scalars`, not both.")
-
     if scalars is not None:
-        scalars = np.asarray(scalars)
+        scalars = np.asarray(scalars, dtype=float)
 
         # Handle active filtering consistency
         if grid.active is not None and not np.all(grid.active) and not show_inactive:
@@ -86,14 +81,14 @@ def _add_corner_point_grid(
         backend.plotter.add_mesh(
             mesh,
             scalars="values",
-            cmap=cmap or "viridis",   # default fallback
+            cmap=cmap or "turbo",   # default fallback
             show_edges=True,
             **kwargs
         )
     else:
         backend.plotter.add_mesh(
             mesh,
-            color=Color(color).as_rgb() if color is not None else None,
+            color=Color(color).as_rgb() if color is not None else 'tan',
             show_edges=True,
             **kwargs
         )

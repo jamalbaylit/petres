@@ -359,6 +359,7 @@ def _write_page(
     *,
     page: Page,
     app: Sphinx,
+    show_source: bool = False,
     previous: NavLink | None = None,
     next_: NavLink | None = None,
 ) -> None:
@@ -429,9 +430,9 @@ def _write_page(
                     ]
                 )
 
-            source_path = example.path
-            lines.append(f"**Source:** ``{source_path}``")
-            lines.append("")
+            if show_source:
+                lines.append(f"**Source:** ``{example.path}``")
+                lines.append("")
 
             if example.description:
                 lines.extend([example.description, ""])

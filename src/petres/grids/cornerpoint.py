@@ -107,6 +107,36 @@ class CornerPointGrid:
         zone_id = self._get_zone_id_from_name(zone_name)
         return self.zone_index == zone_id
 
+    def summary(self) -> str:
+        nk, nj, ni = self.shape
+        total_cells = self.n_cells
+        active = int(self.active.sum())
+        inactive = total_cells - active
+
+        active_pct = 100 * active / total_cells if total_cells else 0.0
+        inactive_pct = 100.0 - active_pct
+
+        prop_names = list(self._properties.keys())
+        zone_names = list(self.zone_names.values()) if self.zone_names else []
+
+        def fmt(items: list[str], max_items: int = 4) -> str:
+            if not items:
+                return "Not Defined"
+            if len(items) <= max_items:
+                return ", ".join(items)
+            return f"{', '.join(items[:max_items])}, … (+{len(items) - max_items} more)"
+
+        lines = [
+            "Grid Summary",
+            "════════════",
+            f"Shape         : {nk}×{nj}×{ni} (k×j×i)",
+            f"Cells         : {total_cells}",
+            f"Active        : {active} ({active_pct:.2f}%)",
+            f"Inactive      : {inactive} ({inactive_pct:.2f}%)",
+            f"Properties    : {fmt(prop_names)}",
+            f"Zones         : {fmt(zone_names)}",
+        ]
+        return "\n".join(lines)
 
     @staticmethod
     def _normalize_zone_name(zone: str | Zone) -> str:
@@ -347,11 +377,19 @@ class CornerPointGrid:
         writer = GRDECLWriter()
         writer.write(path=path, coord=coord, zcorn=zcorn, actnum=actnum)
 
-    def show(self, show_inactive: bool = False, color: Any = 'tan', scalars: str | None = None, **kwargs) -> None:
+    def show(
+        self, 
+        show_inactive: bool = False, 
+        scalars: str | None = None,
+        color: Any = 'tan', 
+        cmap: Optional[str] = 'turbo', 
+        **kwargs
+    ) -> None:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
-        scalars = self._resolve_source(scalars)
-        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, **kwargs)
+        scalars = self._resolve_source(scalars) if scalars is not None else None
+        color = None if scalars is not None else color
+        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)
         viewer.show()
     
     @classmethod
@@ -461,7 +499,6 @@ class CornerPointGrid:
         
         self.active &= inside_mask
         
-
     def _compute_cell_corners(self) -> np.ndarray:
         """Compute 3D coordinates of all 8 corners for each cell.
         
@@ -525,7 +562,6 @@ class CornerPointGrid:
         
         return corners
 
-
     def _target_mask(
         self,
         zone: str | Zone | None = None,
@@ -556,7 +592,11 @@ class CornerPointGrid:
         - another GridProperty
         """
         if isinstance(source, str):
-            return self._geometry_source(source)
+            if source in self._properties:
+                prop = self._properties[source]
+                return prop.values
+            else:
+                return self._geometry_source(source)
 
         if isinstance(source, GridProperty):
             if source.grid is not self:
@@ -581,6 +621,7 @@ class CornerPointGrid:
         "top"       : top z of cell
         "bottom"    : bottom z of cell
         "thickness" : cell thickness
+        "active"    : active mask (1 for active, 0 for inactive)
         """
         centers = self.cell_centers  # (nk, nj, ni, 3)
 
@@ -608,14 +649,23 @@ class CornerPointGrid:
                         return z_bottom
                     case "thickness":
                         return np.abs(z_bottom - z_top)
-
+            case "active":
+                return self.active.astype(int)
             case _:
                 raise ValueError(
                     f"Unsupported source {source!r}. "
                     f"Supported built-in sources are: "
-                    f"'x', 'y', 'z', 'top', 'bottom', 'thickness'."
+                    f"'x', 'y', 'z', 'top', 'bottom', 'thickness', 'active'."
                 )
             
+    def __repr__(self) -> str:
+        nk, nj, ni = self.shape
+    
+        return (
+            f"{self.__class__.__name__}(shape=({nk}, {nj}, {ni}), "
+            f"n_active={self.n_active}/{self.n_cells}, "
+            f"properties={list(self._properties.keys())})"
+        )
     # # ----------------------------
     # # Cell geometry
     # # ----------------------------
@@ -888,11 +938,6 @@ class CornerPointGrid:
         
     #     return cls.from_layers(pillars, layer_z, active, properties)
 
-    # def __repr__(self) -> str:
-    #     """String representation."""
-    #     return (
-    #         f"CornerPointGrid(shape={self.shape}, "
-    #         f"n_active={self.n_active}/{self.n_cells}, "
-    #         f"properties={list(self.properties.keys())})"
-    #     )
+
+        
     

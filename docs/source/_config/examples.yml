@@ -1,20 +1,26 @@
 pages:
-  - slug: visualization
-    title: Visualization
+  - slug: grid-generation
+    title: Grid Generation
     location: examples
-    summary: Focused visualization examples for 2D workflows.
-    description: |
-      These examples show different 2D visualization patterns.
-    difficulty: beginner
-    tags: [visualization, 2d]
+    summary: Focused on examples for generating grids.
+    # description: |
+      # These examples show different 2D visualization patterns.
+    # difficulty: beginner
+    # tags: [grid-generation, 2d]
     sections:
-      - title: View boundaries and zones in 2D
+      - title: Generate Basic Grid Types
         description: |
-          Basic 2D visualization examples.
+          Basic grid generation like Rectilinear, and Regular grids.
         examples:
-          - path: examples/view_boundary_2d.py
-            title: View a boundary in 2D
-          - path: examples/view_zone_2d.py
-            title: View a zone in 2D
-          - path: examples/view_2d_advanced.py
-            title: Advanced 2D visualization
+          - path: examples/grid/create_cornerpoint_grid_from_rectilinear.py
+            title: Generate a Rectilinear Grid
+          - path: examples/grid/create_cornerpoint_grid_from_regular.py
+            title: Generate a Regular Grid
+
+      - title: Generate Corner-Point Grid from Zones
+        description: |
+          Generate a Corner-Point grid from horizon and zone data.
+        examples:
+          - path: examples/grid/create_cornerpoint_grid_from_zones.py
+            title: Generate a Corner-Point Grid from Zones
+

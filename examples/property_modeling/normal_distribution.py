@@ -6,9 +6,9 @@ grid = CornerPointGrid.from_regular(
     xlim=(0, 1000),
     ylim=(0, 1000),
     zlim=(0, 100),
-    ni=20,
-    nj=20,
-    nk=3,
+    ni=20*4,
+    nj=20*4,
+    nk=3*4,
 )
 
 porosity = grid.properties.create(name="poro", eclipse_keyword="PORO", description="Porosity")

@@ -26,7 +26,7 @@ print("Example 1: Simple horizon view")
 horizon1.show2d(xlim=(0, 100), ylim=(0, 100), ni=50, nj=50)
 
 # Example 2: Custom theme
-print("Example 2: Custom theme with different colormap")
+print("Example 2: Custom theme with different cmap")
 theme = Viewer2DTheme(
     figure_size=(12, 10),
     background="lightgray",
@@ -35,7 +35,7 @@ theme = Viewer2DTheme(
     xlabel="Easting (m)",
     ylabel="Northing (m)",
     title="Custom Styled Horizon Map",
-    colormap="plasma",
+    cmap="plasma",
     aspect="equal"
 )
 

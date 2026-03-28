@@ -192,7 +192,7 @@ def _add_zone(
 
     actor_name = name or f"zone:{zone.name}"
 
-    color = Color(color).as_rgb()
+    color = Color(color).as_rgb() if color is not None else 'tan'
 
     assert isinstance(show_outline, bool), \
          f"'show_outline' must be a boolean. Got: {type(show_outline).__name__}"

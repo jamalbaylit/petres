@@ -129,6 +129,6 @@ table.docutils th{
     text-align: left;
 } */
 
-.admonition, .topic{
+/* .admonition, .topic{
     background: var(--color-sidebar-background);
-}
+} */

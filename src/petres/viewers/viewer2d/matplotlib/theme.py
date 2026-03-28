@@ -28,7 +28,7 @@ class Matplotlib2DViewerTheme:
     
     # Colorbar
     show_colorbar: bool = True
-    colormap: str = "viridis"
+    cmap: str = "viridis"
     
     # Aspect ratio
     aspect: Literal["auto", "equal"] = "equal"

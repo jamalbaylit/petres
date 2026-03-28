@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from typing import Any
+from pyparsing import Optional
 import pyvista as pv
 import numpy as np
 
 from .....models.horizon import Horizon
+from ....._utils._color import Color
 
 
 def _add_horizon(
@@ -14,7 +16,9 @@ def _add_horizon(
     x: np.ndarray,
     y: np.ndarray,
     name: str | None = None,
-    scalars: str | None = "z",
+    color: Optional[Color] = None,
+    scalars: Optional[bool] = True,   
+    cmap: Optional[str] = None,             
     **mesh_kwargs: Any,
 ) -> pv.StructuredGrid:
     """
@@ -38,10 +42,10 @@ def _add_horizon(
 
     grid = pv.StructuredGrid(xx, yy, z)
 
-    if scalars is not None:
-        # point_data expects flat array matching n_points
-        grid.point_data[scalars] = z.ravel(order="C")
+    if scalars is True:
+        grid.point_data['z'] = z.ravel(order="F")
+        color = None  # use scalars + cmap for coloring
+        cmap = cmap or "viridis"
 
-    actor_name = name or f"horizon:{horizon.name}"
-    backend.plotter.add_mesh(grid, name=actor_name, **mesh_kwargs)
+    backend.plotter.add_mesh(grid, name=name, color=color, cmap=cmap, **mesh_kwargs)
     return grid
