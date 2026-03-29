@@ -29,16 +29,24 @@ grid.show(show_inactive=False)
 
 
 porosity = grid.properties.create(
-    "poro",
-    eclipse_keyword="PORO",
-    description="Porosity"
+  "poro",
+  eclipse_keyword="PORO",
+  description="Porosity"
 )
 
 porosity.fill(0.20, zone="Caprock")
 porosity.fill(0.5, zone="Base")
 
+
+
+porosity.show(show_inactive=True)
+
+# Fill any remaining NaN values
+porosity.fill_nan(0)  
+porosity.show(show_inactive=True)
 porosity.show(show_inactive=False)
 
+porosity.to_grdecl("poro_constant_per_zone.grdecl")
 
 
 

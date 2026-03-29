@@ -2,22 +2,61 @@ from __future__ import annotations
 
 from typing import Any, Optional, Dict, Self, Tuple, Sequence
 from dataclasses import dataclass, field
+from typing import Callable
 from pathlib import Path
 import numpy as np
 import warnings
 
 
 
+
 from ..grids.sampling._validation import _validate_vertex_array
 from ..grids.sampling._vertices import _resolve_xyz_vertices
 from .builders.cornerpoint import _build_zcorn_from_zones
-from ..errors import MissingEclipseKeywordError
+from ..errors.property import MissingEclipseKeywordError
+from ..errors.grid import UnsupportedGridAttributeError
 from ..eclipse.grids.write import GRDECLWriter
 from ..eclipse.grids.read import GRDECLReader
 from .pillar import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
 from ..grids.properties import GridProperties, GridProperty
+
+
+
+@dataclass(frozen=True)
+class GridAttributeSpec:
+    name: str
+    description: str
+    resolver: Callable[["CornerPointGrid"], np.ndarray]
+    aliases: tuple[str, ...] = ()
+
+
+GRID_ATTRIBUTES = (
+    GridAttributeSpec("x", "cell-center x coordinate", lambda g: g.cell_centers[..., 0]),
+    GridAttributeSpec("y", "cell-center y coordinate", lambda g: g.cell_centers[..., 1]),
+    GridAttributeSpec(
+        "depth",
+        "cell-center depth (positive downward)",
+        lambda g: g.cell_centers[..., 2],
+        aliases=("z",),
+    ),
+    GridAttributeSpec("top", "top depth of cell", lambda g: g._cell_top_depth()),
+    GridAttributeSpec("bottom", "bottom depth of cell", lambda g: g._cell_bottom_depth()),
+    GridAttributeSpec("thickness", "cell thickness", lambda g: g._cell_thickness()),
+    GridAttributeSpec("active", "1 for active cells, 0 for inactive", lambda g: g.active.astype(int)),
+)
+
+GRID_ATTRIBUTE_BY_NAME = {spec.name: spec for spec in GRID_ATTRIBUTES}
+
+GRID_ATTRIBUTE_BY_ALIAS = {
+    alias: spec
+    for spec in GRID_ATTRIBUTES
+    for alias in (spec.name, *spec.aliases)
+}
+
+RESERVED_GRID_PROPERTY_NAMES = frozenset(GRID_ATTRIBUTE_BY_ALIAS)
+
 
 @dataclass
 class CornerPointGrid:
@@ -112,8 +151,8 @@ class CornerPointGrid:
     def summary(self) -> str:
         nk, nj, ni = self.shape
         total_cells = self.n_cells
-        active = int(self.active.sum())
-        inactive = total_cells - active
+        active = self.n_active
+        inactive = self.n_inactive
 
         active_pct = 100 * active / total_cells if total_cells else 0.0
         inactive_pct = 100.0 - active_pct
@@ -152,7 +191,7 @@ class CornerPointGrid:
     
     def _get_zone_id_from_name(self, name: str) -> int:
         if name not in self._zone_name_to_id:
-            raise ValueError(f"Zone name '{name}' not found in grid zones.")
+            raise ValueError(f"Zone '{name}' not found in grid zones.")
         return self._zone_name_to_id[name]
 
     def set_zones(
@@ -295,9 +334,13 @@ class CornerPointGrid:
     @property
     def n_active(self) -> int:
         """Number of active cells."""
-        return np.sum(self.active)
+        return int(np.nansum(self.active))
     
-
+    @property
+    def n_inactive(self) -> int:
+        """Number of inactive cells."""
+        return self.n_cells - self.n_active
+    
     @property
     def cell_centers(self) -> np.ndarray:
         """Cell centers (average of 8 corners).
@@ -614,6 +657,7 @@ class CornerPointGrid:
 
         return mask
     
+
     def _resolve_source(
         self,
         source: str | "GridProperty",
@@ -630,7 +674,7 @@ class CornerPointGrid:
                 prop = self._properties[source]
                 return prop.values
             else:
-                return self._geometry_source(source)
+                return self._get_attribute(source)
 
         if isinstance(source, GridProperty):
             if source.grid is not self:
@@ -643,54 +687,13 @@ class CornerPointGrid:
             "`source` entries must be either str or GridProperty."
         )
     
-    def _geometry_source(self, source: str) -> np.ndarray:
-        """
-        Resolve built-in geometric source names to full-grid arrays.
+    def _get_attribute(self, name: str) -> np.ndarray:
+        try:
+            spec = GRID_ATTRIBUTE_BY_ALIAS[name]
+        except KeyError as e:
+            raise UnsupportedGridAttributeError(attribute_name=name, supported_names=GRID_ATTRIBUTE_BY_ALIAS.keys()) from e
+        return spec.resolver(self)
 
-        Supported
-        ---------
-        "x"         : cell-center x coordinate
-        "y"         : cell-center y coordinate
-        "z"         : cell-center z coordinate
-        "top"       : top z of cell
-        "bottom"    : bottom z of cell
-        "thickness" : cell thickness
-        "active"    : active mask (1 for active, 0 for inactive)
-        """
-        centers = self.cell_centers  # (nk, nj, ni, 3)
-
-        match source:
-            case "x":
-                return centers[..., 0]
-
-            case "y":
-                return centers[..., 1]
-
-            case "z":
-                return centers[..., 2]
-
-            case "top" | "bottom" | "thickness":
-                corners = self._compute_cell_corners()  # (nk, nj, ni, 8, 3)
-                zcorn = corners[..., 2]                    # (nk, nj, ni, 8)
-
-                z_top = np.min(zcorn[..., :4], axis=-1)
-                z_bottom = np.max(zcorn[..., 4:], axis=-1)
-
-                match source:
-                    case "top":
-                        return z_top
-                    case "bottom":
-                        return z_bottom
-                    case "thickness":
-                        return np.abs(z_bottom - z_top)
-            case "active":
-                return self.active.astype(int)
-            case _:
-                raise ValueError(
-                    f"Unsupported source {source!r}. "
-                    f"Supported built-in sources are: "
-                    f"'x', 'y', 'z', 'top', 'bottom', 'thickness', 'active'."
-                )
             
     def __repr__(self) -> str:
         nk, nj, ni = self.shape
