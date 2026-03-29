@@ -155,22 +155,21 @@ more complex or needs to be reused.
 
 .. _grid-attributes:
 
-Built-in Grid Attributes
+Built-In Grid Attributes
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following built-in attribute names can be used as data sources in
 :meth:`GridProperty.apply`.
-
 These attributes are computed directly from the grid geometry and do not
 require explicit property creation.
 
-- ``"x"`` — x-coordinate of cell centers  
-- ``"y"`` — y-coordinate of cell centers  
-- ``"depth"`` (or ``"z"``) — cell-center depth (positive downward)  
-- ``"top"`` — depth of the top face of each cell  
-- ``"bottom"`` — depth of the bottom face of each cell  
-- ``"thickness"`` — cell thickness (``bottom - top``)  
-- ``"active"`` — activity indicator (1 for active cells, 0 for inactive)  
+- ``"x"`` — X-coordinate of cell centers  
+- ``"y"`` — Y-coordinate of cell centers  
+- ``"depth"`` (or ``"z"``) — Cell-center depth (positive downward)  
+- ``"top"`` — Depth of the top face of each cell  
+- ``"bottom"`` — Depth of the bottom face of each cell  
+- ``"thickness"`` — Cell thickness (``bottom - top``)  
+- ``"active"`` — Activity indicator (1 for active cells, 0 for inactive)  
 
 These attributes can be used directly as input sources. For example,
 permeability can be defined as a function of depth:
@@ -318,32 +317,68 @@ The same zone-based idea can be used with other population methods as well`. For
 
 This allows each zone to be modeled independently.
 
+
+
+
+
+
+
+
+
+
+
+
+
 Interpolating Property Values from Wells
 ----------------------------------------
 
-Properties can also be interpolated from well samples.
+Property values can also be assigned by interpolating measurements taken at
+well locations. This is useful when property data are available only at sparse
+sample points and must be distributed throughout the grid.
+
+First, define the wells and add property samples:
+
+.. code-block:: python
+    from petres.interpolators import UKInterpolator
+    from petres.models import VerticalWell
+
+    well1 = VerticalWell(name="Well 1", x=20, y=78)
+    well2 = VerticalWell(name="Well 2", x=32, y=55)
+
+    well1.add_sample(name="porosity", value=100, depth=10)
+    well2.add_sample(name="porosity", value=50, depth=15)
+
+Each sample represents a known property value at a specific location in space.
+
+Next, interpolate these values across the grid:
 
 .. code-block:: python
 
-    well1 = VerticalWell(name="Well 1", x=20, y=78)
-    well3 = VerticalWell(name="Well 3", x=32, y=55)
-
-    well1.add_sample(name="porosity", value=100, depth=10)
-    well3.add_sample(name="porosity", value=50, depth=15)
-
     porosity.from_wells(
-        wells=[well1, well3],
+        wells=[well1, well2],
         interpolator=UKInterpolator(),
         mode="xyz",
     )
 
-   porosity.show()
+The well samples are used as input data, and the interpolator estimates a
+property value for each grid cell.
 
-This workflow is useful when property measurements are available only at well
-locations and must be distributed throughout the grid by interpolation.
+The ``wells`` argument defines the source data points.
+The ``interpolator`` argument controls how the values are distributed in space.
+The ``mode`` argument defines which spatial coordinates are used during
+interpolation. For example, ``"xyz"`` uses full three-dimensional coordinates,
+while ``"xy"`` can be used for interpolation only in the horizontal plane.
 
-The chosen interpolator controls how the well data are propagated spatially.
-Depending on the problem, different interpolators may be more appropriate.
+In this example, Universal Kriging (:class:`~petres.interpolators.UniversalKrigingInterpolator`) is used. 
+Different interpolators may produce different results depending on the sample
+distribution and interpolation method. Choose the interpolator that best fits
+the available data and the intended modeling workflow.
+For more details and additional interpolation options, see
+the :doc:`/tutorials/interpolators`.
+
+
+
+
 
 
 
@@ -353,12 +388,11 @@ Depending on the problem, different interpolators may be more appropriate.
 Filling Remaining Missing Values
 --------------------------------
 
-In some workflows, such as zone-based modeling or interpolation, certain cells may remain unassigned and contain NaN values.
-
-These values can be replaced using :meth:fill_nan:
+In some workflows, such as zone-based modeling or interpolation, certain cells may remain unassigned and contain ``NaN`` values.
+These values can be replaced using :meth:`fill_nan`:
 
 .. code-block:: python
-    
+
     porosity.fill_nan(0.0)
 
 This is particularly useful for handling inactive cells and ensuring that all grid cells have valid values before further processing or export.

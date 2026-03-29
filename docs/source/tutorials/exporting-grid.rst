@@ -19,7 +19,7 @@ Exporting a grid to ``.GRDECL`` file typically includes:
 Exporting Grid Geometry
 -----------------------
 
-:class:`~petres.grids.cornerpoint.CornerPointGrid` can be exported directly to a ``.GRDECL`` file:
+:class:`~petres.grids.CornerPointGrid` can be exported directly to a ``.GRDECL`` file:
 
 .. code-block:: python
 
