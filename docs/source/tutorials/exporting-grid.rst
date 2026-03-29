@@ -87,7 +87,7 @@ Grid properties can be exported together with the geometry:
    )
 
 .. important::
-   If the ``properties`` argument is not defined in ``grid.to_grdecl()``, **all existing properties** will be exported by default.
+   If the ``properties`` argument is not defined in :meth:`to_grdecl`, **all existing properties** will be exported by default.
 
 Each property is written using its associated simulator keyword defined during property creation
 (e.g., ``PORO``, ``PERMX``).

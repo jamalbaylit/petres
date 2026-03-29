@@ -17,7 +17,6 @@ The tutorials present Petres through practical workflows, beginning with direct 
    :maxdepth: 1
    :hidden:
 
-   getting-started
    basic-grid-creation
    horizon-modeling
    zone-modeling
