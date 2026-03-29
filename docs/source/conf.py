@@ -156,8 +156,11 @@ html_theme_options = {
 
         "color-highlight-on-target": main_color2_soft,
 
+        "color-admonition-title-background--notes": main_color1_soft,
         "color-admonition-title-background--note": main_color1_soft,
+        "color-admonition-title--notes": main_color1,
         "color-admonition-title--note": main_color1,
+
 
         "color-admonition-title-background--important": main_color2_soft,
         "color-admonition-title--important": "#8FBF26",
@@ -173,7 +176,9 @@ html_theme_options = {
         'color-link--visited--hover': main_color2_soft,
 
         "color-highlight-on-target": main_color1_soft,
+        "color-admonition-title-background--notes": main_color1_soft,
         "color-admonition-title-background--note": main_color1_soft,
+        "color-admonition-title--notes": main_color1_bright,
         "color-admonition-title--note": main_color1_bright,
 
         "color-admonition-title-background--important": main_color2_soft,
