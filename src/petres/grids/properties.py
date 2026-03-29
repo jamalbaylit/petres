@@ -5,12 +5,15 @@ from dataclasses import dataclass, field
 import numpy as np
 import warnings
 
+
 from .._validation import _validate_nonempty_string
 from ..interpolators.base import BaseInterpolator
-from ..errors import MissingEclipseKeywordError
+from ..errors.property import ExistingPropertyNameError, MissingEclipseKeywordError, MissingPropertyValueError, ReservedPropertyNameError
+from ..errors.eclipse import GRDECLMissingValueError
 from ..eclipse.grids.write import GRDECLWriter
 from ..models.wells import VerticalWell
 from ..models.zone import Zone
+
 
 @dataclass
 class GridProperty:
@@ -102,7 +105,7 @@ class GridProperty:
         std: float,
         *,
         zone: str | Zone | None = None,
-        include_inactive: bool = False,
+        include_inactive: bool = True,
         min: float | None = None,
         max: float | None = None,
         seed: int | None = None,
@@ -147,9 +150,9 @@ class GridProperty:
         self,
         func: Callable[..., Any],
         *,
-        source: str | "GridProperty" | Sequence[str | "GridProperty"] = "z_center",
+        source: str | "GridProperty" | Sequence[str | "GridProperty"],
         zone: Optional[str | Zone] = None,
-        include_inactive: bool = False,
+        include_inactive: bool = True,
     ) -> "GridProperty":
         """
         Apply a function to geometric sources and/or existing properties,
@@ -159,16 +162,17 @@ class GridProperty:
         ----------
         func : callable
             Function applied to the resolved source arrays.
-        source : str | GridProperty | sequence of these, default "z_center"
+        source : str | GridProperty | sequence of these, default "depth"
             Input source(s) for the function.
 
             Supported built-in string sources:
-            - "x"         : cell-center x coordinate
-            - "y"         : cell-center y coordinate
-            - "z"         : cell-center z coordinate
-            - "top"       : top z of cell
-            - "bottom"    : bottom z of cell
-            - "thickness" : cell thickness
+            - "x"           : cell-center x coordinate
+            - "y"           : cell-center y coordinate
+            - "depth", "z"  : cell-center depth (positive downward)
+            - "top"         : top z of cell
+            - "bottom"      : bottom z of cell
+            - "thickness"   : cell thickness
+            - "active"      : 1 for active cells, 0 for inactive
 
             You may also pass another GridProperty, or a tuple/list mixing them.
 
@@ -184,13 +188,13 @@ class GridProperty:
 
         Examples
         --------
-        poro.apply(lambda z: 0.32 - 0.00015 * z, source="z_center")
+        poro.apply(lambda z: 0.32 - 0.00015 * z, source="depth")
 
         perm.apply(lambda p: 1000 * p**3, source=poro)
 
         perm.apply(
             lambda z, p: (1000 * p**3) * np.exp(-z / 3000.0),
-            source=("z_center", poro),
+            source=("depth", poro),
         )
         """
         if not callable(func):
@@ -257,7 +261,7 @@ class GridProperty:
         value: float | int,
         *,
         zone: Optional[str | Zone] = None,
-        include_inactive: bool = False,
+        include_inactive: bool = True,
     ) -> GridProperty:
         """
         Fill this property with a constant value.
@@ -290,7 +294,7 @@ class GridProperty:
         std: float,
         *,
         zone: str | Zone | None = None,
-        include_inactive: bool = False,
+        include_inactive: bool = True,
         min: float | None = None,
         max: float | None = None,
         seed: int | None = None,
@@ -353,7 +357,7 @@ class GridProperty:
         high: float,
         *,
         zone: str | Zone | None = None,
-        include_inactive: bool = False,
+        include_inactive: bool = True,
         seed: int | None = None,
     ) -> "GridProperty":
         if high < low:
@@ -371,18 +375,29 @@ class GridProperty:
         value: float | int,
         *,
         zone: str | Zone | None = None,
+        include_inactive: bool = True,
     ) -> GridProperty:
-        if zone is not None:
-            mask = self.grid._zone_mask(zone)
-            self.values[mask] = value
-        else:
-            self.values.fill(value)
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
+        self.values[mask] = value
+        return self
+
+    def fill_nan(
+        self,
+        value: float | int,
+        *,
+        zone: str | Zone | None = None,
+        include_inactive: bool = True,
+    ) -> GridProperty:
+        mask = np.isnan(self.values) & self.grid._target_mask(zone=zone, include_inactive=include_inactive)
+        self.values[mask] = value
         return self
 
     def from_array(
         self,
         values: np.ndarray,
+        *,
         zone: str | Zone | None = None,
+        include_inactive: bool = True,
     ) -> GridProperty:
         values = np.asarray(values)
 
@@ -390,12 +405,9 @@ class GridProperty:
             raise ValueError(
                 f"`values` shape {values.shape} != grid shape {self.grid.shape}."
             )
-
-        if zone is not None:
-            mask = self.grid._zone_mask(zone)
-            self.values[mask] = values[mask]
-        else:
-            self.values = values
+        
+        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
+        self.values[mask] = values[mask]
         return self
 
 
@@ -412,7 +424,7 @@ class GridProperty:
         mode: Literal["xy", "xyz"] = "xy",
         zone: str | Zone | None = None,
         location: Literal["center", "top", "bottom"] = "center",
-        include_inactive: bool = False,
+        include_inactive: bool = True,
     ) -> "GridProperty":
         """
         Populate this property by interpolating well samples.
@@ -501,11 +513,32 @@ class GridProperty:
         if self.eclipse_keyword is None:
             raise MissingEclipseKeywordError(property_name=self.name)
         
-        writer.write_property( 
-            path,
-            values = self.values,
-            keyword = self.eclipse_keyword
-        )
+        try:
+            writer.write_property( 
+                path,
+                values = self.values,
+                keyword = self.eclipse_keyword
+            )
+        except GRDECLMissingValueError as e:
+            raise MissingPropertyValueError(property_name=self.name) from e
+
+    def summary(self) -> str:
+        lines = [
+            "Property Summary",
+            "════════════        : {self.name}",
+            f"Descri════",
+            f"Name      ption       : {self.description}",
+            f"Eclipse Keyword   : {self.eclipse_keyword}",
+            f"Grid Shape        : {self.shape}",
+            f"Min               : {self.min}",
+            f"Max               : {self.max}",
+            f"Mean              : {self.mean}",
+            f"Median            : {self.median}",
+            f"Std Dev           : {self.std}",
+        ]
+        return "\n".join(lines)
+    
+
 
     def _collect_well_samples(
         self,
@@ -622,10 +655,10 @@ class GridProperties:
         description: Optional[str] = None,
         fill_value: float = np.nan,
     ) -> GridProperty:
-        name = self._normalize_name(name)
+        name = self._validate_property_name(name)
 
         if name in self._grid._properties:
-            raise ValueError(f"Property '{name}' already exists.")
+            raise ExistingPropertyNameError(property_name=name)
 
         values = np.full(self._grid.shape, fill_value, dtype=float)
 
@@ -661,12 +694,18 @@ class GridProperties:
         return self._grid._properties.values()
 
     @staticmethod
-    def _normalize_name(name: str) -> str:
+    def _validate_property_name(name: str) -> str:
+        from .cornerpoint import RESERVED_GRID_PROPERTY_NAMES
+        
         if not isinstance(name, str):
-            raise TypeError(f"`name` must be str, got {type(name)}.")
-        name = name.strip()
-        if not name:
+            raise TypeError(f"`name` must be str, got {type(name).__name__}.")
+
+        if not name.strip():
             raise ValueError("`name` cannot be empty.")
+
+        if name in RESERVED_GRID_PROPERTY_NAMES:
+            raise ReservedPropertyNameError(property_name=name, reserved_names=RESERVED_GRID_PROPERTY_NAMES)
+
         return name
 
 

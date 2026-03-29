@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import TextIO
 import numpy as np
 
+from ...errors.eclipse import GRDECLMissingValueError
+
 from .validation import (
     validate_specgrid, 
     validate_coord_array_shape, 
@@ -182,8 +184,7 @@ class GRDECLWriter:
             array = np.nan_to_num(array, nan=nan_fill, copy=False)
         else:
             if np.isnan(array).any():
-                raise ValueError(f" Array '{keyword}' contains NaN values.")
-
+                raise GRDECLMissingValueError(keyword=keyword)
         if rle:
             return GRDECLWriter._write_array_rle(f, keyword, array, ncol, type, decimals)
         else:

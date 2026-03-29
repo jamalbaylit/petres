@@ -13,5 +13,14 @@ grid = CornerPointGrid.from_regular(
 
 porosity = grid.properties.create(name="poro", eclipse_keyword="PORO", description="Porosity")
 
-porosity.fill_lognormal(mean=0.24, std=0.03, min=0.0, max=0.35)
-porosity.show(show_inactive=False)
+# Fill porosity with log-normal distribution
+porosity.fill_lognormal(mean=0.24, std=0.03)
+porosity.show()
+
+# You can optionally set minimum and maximum limits for the generated log-normal distribution values
+porosity.fill_lognormal(mean=0.24, std=0.03, min=0.2, max=0.3)
+porosity.show()
+
+# To ensure reproducibility of the random values, you can set a seed for the random number generator
+porosity.fill_lognormal(mean=0.24, std=0.03, seed=42)
+porosity.show()
