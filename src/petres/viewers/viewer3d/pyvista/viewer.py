@@ -71,10 +71,17 @@ class PyVista3DViewer(Base3DViewer):
         self.plotter.reset_camera()
         self.plotter.reset_camera_clipping_range()
 
-    def show(self):
+    def show(self, *, title: str | None = None) -> None:
         self.apply_theme(self.theme)
         # self.plotter.set_viewup((-1, 0, 0))
         # self._set_y_front_slight_top(self.plotter, tilt=0.5)
+        if title:
+            self.plotter.add_text(
+                str(title),
+                position=self.theme.title_position,
+                font_size=self.theme.title_fontsize,
+                color=self.theme.title_color,
+            )
         self.apply_camera(self.camera)
         self.plotter.show()
         self.plotter = pv.Plotter()
@@ -490,17 +497,4 @@ class PyVista3DViewer(Base3DViewer):
 #             opacity=0.8,
 #             scalar_bar_args={"title": f"{layer_name} Thickness"}
 #         )
-
-#     def show(self):
-#         p = self.plotter
-#         p.reset_camera_clipping_range()
-#         p.set_background("#e6e6e6", top="#bdbdbd")
-#         p.set_scale(xscale=self.xscale, yscale=self.yscale, zscale=self.zscale)
-#         p.show_axes()
-#         p.show_grid()
-#         # p.camera_position = "xy"   # or "iso"
-#         p.camera.up = (0, 0, -1)
-#         p.show()
-#         # print(self.plotter.bounds)
-
 

@@ -145,6 +145,7 @@ class Horizon:
         dy: float | None = None,
         view: Literal["3d", "2d"] = "3d",
     ) -> None:
+        view = view.strip().lower()
         if view == "3d":
             self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
         elif view == "2d":
@@ -169,8 +170,16 @@ class Horizon:
     ):
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
-        viewer.add_horizon(self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, color=color, scalars=scalars, cmap=cmap)
-        viewer.show()
+        viewer.add_horizon(
+            self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
+            color=color, 
+            scalars=scalars, 
+            cmap=cmap,
+            show_colorbar=True,
+            colorbar_title='Depth',
+        )
+        title="Horizon: " + self.name
+        viewer.show(title=title)
 
     def show2d(
         self,
@@ -186,6 +195,7 @@ class Horizon:
         cmap: str = "turbo",
         show_contours: bool = True,
         contour_levels: int = 10,
+        aspect: Literal["auto", "equal"] = "auto",
         **kwargs,
     ):
         """
@@ -210,7 +220,7 @@ class Horizon:
         dy : float, optional
             Spacing in y direction.
         cmap : str
-            Colormap name (default: "viridis").
+            Colormap name (default: "turbo").
         show_contours : bool
             Whether to show contour lines (default: True).
         contour_levels : int
@@ -219,8 +229,10 @@ class Horizon:
             Additional kwargs passed to the viewer.
         """
         from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
+        from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
 
-        viewer = Matplotlib2DViewer()
+        title="Horizon: " + self.name
+        viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
         viewer.add_horizon(
             self, 
             x=x, y=y, 
@@ -232,7 +244,7 @@ class Horizon:
             contour_levels=contour_levels,
             **kwargs
         )
-        viewer.show()
+        viewer.show(title=title)
 
     def _validate_interpolator(self, interpolator: Any) -> BaseInterpolator:
         if not isinstance(interpolator, BaseInterpolator):
