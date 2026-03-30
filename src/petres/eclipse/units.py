@@ -1,25 +1,25 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import ClassVar
 
 
 class UnitConverter:
     """
-    General unit conversion utility.
+    Provide unit conversion across supported physical dimensions.
 
     Units are grouped by physical dimension (e.g., pressure, flowrate).
     Each dimension has a base unit. All conversions are performed
     via that base unit.
 
-    Example
-    -------
+    Examples
+    --------
     >>> UnitConverter.convert(100, "bar", "psi")
     1450.38
     """
 
     # Conversion factors TO base unit
     # base unit chosen per dimension
-    _UNITS: Dict[str, Dict[str, float]] = {
+    _UNITS: ClassVar[dict[str, dict[str, float]]] = {
         "pressure": {
             "pa": 1.0,             # base
             "bar": 1e5,
@@ -71,6 +71,25 @@ class UnitConverter:
 
     @classmethod
     def _find_dimension(cls, from_unit: str, to_unit: str) -> str:
+        """Resolve the physical dimension shared by two unit symbols.
+
+        Parameters
+        ----------
+        from_unit : str
+            Unit symbol for the source value.
+        to_unit : str
+            Unit symbol for the target value.
+
+        Returns
+        -------
+        str
+            Physical dimension key that contains both units.
+
+        Raises
+        ------
+        ValueError
+            Raised when the units do not belong to the same known dimension.
+        """
         for dimension, units in cls._UNITS.items():
             if from_unit in units and to_unit in units:
                 return dimension
@@ -80,8 +99,19 @@ class UnitConverter:
         )
 
     @classmethod
-    def available_units(cls) -> Dict[str, list[str]]:
-        """Return available units grouped by dimension."""
+    def available_units(cls) -> dict[str, list[str]]:
+        """Return all supported unit symbols grouped by physical dimension.
+
+        Returns
+        -------
+        dict[str, list[str]]
+            Mapping of each dimension name to the list of available unit symbols.
+
+        Examples
+        --------
+        >>> UnitConverter.available_units()["pressure"]
+        ['pa', 'bar', 'psi']
+        """
         return {
             dim: list(units.keys())
             for dim, units in cls._UNITS.items()

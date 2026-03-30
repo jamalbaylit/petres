@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 import numpy as np
+from numpy.typing import DTypeLike, NDArray
 import re
 
 from .validation import (
@@ -17,29 +19,73 @@ from .validation import (
 
 @dataclass(frozen=True)
 class GRDECLData:
+    """Container for parsed GRDECL grid arrays and dimensions.
+
+    Parameters
+    ----------
+    ni : int
+        Number of cells in the I direction.
+    nj : int
+        Number of cells in the J direction.
+    nk : int
+        Number of cells in the K direction.
+    coord : numpy.ndarray
+        COORD array reshaped to ``(nj + 1, ni + 1, 6)``.
+    zcorn : numpy.ndarray
+        ZCORN array reshaped to ``(2 * nk, 2 * nj, 2 * ni)``.
+    actnum : numpy.ndarray of int or None
+        ACTNUM array reshaped to ``(nk, nj, ni)``, or ``None`` if missing or
+        disabled.
+    """
+
     ni: int
     nj: int
     nk: int
-    coord: np.ndarray   # (nj+1, ni+1, 6)
-    zcorn: np.ndarray   # (2*nk, 2*nj, 2*ni)
-    actnum: np.ndarray | None  # (nk, nj, ni) or None
+    coord: NDArray[np.float64]   # (nj+1, ni+1, 6)
+    zcorn: NDArray[np.float64]   # (2*nk, 2*nj, 2*ni)
+    actnum: NDArray[np.int_] | None  # (nk, nj, ni) or None
 
 
 class GRDECLReader:
-    """
-    Reads GRDECL (Eclipse) grid keywords:
-    - SPECGRID (NI, NJ, NK)
-    - COORD
-    - ZCORN
-    - ACTNUM (optional)
+    """Read Eclipse GRDECL grid keywords into validated NumPy arrays.
+
+    Notes
+    -----
+    The reader extracts and validates the ``SPECGRID``, ``COORD``, and
+    ``ZCORN`` keywords and optionally parses ``ACTNUM``.
     """
 
     def __init__(self, *, take_last: bool = True):
+        """Initialize the GRDECL reader.
+
+        Parameters
+        ----------
+        take_last : bool, default=True
+            Whether to use the last occurrence of a keyword when the same
+            keyword appears multiple times in a deck.
+
+        Notes
+        -----
+        Eclipse decks may redefine keywords later in the file. Setting
+        ``take_last=True`` matches that overriding behavior.
+        """
         # In decks, later keywords can override earlier ones.
         self.take_last = take_last
 
     @staticmethod
     def clean_comments(text: str) -> str:
+        """Remove inline Eclipse comments from text.
+
+        Parameters
+        ----------
+        text : str
+            Raw deck text.
+
+        Returns
+        -------
+        str
+            Text with portions after ``--`` removed on each line.
+        """
         # Remove inline comments starting with --
         out = []
         for line in text.splitlines():
@@ -49,6 +95,25 @@ class GRDECLReader:
         return "\n".join(out)
 
     def read(self, path: str | Path, *, use_actnum: bool = True) -> GRDECLData:
+        """Read and validate grid keywords from a GRDECL file.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Path to the GRDECL file.
+        use_actnum : bool, default=True
+            Whether to parse and validate ``ACTNUM`` when it exists.
+
+        Returns
+        -------
+        GRDECLData
+            Parsed dimensions and reshaped keyword arrays.
+
+        Raises
+        ------
+        ValueError
+            If required keywords are missing or keyword data are malformed.
+        """
         path = Path(path)
         text = path.read_text(encoding="utf-8", errors="ignore")
         text = self.clean_comments(text)
@@ -81,6 +146,21 @@ class GRDECLReader:
     # ----------------------------
 
     def _find_keyword_block_start(self, text: str, keyword: str) -> str | None:
+        """Locate text immediately after a keyword line.
+
+        Parameters
+        ----------
+        text : str
+            Deck text to search.
+        keyword : str
+            Keyword to locate.
+
+        Returns
+        -------
+        str or None
+            Substring after the selected keyword line, or ``None`` if not
+            found.
+        """
         pattern = rf"^[ \t]*{re.escape(keyword)}\b.*$"
         matches = list(re.finditer(pattern, text, flags=re.MULTILINE))
         if not matches:
@@ -90,6 +170,23 @@ class GRDECLReader:
 
     @staticmethod
     def _extract_until_slash(text_after_keyword: str) -> str:
+        """Extract keyword payload up to the terminating slash.
+
+        Parameters
+        ----------
+        text_after_keyword : str
+            Text following a keyword declaration line.
+
+        Returns
+        -------
+        str
+            Content before the first ``/`` terminator.
+
+        Raises
+        ------
+        ValueError
+            If no terminating slash is present.
+        """
         idx = text_after_keyword.find("/")
         if idx == -1:
             raise ValueError("Keyword block does not contain terminating '/'.")
@@ -97,15 +194,46 @@ class GRDECLReader:
 
     @staticmethod
     def _expand_ecl_pattern(s: str) -> str:
+        """Expand Eclipse repeat syntax into explicit tokens.
+
+        Parameters
+        ----------
+        s : str
+            Token string that may include repeat patterns like ``10*0.25``.
+
+        Returns
+        -------
+        str
+            Expanded token string with repeats replaced by explicit values.
+        """
         # Expand Eclipse repetition like: 10*0.25
         pattern = re.compile(r"(\d+)\*([^\s]+)")
-        def repl(m):
+        def repl(m: re.Match[str]) -> str:
             n = int(m.group(1))
             val = m.group(2)
             return " ".join([val] * n)
         return pattern.sub(repl, s)
 
     def _get_keyword_content(self, text: str, keyword: str) -> str:
+        """Get normalized raw content for a keyword block.
+
+        Parameters
+        ----------
+        text : str
+            Deck text to parse.
+        keyword : str
+            Keyword to extract.
+
+        Returns
+        -------
+        str
+            Whitespace-normalized keyword content before expansion.
+
+        Raises
+        ------
+        ValueError
+            If the keyword is missing or has no valid terminator.
+        """
         cropped = self._find_keyword_block_start(text, keyword)
         if cropped is None:
             raise ValueError(f"{keyword} not found in GRDECL file.")
@@ -113,7 +241,28 @@ class GRDECLReader:
         raw = re.sub(r"\s+", " ", raw).strip()
         return raw
 
-    def _get_keyword_array(self, text: str, keyword: str, dtype=float) -> np.ndarray:
+    def _get_keyword_array(
+        self,
+        text: str,
+        keyword: str,
+        dtype: DTypeLike = float,
+    ) -> NDArray[Any]:
+        """Parse a keyword block into a NumPy array.
+
+        Parameters
+        ----------
+        text : str
+            Deck text to parse.
+        keyword : str
+            Keyword to parse.
+        dtype : numpy.typing.DTypeLike, default=float
+            Target dtype for the returned array.
+
+        Returns
+        -------
+        numpy.ndarray
+            Parsed 1D array of tokens converted to the requested dtype.
+        """
         content = self._get_keyword_content(text, keyword)
         content = self._expand_ecl_pattern(content)
         if not content:
@@ -121,5 +270,19 @@ class GRDECLReader:
         return np.array(content.split(), dtype=dtype)
 
     def _has_keyword(self, text: str, keyword: str) -> bool:
+        """Check whether a keyword exists as a standalone deck token.
+
+        Parameters
+        ----------
+        text : str
+            Deck text to search.
+        keyword : str
+            Keyword to check.
+
+        Returns
+        -------
+        bool
+            ``True`` when the keyword is present, otherwise ``False``.
+        """
         # Fast-ish presence check with boundary
         return re.search(rf"^[ \t]*{re.escape(keyword)}\b", text, flags=re.MULTILINE) is not None

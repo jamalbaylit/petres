@@ -3,21 +3,48 @@ from __future__ import annotations
 from typing import Iterable, Optional
 from abc import ABC, abstractmethod
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 
 
 class BaseInterpolator(ABC):
-    """
-    Abstract base class for spatial interpolators.
+    """Define a validated template for spatial interpolation workflows.
 
-    coordinates: (n_samples, dim)
-    values:      (n_samples,)
+    This abstract base class centralizes input validation, fitted-state
+    management, and dimensionality checks for interpolators that operate on
+    coordinate/value pairs. Concrete subclasses only need to implement
+    :meth:`_fit_impl` and :meth:`_predict_impl`.
+
+    Parameters
+    ----------
+    None
+
+    Notes
+    -----
+    The ``allowed_dims`` class attribute can be overridden by subclasses to
+    restrict supported coordinate dimensionalities, for example ``(2,)`` for 2D
+    interpolation or ``(2, 3)`` for both 2D and 3D support.
     """
 
     allowed_dims: Optional[Iterable[int]] = None  # override in subclasses, e.g. (2,) or (2, 3)
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize fitted state and dimensionality constraints.
+
+        The initializer sets the interpolator as not fitted, clears the fitted
+        dimensionality marker, and normalizes ``allowed_dims`` into an internal
+        tuple of integers when provided by a subclass.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
         self._is_fitted = False
         self.dim_: Optional[int] = None
+        self._allowed_dims: Optional[tuple[int, ...]]
 
         if self.allowed_dims is not None:
             self._allowed_dims = tuple(int(d) for d in self.allowed_dims)
@@ -25,11 +52,50 @@ class BaseInterpolator(ABC):
             self._allowed_dims = None
             
     def is_allowed_dim(self, dim: int) -> bool:
+        """Check whether a dimensionality is accepted by the interpolator.
+
+        Parameters
+        ----------
+        dim : int
+            Coordinate dimensionality to validate.
+
+        Returns
+        -------
+        bool
+            ``True`` when ``dim`` is supported. If no dimensional restriction is
+            configured, all dimensions are accepted.
+        """
         if self._allowed_dims is None:
             return True
         return dim in self._allowed_dims
     
-    def fit(self, coordinates: np.ndarray, values: np.ndarray) -> None:
+    def fit(self, coordinates: ArrayLike, values: ArrayLike) -> None:
+        """Fit the interpolator using known sample coordinates and values.
+
+        Parameters
+        ----------
+        coordinates : ArrayLike
+            Sample coordinates with shape ``(n_samples, dim)``.
+        values : ArrayLike
+            Sample values with shape ``(n_samples,)`` corresponding to
+            ``coordinates``.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If coordinates or values have invalid shape, mismatch in sample
+            count, contain non-finite values, or violate dimensionality
+            constraints.
+
+        Examples
+        --------
+        >>> interp = SomeInterpolator()
+        >>> interp.fit([[0.0, 0.0], [1.0, 1.0]], [10.0, 20.0])
+        """
         coordinates, values = self._validate_fit_inputs(coordinates, values)
 
         self.dim_ = int(coordinates.shape[1])
@@ -37,24 +103,110 @@ class BaseInterpolator(ABC):
         self._fit_impl(coordinates, values)
         self._is_fitted = True
 
-    def predict(self, coordinates: np.ndarray) -> np.ndarray:
+    def predict(self, coordinates: ArrayLike) -> NDArray[np.float64]:
+        """Predict interpolated values at new coordinates.
+
+        Parameters
+        ----------
+        coordinates : ArrayLike
+            Coordinates with shape ``(n_points, dim)`` where ``dim`` matches the
+            dimensionality used during :meth:`fit`.
+
+        Returns
+        -------
+        numpy.ndarray
+            Predicted values with one value per input coordinate.
+
+        Raises
+        ------
+        RuntimeError
+            If called before the interpolator is fitted.
+        ValueError
+            If ``coordinates`` has invalid shape, dimensionality mismatch, or
+            non-finite values.
+
+        Examples
+        --------
+        >>> interp = SomeInterpolator()
+        >>> interp.fit([[0.0, 0.0], [1.0, 1.0]], [10.0, 20.0])
+        >>> interp.predict([[0.5, 0.5]])
+        array([...])
+        """
         self._check_fitted()
         coordinates = self._validate_predict_inputs(coordinates)
         return self._predict_impl(coordinates)
 
     @abstractmethod
-    def _fit_impl(self, coordinates: np.ndarray, values: np.ndarray) -> None:
+    def _fit_impl(
+        self,
+        coordinates: NDArray[np.float64],
+        values: NDArray[np.float64],
+    ) -> None:
+        """Fit implementation hook for subclass-specific training logic.
+
+        Parameters
+        ----------
+        coordinates : numpy.ndarray
+            Validated coordinates with shape ``(n_samples, dim)``.
+        values : numpy.ndarray
+            Validated values with shape ``(n_samples,)``.
+
+        Returns
+        -------
+        None
+        """
         ...
 
     @abstractmethod
-    def _predict_impl(self, coordinates: np.ndarray) -> np.ndarray:
+    def _predict_impl(self, coordinates: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Prediction implementation hook for subclass-specific inference.
+
+        Parameters
+        ----------
+        coordinates : numpy.ndarray
+            Validated prediction coordinates with shape ``(n_points, dim)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Predicted values for each input coordinate.
+        """
         ...
 
-    def _check_fitted(self):
+    def _check_fitted(self) -> None:
+        """Validate that the interpolator has been fitted.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
         if not self._is_fitted:
             raise RuntimeError("Interpolator must be fitted before prediction.")
 
-    def _validate_fit_inputs(self, coordinates: np.ndarray, values: np.ndarray):
+    def _validate_fit_inputs(
+        self,
+        coordinates: ArrayLike,
+        values: ArrayLike,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Validate training input arrays.
+
+        Parameters
+        ----------
+        coordinates : ArrayLike
+            Candidate coordinates expected as ``(n_samples, dim)``.
+        values : ArrayLike
+            Candidate values expected as ``(n_samples,)``.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Converted and validated ``(coordinates, values)`` arrays with
+            floating-point dtype.
+        """
         coordinates = np.asarray(coordinates, dtype=float)
         values = np.asarray(values, dtype=float)
 
@@ -86,7 +238,19 @@ class BaseInterpolator(ABC):
 
         return coordinates, values
 
-    def _validate_predict_inputs(self, coordinates: np.ndarray):
+    def _validate_predict_inputs(self, coordinates: ArrayLike) -> NDArray[np.float64]:
+        """Validate prediction coordinates against fitted model metadata.
+
+        Parameters
+        ----------
+        coordinates : ArrayLike
+            Candidate prediction coordinates expected as ``(n_points, dim)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Converted coordinates validated for prediction.
+        """
         coordinates = np.asarray(coordinates, dtype=float)
 
         if coordinates.ndim != 2:

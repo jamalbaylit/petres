@@ -181,7 +181,7 @@ axis. Petres will automatically create a grid with these spacings:
 
 
 By default, :meth:`~petres.models.Horizon.show` renders the horizon surface in 3D. 
-However, the :paramref:`~petres.models.Horizon.show.view` argument allows switching between 2D and 3D visualizations.
+However, the ``view`` argument allows switching between 2D and 3D visualizations.
 To visualize the horizon in 2D, set ``view="2d"``:
 
 .. code-block:: python
@@ -192,7 +192,7 @@ To visualize the horizon in 2D, set ``view="2d"``:
       view="2d"
    )
 
-Additionally, the :paramref:`~petres.models.Horizon.show.title` argument can be used to set a custom plot title.
+Additionally, the ``title`` argument can be used to set a custom plot title.
 If ``title=None`` is provided, no title will be displayed. Otherwise, an automatic
 title is generated based on the horizon name:
    

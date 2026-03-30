@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Dict, Self, Tuple, Sequence
+from typing import Any, Optional, Self, Sequence
 from dataclasses import dataclass, field
 from typing import Callable
 from pathlib import Path
@@ -26,6 +26,25 @@ from ..grids.properties import GridProperties, GridProperty
 
 @dataclass(frozen=True)
 class GridAttributeSpec:
+    """Specification for a computed grid attribute.
+
+    Parameters
+    ----------
+    name : str
+        Canonical attribute name exposed to users.
+    description : str
+        Human-readable description of the attribute semantics.
+    resolver : Callable[[CornerPointGrid], np.ndarray]
+        Callable that computes the attribute array from a grid instance.
+    aliases : tuple[str, ...], default ()
+        Additional accepted names that resolve to the same attribute.
+
+    Notes
+    -----
+    Instances of this class are immutable and used to build lookup tables for
+    attribute-name and alias resolution.
+    """
+
     name: str
     description: str
     resolver: Callable[["CornerPointGrid"], np.ndarray]
@@ -60,33 +79,25 @@ RESERVED_GRID_PROPERTY_NAMES = frozenset(GRID_ATTRIBUTE_BY_ALIAS)
 
 @dataclass
 class CornerPointGrid:
-    """
-    3D corner-point grid with explicit corner coordinates.
-    
-    Builds on a PillarGrid foundation by adding:
-    - Vertical layering (k-direction)
-    - Corner z-coordinates for each cell
-    - Active/inactive cell masking
-    - Cell properties (porosity, permeability, etc.)
-    
-    Attributes:
-        pillars (PillarGrid): Lateral pillar geometry
-        zcorn (np.ndarray): Z-coordinates at cell corners, shape (nk, nj, ni, 2, 2, 2)
-                              Indices: [k, j, i, di, dj, dk] where di,dj,dk ∈ {0,1}
-        active (Optional[np.ndarray]): Boolean mask of active cells, shape (nk, nj, ni).
-                                       If None, all cells are considered active (memory efficient).
-        properties (Dict): Cell properties (e.g., 'porosity', 'permeability_x')
-    
-    Example:
-        >>> # Create from pillar grid
-        >>> pillars = PillarGrid.from_rectilinear(
-        ...     x=np.linspace(0, 100, 11),
-        ...     y=np.linspace(0, 100, 11),
-        ...     z_top=0, z_bottom=100
-        ... )
-        >>> zcorn = ...  # Define corner depths
-        >>> grid = CornerPointGrid(pillars, zcorn)
-        >>> print(grid.shape)  # (10, 10, 5)
+    """3D corner-point grid with explicit corner coordinates.
+
+    Parameters
+    ----------
+    pillars : PillarGrid
+        Lateral pillar geometry defining i–j topology.
+    zcorn : ndarray
+        Corner depths shaped ``(2*nk, 2*nj, 2*ni)`` in Eclipse order.
+    active : ndarray or None, optional
+        Boolean mask ``(nk, nj, ni)``; ``None`` marks all cells active.
+    zone_index : ndarray or None, optional
+        Zone id per cell, same shape as the grid. ``0`` denotes gap.
+    zone_names : dict[int, str], optional
+        Mapping of zone id to zone name.
+
+    Notes
+    -----
+    Properties are managed via :class:`GridProperties` and are not stored in
+    ``zcorn``. Use :meth:`from_zones` to build grids from stratigraphic zones.
     """
     
     pillars: PillarGrid
@@ -94,12 +105,40 @@ class CornerPointGrid:
     active: Optional[np.ndarray] = None      # Shape (nk, nj, ni), boolean, or None for all active
 
     zone_index: Optional[np.ndarray] = None        # shape (nk, nj, ni), int
-    zone_names: Dict[int, str] = field(default_factory=dict)
+    zone_names: dict[int, str] = field(default_factory=dict)
     
-    _properties: Dict[str, GridProperty] = field(default_factory=dict, repr=False)
+    _properties: dict[str, GridProperty] = field(default_factory=dict, repr=False)
+    _zone_name_to_id: dict[str, int] = field(default_factory=dict, init=False, repr=False)
     
-    def __post_init__(self):
-        """Validate dimensions."""
+    def __post_init__(self) -> None:
+        """Validate dimensions, active mask, and zone/property consistency.
+
+        Parameters
+        ----------
+        None
+            This hook receives dataclass-initialized attributes from
+            :class:`CornerPointGrid`.
+
+        Returns
+        -------
+        None
+            Updates validated attributes in place and initializes zone lookup
+            metadata.
+
+        Raises
+        ------
+        ValueError
+            If ``zcorn``, ``active``, or attached property shapes do not match
+            the grid dimensions, or when a property belongs to a different grid.
+        TypeError
+            If an attached entry in ``_properties`` is not a
+            :class:`GridProperty` instance.
+
+        Notes
+        -----
+        When ``active`` is ``None``, an all-active broadcast view is created for
+        memory efficiency.
+        """
         nj, ni = self.pillars.cell_shape
         nk = self.zcorn.shape[0]//2
         
@@ -142,6 +181,24 @@ class CornerPointGrid:
         self.set_zones(zone_index=self.zone_index, zone_names=self.zone_names)
     
     def _zone_mask(self, zone: str | Zone) -> np.ndarray:
+        """Build a boolean mask for cells that belong to a selected zone.
+
+        Parameters
+        ----------
+        zone : str or Zone
+            Zone name or zone object to select.
+
+        Returns
+        -------
+        np.ndarray
+            Boolean mask with shape ``(nk, nj, ni)`` where ``True`` marks cells
+            assigned to the requested zone.
+
+        Raises
+        ------
+        ValueError
+            If no zone definition is available on the grid.
+        """
         if self.zone_index is None:
             raise ValueError("Grid has no zones defined.")
         zone_name = self._normalize_zone_name(zone)
@@ -149,6 +206,20 @@ class CornerPointGrid:
         return self.zone_index == zone_id
 
     def summary(self) -> str:
+        """Create a human-readable summary of grid dimensions and metadata.
+
+        Returns
+        -------
+        str
+            Multi-line summary including shape, active/inactive counts,
+            registered property names, and zone names.
+
+        Examples
+        --------
+        >>> text = grid.summary()
+        >>> "Grid Summary" in text
+        True
+        """
         nk, nj, ni = self.shape
         total_cells = self.n_cells
         active = self.n_active
@@ -181,6 +252,23 @@ class CornerPointGrid:
 
     @staticmethod
     def _normalize_zone_name(zone: str | Zone) -> str:
+        """Normalize a zone selector into a zone-name string.
+
+        Parameters
+        ----------
+        zone : str or Zone
+            Zone selector provided by caller.
+
+        Returns
+        -------
+        str
+            Zone name to be used in internal lookups.
+
+        Raises
+        ------
+        TypeError
+            If ``zone`` is neither a string nor a :class:`Zone`.
+        """
         if isinstance(zone, Zone):
             return zone.name
 
@@ -190,6 +278,23 @@ class CornerPointGrid:
         return zone
     
     def _get_zone_id_from_name(self, name: str) -> int:
+        """Resolve a zone name to its integer zone identifier.
+
+        Parameters
+        ----------
+        name : str
+            Name of the zone.
+
+        Returns
+        -------
+        int
+            Integer identifier associated with the zone name.
+
+        Raises
+        ------
+        ValueError
+            If the provided zone name is not present in the grid lookup table.
+        """
         if name not in self._zone_name_to_id:
             raise ValueError(f"Zone '{name}' not found in grid zones.")
         return self._zone_name_to_id[name]
@@ -199,8 +304,7 @@ class CornerPointGrid:
         zone_index: np.ndarray | None,
         zone_names: dict[int, str] | None,
     ) -> None:
-        """
-        Assign zone membership to the grid.
+        """Assign zone membership arrays and zone-name metadata.
 
         Parameters
         ----------
@@ -213,10 +317,17 @@ class CornerPointGrid:
             Mapping from zone id to zone name.
             If not provided, names will be auto-generated as "Zone {id}".
 
+        Returns
+        -------
+        None
+            Stores normalized zone arrays and lookup dictionaries on the grid.
+
         Raises
         ------
         ValueError
             If shapes mismatch, invalid ids are present, or names are inconsistent.
+        TypeError
+            If ``zone_index`` cannot be converted to an integer ndarray.
         """
 
         
@@ -304,49 +415,100 @@ class CornerPointGrid:
     
     @property
     def properties(self) -> GridProperties:
+        """Return the property manager bound to this grid.
+
+        Returns
+        -------
+        GridProperties
+            Dictionary-like facade used to access and validate cell properties.
+        """
         return GridProperties(self)
 
     @property
     def ni(self) -> int:
-        """Number of cells in i-direction."""
+        """Get the number of cells in the i direction.
+
+        Returns
+        -------
+        int
+            Cell count along the i axis.
+        """
         return self.pillars.ni
 
     @property
     def nj(self) -> int:
-        """Number of cells in j-direction."""
+        """Get the number of cells in the j direction.
+
+        Returns
+        -------
+        int
+            Cell count along the j axis.
+        """
         return self.pillars.nj
 
     @property
     def nk(self) -> int:
-        """Number of cells in k-direction (layers)."""
+        """Get the number of layers in the k direction.
+
+        Returns
+        -------
+        int
+            Layer count inferred from ``zcorn``.
+        """
         return self.zcorn.shape[0] // 2
 
     @property
-    def shape(self) -> Tuple[int, int, int]:
-        """Grid shape (nk, nj, ni)."""
+    def shape(self) -> tuple[int, int, int]:
+        """Get grid dimensions ordered as ``(nk, nj, ni)``.
+
+        Returns
+        -------
+        tuple[int, int, int]
+            Layer, row, and column cell counts.
+        """
         return (self.nk, self.nj, self.ni)
 
     @property
     def n_cells(self) -> int:
-        """Total number of cells."""
+        """Get the total number of cells in the grid.
+
+        Returns
+        -------
+        int
+            Product of ``nk * nj * ni``.
+        """
         return self.nk * self.nj * self.ni
 
     @property
     def n_active(self) -> int:
-        """Number of active cells."""
+        """Get the number of active cells.
+
+        Returns
+        -------
+        int
+            Count of ``True`` values in ``active``.
+        """
         return int(np.nansum(self.active))
     
     @property
     def n_inactive(self) -> int:
-        """Number of inactive cells."""
+        """Get the number of inactive cells.
+
+        Returns
+        -------
+        int
+            Difference between total and active cell counts.
+        """
         return self.n_cells - self.n_active
     
     @property
     def cell_centers(self) -> np.ndarray:
-        """Cell centers (average of 8 corners).
-        
-        Returns:
-            np.ndarray: Shape (nk, nj, ni, 3)
+        """Cell centers computed as the mean of 8 corners.
+
+        Returns
+        -------
+        ndarray
+            Coordinates shaped ``(nk, nj, ni, 3)``.
         """
         corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
         cell_centers = np.mean(corners, axis=3)  # Average over 8 corners
@@ -355,9 +517,11 @@ class CornerPointGrid:
     @property
     def cell_volumes(self) -> np.ndarray:
         """Cell volumes computed via hexahedral decomposition.
-        
-        Returns:
-            np.ndarray: Shape (nk, nj, ni)
+
+        Returns
+        -------
+        ndarray
+            Volumes shaped ``(nk, nj, ni)``.
         """
         corners = self._compute_cell_corners()  # Shape (nk, nj, ni, 8, 3)
         
@@ -367,8 +531,30 @@ class CornerPointGrid:
         #   0-3: Top face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
         #   4-7: Bottom face (i,j), (i+1,j), (i,j+1), (i+1,j+1)
         
-        def tet_volume(v0, v1, v2, v3):
-            """Compute signed volume of tetrahedron with vectorized arrays."""
+        def tet_volume(
+            v0: np.ndarray,
+            v1: np.ndarray,
+            v2: np.ndarray,
+            v3: np.ndarray,
+        ) -> np.ndarray:
+            """Compute signed tetrahedron volumes for vectorized vertices.
+
+            Parameters
+            ----------
+            v0 : np.ndarray
+                First tetrahedron vertex array.
+            v1 : np.ndarray
+                Second tetrahedron vertex array.
+            v2 : np.ndarray
+                Third tetrahedron vertex array.
+            v3 : np.ndarray
+                Fourth tetrahedron vertex array.
+
+            Returns
+            -------
+            np.ndarray
+                Signed tetrahedron volumes with broadcast-compatible shape.
+            """
             # v1-v0, v2-v0, v3-v0 form the edge vectors
             # Volume = det([v1-v0, v2-v0, v3-v0]) / 6
             a = v1 - v0
@@ -404,6 +590,21 @@ class CornerPointGrid:
         *,
         use_actnum: bool = True
     ) -> CornerPointGrid:
+        """Load a grid from a GRDECL file.
+
+        Parameters
+        ----------
+        path : str or Path
+            Path to GRDECL file containing COORD/ZCORN (and optional ACTNUM).
+        use_actnum : bool, default True
+            When True, read ACTNUM to set active cells; otherwise all active.
+
+        Returns
+        -------
+        CornerPointGrid
+            Grid populated from GRDECL arrays.
+        """
+
         # Local import avoids circular deps and keeps startup light
 
         data = GRDECLReader().read(path, use_actnum=use_actnum)  # returns raw arrays/spec, not a grid
@@ -421,7 +622,30 @@ class CornerPointGrid:
         properties: Optional[Sequence[str]] = None,
         include_actnum: bool = True,
     ) -> None:
-        """Export grid to GRDECL format."""
+        """Write grid geometry and selected properties to a GRDECL file.
+
+        Parameters
+        ----------
+        path : str or Path
+            Output file path.
+        properties : Sequence[str] or None, optional
+            Property names to export. When ``None``, all attached properties are
+            written.
+        include_actnum : bool, default True
+            Whether to export ``ACTNUM`` from the grid active mask.
+
+        Returns
+        -------
+        None
+            Writes GRDECL content to disk.
+
+        Raises
+        ------
+        TypeError
+            If ``properties`` is not a valid sequence of names.
+        MissingEclipseKeywordError
+            If an included property has no Eclipse keyword configured.
+        """
         coord = self.pillars.to_eclipse_coord()
         zcorn = self.zcorn
         actnum = self.active.astype(int) if include_actnum else None
@@ -461,8 +685,30 @@ class CornerPointGrid:
         color: Any = 'tan', 
         cmap: Optional[str] = 'turbo', 
         title: Optional[str] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> None:
+        """Render the grid in 3D PyVista viewer.
+
+        Parameters
+        ----------
+        show_inactive : bool, default False
+            Whether to display inactive cells.
+        scalars : str or None, optional
+            Property name to color by; if ``None`` uses solid color.
+        color : Any, default 'tan'
+            Solid color when ``scalars`` is not provided.
+        cmap : str or None, default 'turbo'
+            Colormap applied when ``scalars`` is provided.
+        title : str or None, optional
+            Figure title.
+        **kwargs
+            Forwarded to viewer ``add_grid``.
+
+        Returns
+        -------
+        None
+            Opens an interactive 3D rendering window.
+        """
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
         scalars = self._resolve_source(scalars) if scalars is not None else None
@@ -477,7 +723,22 @@ class CornerPointGrid:
         y: np.ndarray,
         z: np.ndarray
     ) -> Self:
-        """Create a simple corner-point grid from rectilinear coordinates."""
+        """Create a corner-point grid from rectilinear coordinate vertices.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            Monotonic x-vertex coordinates with shape ``(ni + 1,)``.
+        y : np.ndarray
+            Monotonic y-vertex coordinates with shape ``(nj + 1,)``.
+        z : np.ndarray
+            Layer-interface depths with shape ``(nk + 1,)``.
+
+        Returns
+        -------
+        Self
+            Grid with vertical pillars and broadcasted layer surfaces.
+        """
         
         z = _validate_vertex_array(z, "z")
         pillars = PillarGrid.from_rectilinear(x=x, y=y, z_top=z[0], z_bottom=z[-1])
@@ -518,6 +779,34 @@ class CornerPointGrid:
         dy: float | None = None,
         dz: float | None = None,
         ) -> Self:
+        """Build a rectilinear corner-point grid from limits or spacings.
+
+        Parameters
+        ----------
+        xlim : tuple[float, float] or None, optional
+            Minimum and maximum x bounds.
+        ylim : tuple[float, float] or None, optional
+            Minimum and maximum y bounds.
+        zlim : tuple[float, float] or None, optional
+            Minimum and maximum z bounds.
+        ni : int or None, optional
+            Number of cells in i direction.
+        nj : int or None, optional
+            Number of cells in j direction.
+        nk : int or None, optional
+            Number of cells in k direction.
+        dx : float or None, optional
+            Cell size in i direction.
+        dy : float or None, optional
+            Cell size in j direction.
+        dz : float or None, optional
+            Cell size in k direction.
+
+        Returns
+        -------
+        Self
+            Corner-point grid resolved from the provided geometric constraints.
+        """
         x, y, z = _resolve_xyz_vertices(
             xlim=xlim, ylim=ylim, zlim=zlim, ni=ni, nj=nj, nk=nk, dx=dx, dy=dy, dz=dz
         )
@@ -542,20 +831,24 @@ class CornerPointGrid:
         zcorn, actnum, zone_index, zone_names = _build_zcorn_from_zones(pillars=pillars, zones=zones)
         return cls(pillars=pillars, zcorn=zcorn, active=actnum, zone_index=zone_index, zone_names=zone_names)
     
-    def apply_boundary(self, boundary: BoundaryPolygon):
-        """Apply boundary polygon mask to active cells.
-        
-        Cells whose centers fall outside the polygon boundary will be marked
-        as inactive (ACTNUM=0).
-        
+    def apply_boundary(self, boundary: BoundaryPolygon) -> None:
+        """Mask grid activity using a boundary polygon.
+
+        Cells whose centers fall outside the polygon become inactive (ACTNUM=0).
+
         Parameters
         ----------
         boundary : BoundaryPolygon
-            2D boundary polygon in XY plane
-        
+            XY boundary polygon used to clip the grid.
+
         Notes
         -----
-        This modifies the active array in-place and clears cached properties.
+        Updates ``active`` in place; cached property masks may become stale.
+
+        Returns
+        -------
+        None
+            Applies the boundary mask directly to ``active``.
         """
         # Get cell centers (nk, nj, ni, 3)
         centers = self.cell_centers
@@ -579,12 +872,13 @@ class CornerPointGrid:
         
     def _compute_cell_corners(self) -> np.ndarray:
         """Compute 3D coordinates of all 8 corners for each cell.
-        
-        Returns:
-            np.ndarray: Shape (nk, nj, ni, 8, 3) where the 8 corners are ordered:
-                0-3: Top face (k-layer top)
-                4-7: Bottom face (k-layer bottom)
-                Each face: (i,j), (i+1,j), (i,j+1), (i+1,j+1)
+
+        Returns
+        -------
+        ndarray
+            Corner coordinates shaped ``(nk, nj, ni, 8, 3)`` ordered as:
+            0-3 top face (k-layer top), 4-7 bottom face, each face ordered
+            (i, j), (i+1, j), (i, j+1), (i+1, j+1).
         """
         nk, nj, ni = self.shape
         corners = np.zeros((nk, nj, ni, 8, 3))
@@ -610,8 +904,27 @@ class CornerPointGrid:
         # For each pillar, compute t = (z - z_top) / (z_bottom - z_top)
         # Then position = pillar_top + t * (pillar_bottom - pillar_top)
         
-        def interpolate_pillar_at_z(pillar_top, pillar_bottom, z):
-            """Interpolate pillar position at given z-coordinates."""
+        def interpolate_pillar_at_z(
+            pillar_top: np.ndarray,
+            pillar_bottom: np.ndarray,
+            z: np.ndarray,
+        ) -> np.ndarray:
+            """Interpolate pillar xyz positions at target depths.
+
+            Parameters
+            ----------
+            pillar_top : np.ndarray
+                Pillar top xyz coordinates.
+            pillar_bottom : np.ndarray
+                Pillar bottom xyz coordinates.
+            z : np.ndarray
+                Target depths for interpolation.
+
+            Returns
+            -------
+            np.ndarray
+                Interpolated xyz coordinates with ``z`` enforced exactly.
+            """
             z_top = pillar_top[..., 2:3]  # Keep dimension for broadcasting
             z_bot = pillar_bottom[..., 2:3]
             
@@ -641,20 +954,48 @@ class CornerPointGrid:
         return corners
 
     def _cell_top_bottom_depths(self) -> tuple[np.ndarray, np.ndarray]:
+        """Return top and bottom depth for each cell.
+
+        Returns
+        -------
+        tuple of ndarray
+            ``(z_top, z_bottom)`` each shaped ``(nk, nj, ni)``.
+        """
         zcorn = self._compute_cell_corners()[..., 2]
         z_top = np.min(zcorn[..., :4], axis=-1)
         z_bottom = np.max(zcorn[..., 4:], axis=-1)
         return z_top, z_bottom
 
     def _cell_top_depth(self) -> np.ndarray:
+        """Get top depth for each cell.
+
+        Returns
+        -------
+        np.ndarray
+            Top depths with shape ``(nk, nj, ni)``.
+        """
         z_top, _ = self._cell_top_bottom_depths()
         return z_top
 
     def _cell_bottom_depth(self) -> np.ndarray:
+        """Get bottom depth for each cell.
+
+        Returns
+        -------
+        np.ndarray
+            Bottom depths with shape ``(nk, nj, ni)``.
+        """
         _, z_bottom = self._cell_top_bottom_depths()
         return z_bottom
 
     def _cell_thickness(self) -> np.ndarray:
+        """Compute geometric thickness for each cell.
+
+        Returns
+        -------
+        np.ndarray
+            Absolute difference between bottom and top depth per cell.
+        """
         z_top, z_bottom = self._cell_top_bottom_depths()
         return np.abs(z_bottom - z_top)
 
@@ -663,8 +1004,19 @@ class CornerPointGrid:
         zone: str | Zone | None = None,
         include_inactive: bool = False,
     ) -> np.ndarray:
-        """
-        Return boolean mask of target cells.
+        """Boolean mask for selecting cells.
+
+        Parameters
+        ----------
+        zone : str or Zone or None, optional
+            Restrict mask to a specific zone.
+        include_inactive : bool, default False
+            When False, inactive cells are excluded.
+
+        Returns
+        -------
+        ndarray
+            Boolean mask shaped ``(nk, nj, ni)``.
         """
         mask = np.ones(self.shape, dtype=bool)
 
@@ -681,12 +1033,26 @@ class CornerPointGrid:
         self,
         source: str | "GridProperty",
     ) -> np.ndarray:
-        """
-        Resolve one source to a full-grid ndarray.
+        """Resolve a source into a full-grid ndarray.
 
-        source can be:
-        - built-in geometry source name
-        - another GridProperty
+        Parameters
+        ----------
+        source : str or GridProperty
+            Built-in geometry attribute name or property reference.
+
+        Returns
+        -------
+        ndarray
+            Array of shape ``(nk, nj, ni)``.
+
+        Raises
+        ------
+        ValueError
+            If a GridProperty belongs to a different grid.
+        TypeError
+            If ``source`` is not a string or GridProperty.
+        UnsupportedGridAttributeError
+            If a named attribute is not available.
         """
         if isinstance(source, str):
             if source in self._properties:
@@ -707,6 +1073,23 @@ class CornerPointGrid:
         )
     
     def _get_attribute(self, name: str) -> np.ndarray:
+        """Resolve and compute a built-in grid attribute by name or alias.
+
+        Parameters
+        ----------
+        name : str
+            Attribute name or alias such as ``"depth"`` or ``"z"``.
+
+        Returns
+        -------
+        np.ndarray
+            Computed attribute array shaped like the grid.
+
+        Raises
+        ------
+        UnsupportedGridAttributeError
+            If the attribute name is not supported.
+        """
         try:
             spec = GRID_ATTRIBUTE_BY_ALIAS[name]
         except KeyError as e:
@@ -715,6 +1098,13 @@ class CornerPointGrid:
 
             
     def __repr__(self) -> str:
+        """Return a compact debug representation of the grid instance.
+
+        Returns
+        -------
+        str
+            Representation including shape, active-cell count, and properties.
+        """
         nk, nj, ni = self.shape
     
         return (

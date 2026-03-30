@@ -15,11 +15,11 @@ import numpy as np
 # Create sample horizons
 xy1 = np.array([[10, 10], [90, 10], [90, 90], [10, 90], [50, 50]])
 z1 = np.array([100, 105, 110, 102, 106])
-horizon1 = Horizon(name="Horizon 1", interpolator=IDWInterpolator(), xy=xy1, z=z1)
+horizon1 = Horizon(name="Horizon 1", interpolator=IDWInterpolator(), xy=xy1, depth=z1)
 
 xy2 = np.array([[10, 10], [90, 10], [90, 90], [10, 90], [50, 50]])
 z2 = np.array([120, 125, 130, 122, 126])
-horizon2 = Horizon(name="Horizon 2", interpolator=IDWInterpolator(), xy=xy2, z=z2)
+horizon2 = Horizon(name="Horizon 2", interpolator=IDWInterpolator(), xy=xy2, depth=z2)
 
 # Example 1: Simple horizon view
 print("Example 1: Simple horizon view")

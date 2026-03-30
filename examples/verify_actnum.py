@@ -6,16 +6,16 @@ from petres.models import Zone, Horizon
 import numpy as np
 
 # Create horizons with a gap between h2 and h3
-h1 = Horizon("H1", xy=[[0,0],[100,0],[100,100],[0,100]], z=[0,1,0,1], interpolator=IDWInterpolator())
-h2 = Horizon("H2", xy=[[0,0],[100,0],[100,100],[0,100]], z=[2,2,3,3], interpolator=IDWInterpolator())
-h3 = Horizon("H3", xy=[[0,0],[100,0],[100,100],[0,100]], z=[5,7,8,4], interpolator=IDWInterpolator())
-h4 = Horizon("H4", xy=[[0,0],[100,0],[100,100],[0,100]], z=[11,14,13,12], interpolator=IDWInterpolator())
+h1 = Horizon("H1", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[0,1,0,1], interpolator=IDWInterpolator())
+h2 = Horizon("H2", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[2,2,3,3], interpolator=IDWInterpolator())
+h3 = Horizon("H3", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[5,7,8,4], interpolator=IDWInterpolator())
+h4 = Horizon("H4", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[11,14,13,12], interpolator=IDWInterpolator())
 
 zones = [
   Zone("Caprock", top=h1, base=h2).divide(nk=2),  # 2 layers
   Zone("Base", top=h3, base=h4).divide(nk=2),      # 2 layers
 ]
-# Gap between h2 (z~2-3) and h3 (z~5-8) should create 1 inactive layer
+# Gap between h2 (depth~2-3) and h3 (depth~5-8) should create 1 inactive layer
 
 pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=10, nj=10, z_top=0, z_bottom=10)
 grid = CornerPointGrid.from_zones(pillars=pillars, zones=zones)

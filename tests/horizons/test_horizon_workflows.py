@@ -11,7 +11,7 @@ def test_horizon_store_picks_false_releases_pick_arrays():
     xy = np.array([[0.0, 0.0], [100.0, 0.0], [0.0, 100.0]])
     z = np.array([1000.0, 1010.0, 1020.0])
 
-    h = Horizon(name="Top", xy=xy, z=z, interpolator=IDWInterpolator(), store_picks=False)
+    h = Horizon(name="Top", xy=xy, depth=z, interpolator=IDWInterpolator(), store_picks=False)
 
     assert h.xy.shape == (0, 2)
     assert h.z.shape == (0,)
