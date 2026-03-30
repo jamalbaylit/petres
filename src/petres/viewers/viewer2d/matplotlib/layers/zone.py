@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from typing import Any
+
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes
 import numpy as np
+from matplotlib.axes import Axes
 
 from .....models.zone import Zone
 
@@ -21,85 +21,91 @@ def _add_zone(
     cmap: str = "viridis",
     show_contours: bool = True,
     contour_levels: int = 10,
+    show_contour_labels: bool = False,
     show_colorbar: bool = True,
+    colorbar_shrink: float = 0.95,
+    top_color: str = "#2563eb",
+    base_color: str = "#dc2626",
+    top_linewidth: float = 1.0,
+    base_linewidth: float = 1.0,
+    base_linestyle: str = "--",
+    thickness_contour_color: str = "black",
+    thickness_contour_linewidth: float = 0.6,
     **kwargs: Any,
-) -> Any:
-    """
-    Add a zone visualization showing top, base, or thickness.
-
-    Parameters
-    ----------
-    ax : Axes
-        Matplotlib axes to draw on.
-    zone : Zone
-        Zone object to visualize.
-    x : np.ndarray
-        1D array of x coordinates.
-    y : np.ndarray
-        1D array of y coordinates.
-    show_top : bool
-        Whether to show top surface (default: True).
-    show_base : bool
-        Whether to show base surface (default: True).
-    show_thickness : bool
-        Whether to show thickness map (default: False).
-    cmap : str
-        Colormap name (default: "viridis").
-    show_contours : bool
-        Whether to show contour lines (default: True).
-    contour_levels : int
-        Number of contour levels (default: 10).
-    show_colorbar : bool
-        Whether to show colorbar (default: True).
-    **kwargs
-        Additional kwargs passed to pcolormesh or contour.
-    
-    Returns
-    -------
-    mesh : QuadMesh or dict
-        The matplotlib mesh object(s).
-    """
+) -> dict[str, Any]:
+    """Add a zone visualization showing top/base contours or thickness map."""
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
-    
+
     if x.ndim != 1 or y.ndim != 1:
-        raise ValueError("x and y must be 1D arrays.")
-    
-    # Sample the zone
-    z_top = zone.top.to_grid(x, y)  # (ny, nx)
-    z_base = zone.base.to_grid(x, y)  # (ny, nx)
-    
-    # Create meshgrid
-    X, Y = np.meshgrid(x, y)
-    
-    result = {}
-    
+        raise ValueError("`x` and `y` must be 1D arrays.")
+
+    z_top = zone.top.to_grid(x, y)
+    z_base = zone.base.to_grid(x, y)
+    X, Y = np.meshgrid(x, y, indexing="xy")
+
+    result: dict[str, Any] = {}
+
     if show_thickness:
-        # Show thickness map
-        thickness = np.abs(z_base - z_top)
-        mesh = ax.pcolormesh(X, Y, thickness, cmap=cmap, shading='auto', **kwargs)
-        
+        thickness = z_base - z_top
+
+        mesh = ax.pcolormesh(
+            X,
+            Y,
+            thickness,
+            cmap=cmap,
+            shading="auto",
+            **kwargs,
+        )
+        result["thickness"] = mesh
+
         if show_contours:
-            contours = ax.contour(X, Y, thickness, levels=contour_levels, 
-                                 colors='black', linewidths=0.5, alpha=0.5)
-            ax.clabel(contours, inline=True, fontsize=8, fmt='%.0f')
-        
+            contours = ax.contour(
+                X,
+                Y,
+                thickness,
+                levels=contour_levels,
+                colors=thickness_contour_color,
+                linewidths=thickness_contour_linewidth,
+                alpha=0.55,
+            )
+            result["thickness_contours"] = contours
+
+            if show_contour_labels:
+                ax.clabel(contours, inline=True, fontsize=8, fmt="%.0f")
+
         if show_colorbar:
-            cbar = plt.colorbar(mesh, ax=ax, label=f'{zone.name} Thickness')
-        
-        result['thickness'] = mesh
+            cbar = plt.colorbar(mesh, ax=ax, shrink=colorbar_shrink)
+            # cbar.set_label(colorbar_label or f"{zone.name} thickness")
+
     else:
-        # Show top and/or base surfaces
         if show_top:
-            contours_top = ax.contour(X, Y, z_top, levels=contour_levels, 
-                                     colors='blue', linewidths=1.0)
-            ax.clabel(contours_top, inline=True, fontsize=8, fmt='%.0f')
-            result['top'] = contours_top
-        
+            contours_top = ax.contour(
+                X,
+                Y,
+                z_top,
+                levels=contour_levels,
+                colors=top_color,
+                linewidths=top_linewidth,
+            )
+            result["top"] = contours_top
+
+            if show_contour_labels:
+                ax.clabel(contours_top, inline=True, fontsize=8, fmt="%.0f")
+
         if show_base:
-            contours_base = ax.contour(X, Y, z_base, levels=contour_levels, 
-                                      colors='red', linewidths=1.0, linestyles='dashed')
-            ax.clabel(contours_base, inline=True, fontsize=8, fmt='%.0f')
-            result['base'] = contours_base
-    
+            contours_base = ax.contour(
+                X,
+                Y,
+                z_base,
+                levels=contour_levels,
+                colors=base_color,
+                linewidths=base_linewidth,
+                linestyles=base_linestyle,
+            )
+            result["base"] = contours_base
+
+            if show_contour_labels:
+                ax.clabel(contours_base, inline=True, fontsize=8, fmt="%.0f")
+
     return result

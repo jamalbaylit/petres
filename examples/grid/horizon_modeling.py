@@ -91,6 +91,7 @@ well2.add_top("Horizon 1", 120)
 horizon1.show(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50),
+    view="2d",  # or "3d"
 )
 
 # Option 2: Define limits and number of samples
@@ -108,6 +109,7 @@ horizon1.show(
     dx=2,
     dy=2,
 )
+
 
 
 # =============================================================================

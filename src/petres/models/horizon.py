@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Iterable, Optional, Literal
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Optional
 import numpy as np
 
 
@@ -143,6 +143,26 @@ class Horizon:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
+        view: Literal["3d", "2d"] = "3d",
+    ) -> None:
+        if view == "3d":
+            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+        elif view == "2d":
+            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+        else:
+            raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
+        
+    def show3d(
+        self,
+        *,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
         color: Any | None = 'tan',
         scalars: bool = True,
         cmap: Optional[str] = 'turbo',
@@ -163,7 +183,7 @@ class Horizon:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-        cmap: str = "viridis",
+        cmap: str = "turbo",
         show_contours: bool = True,
         contour_levels: int = 10,
         **kwargs,
