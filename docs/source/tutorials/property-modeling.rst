@@ -1,0 +1,454 @@
+Property Modeling
+=================
+
+Overview
+--------
+
+This tutorial introduces property modeling in Petres.
+Grid properties are defined per cell and
+they represent scalar quantities such as porosity, permeability, saturation,
+net-to-gross, or any other spatially distributed field.
+
+In this chapter, you will learn how to:
+
+- Create new grid properties
+- Fill them with constant or stochastic values
+- Derive one property from another
+- Populate values from existing NumPy arrays
+- Interpolate property values from wells
+- Assign properties zone by zone
+- Inspect statistics and summaries
+- Visualize the resulting distributions
+
+.. note::
+
+   This tutorial assumes that you are already familiar with
+   :doc:`horizon-modeling`,
+   :doc:`zone-modeling`,
+   :doc:`pillar-gridding`,
+   and grid creation workflows such as
+   :doc:`grid-modeling-from-horizons-and-zones`.
+
+
+
+Creating a Property
+-------------------
+
+The first step in property modeling is to create a property on the grid:
+
+.. code-block:: python
+
+   from petres.grids import CornerPointGrid
+
+    grid = CornerPointGrid.from_regular(
+        xlim=(0, 1000),
+        ylim=(0, 1000),
+        zlim=(0, 100),
+        ni=20,
+        nj=20,
+        nk=3,
+    )
+
+    porosity = grid.properties.create(
+        name="poro",
+        eclipse_keyword="PORO",
+        description="Porosity",
+    )
+
+The ``name`` defines the internal Petres identifier used to access the property.
+The object returned during creation is the same property and can be accessed later from the grid:
+
+.. code-block:: python
+
+    porosity = grid.properties["poro"]
+
+The optional ``eclipse_keyword`` is useful when exporting the property to
+Eclipse ``.GRDECL`` format. The ``description`` is also optional and can be used
+to provide a more readable explanation of the property, if needed.
+
+Constant Property Assignment
+----------------------------
+
+A property can be filled with a constant value across the whole grid using
+:meth:`fill` method:
+
+.. code-block:: python
+
+    porosity.fill(0.2)
+
+This assigns a porosity value of 0.2 to every cell.
+
+Visualizing a Property
+----------------------
+
+A property can be visualized directly:
+
+.. code-block:: python
+
+    porosity.show()
+
+Inactive cells are hidden by default. If needed, they can also be shown:
+
+.. code-block:: python
+
+    porosity.show(show_inactive=True)
+
+You can customize the colormap:
+
+.. code-block:: python
+
+    porosity.show(cmap="viridis")
+
+Any valid Matplotlib colormap name can be used, such as ``"viridis"``,
+``"plasma"``, ``"coolwarm"``, or ``"inferno"``.
+
+
+
+
+
+
+Deriving a Property from Other Sources
+--------------------------------------
+
+A new property can be computed from one or more existing sources using
+:meth:`apply`. For example, permeability may be derived from porosity:
+
+.. code-block:: python
+
+    permeability = grid.properties.create(
+        name="perm",
+        eclipse_keyword="PERM",
+        description="Permeability",
+    )
+    permeability.apply(lambda poro: 100 * poro**3, source=porosity)
+    permeability.show()
+
+The ``source`` argument may refer to:
+
+- an existing property object,
+- the name of an existing property,
+- or one of the predefined :ref:`grid-derived attributes <grid-attributes>`.
+
+You can also refer to a property using its name:
+
+.. code-block:: python
+    permeability.apply(lambda poro: 100 * poro**3, source="poro")
+
+
+
+Using a Named Function
+~~~~~~~~~~~~~~~~~~~~~~
+
+Instead of a lambda expression, a regular Python function can be used.
+
+.. code-block:: python
+
+    def calc_perm(poro):
+        return 100 * poro**3
+
+   permeability.apply(calc_perm, source="poro")
+
+Using a named function is often preferable when the transformation becomes
+more complex or needs to be reused.
+
+
+
+.. _grid-attributes:
+
+Built-In Grid Attributes
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following built-in attribute names can be used as data sources in
+:meth:`GridProperty.apply`.
+These attributes are computed directly from the grid geometry and do not
+require explicit property creation.
+
+- ``"x"`` — X-coordinate of cell centers  
+- ``"y"`` — Y-coordinate of cell centers  
+- ``"depth"`` (or ``"z"``) — Cell-center depth (positive downward)  
+- ``"top"`` — Depth of the top face of each cell  
+- ``"bottom"`` — Depth of the bottom face of each cell  
+- ``"thickness"`` — Cell thickness (``bottom - top``)  
+- ``"active"`` — Activity indicator (1 for active cells, 0 for inactive)  
+
+These attributes can be used directly as input sources. For example,
+permeability can be defined as a function of depth:
+
+.. code-block:: python
+
+    permeability.apply(
+        lambda depth: depth / 1000,
+        source="depth",
+    )
+
+.. important::
+
+   These names are **reserved** and cannot be used when defining new
+   properties. Attempting to create a property with one of these names
+   will raise an error.
+
+Using Multiple Sources
+~~~~~~~~~~~~~~~~~~~~~~
+
+The :meth:`apply` method can combine multiple sources, including both
+properties and grid-derived attributes.
+
+.. code-block:: python
+    permeability.apply(
+        lambda poro, depth: 100*poro*thickness + depth,
+        source=(porosity, "depth", 'thickness'),
+    )
+
+
+
+Property Statistics
+-------------------
+
+Petres provides convenient access to common summary statistics.
+
+.. code-block:: python
+
+    print("Min Value:", permeability.min)
+    print("Max Value:", permeability.max)
+    print("Mean Value:", permeability.mean)
+    print("Median Value:", permeability.median)
+    print("Standard Deviation:", permeability.std)
+
+You can also print a full summary:
+
+.. code-block:: python
+
+    print(permeability.summary())
+
+This is useful for quickly checking whether the modeled values fall within
+reasonable physical limits.
+
+Filling with a Uniform Distribution
+-----------------------------------
+
+For stochastic modeling, a property can be filled from a uniform distribution.
+
+.. code-block:: python
+
+    porosity.fill_uniform(low=0.24, high=0.30)
+
+This generates values uniformly distributed between the specified lower and upper bounds.
+
+Filling with a Normal Distribution
+----------------------------------
+
+A normal distribution can be used when a property is expected to vary around
+a representative mean value.
+
+.. code-block:: python
+
+    porosity.fill_normal(mean=0.24, std=0.03)
+
+Minimum and maximum clipping bounds may optionally be supplied:
+
+.. code-block:: python
+
+    porosity.fill_normal(mean=0.24, std=0.03, min=0.20, max=0.30)
+
+To ensure reproducibility, a random seed may also be set:
+
+.. code-block:: python
+
+    porosity.fill_normal(mean=0.24, std=0.03, seed=42)
+
+Filling with a Log-Normal Distribution
+--------------------------------------
+
+A log-normal distribution is often more suitable for positively skewed properties,
+especially for quantities such as permeability.
+
+.. code-block:: python
+
+    porosity.fill_lognormal(mean=0.24, std=0.03)
+
+As with normal filling, optional bounds may be provided:
+
+.. code-block:: python
+
+    porosity.fill_lognormal(mean=0.24, std=0.03, min=0.20, max=0.30)
+
+A seed can also be specified for reproducibility:
+
+.. code-block:: python
+
+    porosity.fill_lognormal(mean=0.24, std=0.03, seed=42)
+
+Populating a Property from a NumPy Array
+----------------------------------------
+
+If you already have a precomputed 3D array of values, it can be assigned directly
+to the property.
+
+.. code-block:: python
+
+    import numpy as np
+
+    array = np.full(grid.shape, 0.24)
+    porosity.from_array(array)
+
+This is especially useful when the property values come from an external workflow,
+a simulator output, or a separate numerical calculation.
+
+Zone-Based Property Assignment
+------------------------------
+
+If the grid contains zone information, property values can be modeled separately
+for each zone. This is particularly useful when different formations require different property
+ranges or modeling assumptions. 
+The example below assumes that the zones have already been defined, as shown in
+earlier tutorials (see :doc:`zone-modeling`, :doc:`grid-modeling-from-horizons-and-zones`).
+
+.. code-block:: python
+
+    porosity.fill(0.20, zone="Caprock")
+    porosity.fill(0.50, zone="Base")
+
+The same zone-based idea can be used with other population methods as well`. For example:
+
+.. code-block:: python
+
+    porosity.fill_normal(mean=0.08, std=0.01, zone="Caprock")
+    porosity.fill_normal(mean=0.24, std=0.03, zone="Base")
+
+This allows each zone to be modeled independently.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Interpolating Property Values from Wells
+----------------------------------------
+
+Property values can also be assigned by interpolating measurements taken at
+well locations. This is useful when property data are available only at sparse
+sample points and must be distributed throughout the grid.
+
+First, define the wells and add property samples:
+
+.. code-block:: python
+    from petres.interpolators import UKInterpolator
+    from petres.models import VerticalWell
+
+    well1 = VerticalWell(name="Well 1", x=20, y=78)
+    well2 = VerticalWell(name="Well 2", x=32, y=55)
+
+    well1.add_sample(name="porosity", value=100, depth=10)
+    well2.add_sample(name="porosity", value=50, depth=15)
+
+Each sample represents a known property value at a specific location in space.
+
+Next, interpolate these values across the grid:
+
+.. code-block:: python
+
+    porosity.from_wells(
+        wells=[well1, well2],
+        interpolator=UKInterpolator(),
+        mode="xyz",
+    )
+
+The well samples are used as input data, and the interpolator estimates a
+property value for each grid cell.
+
+The ``wells`` argument defines the source data points.
+The ``interpolator`` argument controls how the values are distributed in space.
+The ``mode`` argument defines which spatial coordinates are used during
+interpolation. For example, ``"xyz"`` uses full three-dimensional coordinates,
+while ``"xy"`` can be used for interpolation only in the horizontal plane.
+
+In this example, Universal Kriging (:class:`~petres.interpolators.UniversalKrigingInterpolator`) is used. 
+Different interpolators may produce different results depending on the sample
+distribution and interpolation method. Choose the interpolator that best fits
+the available data and the intended modeling workflow.
+For more details and additional interpolation options, see
+the :doc:`/tutorials/interpolators`.
+
+
+
+
+
+
+
+
+
+
+Filling Remaining Missing Values
+--------------------------------
+
+In some workflows, such as zone-based modeling or interpolation, certain cells may remain unassigned and contain ``NaN`` values.
+These values can be replaced using :meth:`fill_nan`:
+
+.. code-block:: python
+
+    porosity.fill_nan(0.0)
+
+This is particularly useful for handling inactive cells and ensuring that all grid cells have valid values before further processing or export.
+
+
+
+
+Complete Example
+----------------
+
+The following example combines several of the ideas introduced above.
+
+.. code-block:: python
+
+   from petres.grids import CornerPointGrid
+   import numpy as np
+
+   grid = CornerPointGrid.from_regular(
+       xlim=(0, 1000),
+       ylim=(0, 1000),
+       zlim=(0, 100),
+       ni=20,
+       nj=20,
+       nk=3,
+   )
+
+   porosity = grid.properties.create(
+       name="poro",
+       eclipse_keyword="PORO",
+       description="Porosity",
+   )
+
+   porosity.fill_normal(mean=0.24, std=0.03, min=0.20, max=0.30, seed=42)
+
+   permeability = grid.properties.create(
+       name="perm",
+       eclipse_keyword="PERM",
+       description="Permeability",
+   )
+
+   permeability.apply(
+       lambda poro, z: 100 * poro**3 + z,
+       source=(porosity, "z"),
+   )
+
+   print(porosity.summary())
+   print(permeability.summary())
+
+   porosity.show(cmap="viridis")
+   permeability.show(cmap="plasma")
+
+Where to Go Next
+----------------
+
+Now that you know how to define and populate cell properties, the next step is
+usually to export the grid and its associated properties for simulation use 
+(see :doc:`exporting-grid`)
+
+

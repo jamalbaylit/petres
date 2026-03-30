@@ -88,8 +88,8 @@ class Viewer3D:
         y: np.ndarray | None = None,
         xlim: tuple[float, float] | None = None,
         ylim: tuple[float, float] | None = None,
-        nx: int | None = None,
-        ny: int | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
         **kwargs,
@@ -97,7 +97,7 @@ class Viewer3D:
         x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
-            nx=nx, ny=ny,
+            ni=ni, nj=nj,
             dx=dx, dy=dy,
         )
         self._call_backend("add_zone", zone, x=x, y=y, **kwargs)

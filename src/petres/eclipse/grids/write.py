@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import TextIO
 import numpy as np
 
+from ...errors.eclipse import GRDECLMissingValueError
+
 from .validation import (
     validate_specgrid, 
     validate_coord_array_shape, 
@@ -17,7 +19,7 @@ from .validation import (
 
 class GRDECLWriter:
     """
-    Export corner-point grid to GRDECL format (Schlumberger Petrel / ECLIPSE).
+    Export corner-point grid to GRDECL format (Schlumberger Petrel / Eclipse).
 
     Parameters
     ----------
@@ -43,14 +45,34 @@ class GRDECLWriter:
         - properties: Optional dictionary of property arrays {name: array}
         """
 
+    def write_property(
+        self,
+        path: str | Path,
+        *,
+        values: np.ndarray,
+        keyword: str
+    ) -> None:
+        """
+        Export a single grid property to GRDECL format.
         
+        Parameters:
+        - path: Output file path
+        - values: Array of property values to export
+        - keyword: Eclipse keyword for the property (e.g., 'PORO', 'PERMX')
+        """
+        with open(path, 'w') as f:
+            f = GRDECLWriter._write_array(f, keyword, values, rle=True)
+
     def write(
         self,
         *,
         path: str | Path,
         coord: np.ndarray, 
         zcorn: np.ndarray, 
-        actnum: np.ndarray,
+        actnum: np.ndarray | None = None,
+        property_values: Optional[Dict[str, np.ndarray]] = None,
+        property_keywords: Optional[List[str]] = None,
+        rle: bool = True,
         units: str = "FEET",
         mapunits: str = "FEET",
     ):
@@ -70,7 +92,8 @@ class GRDECLWriter:
         - format_style: 'columns' (6 per line) or 'single' (1 per line)
         """
         
-        nk, nj, ni = actnum.shape
+        # zcorn is shaped (2*nk, 2*nj, 2*ni); convert back to cell counts
+        ni, nj, nk = zcorn.shape[2] // 2, zcorn.shape[1] // 2, zcorn.shape[0] // 2
 
         with open(path, 'w') as f:
             # Header
@@ -91,31 +114,25 @@ class GRDECLWriter:
             # f.write(f"GRIDUNIT\n'{units}' /\n")
             
             # SPECGRID
-            f.write("SPECGRID\n")
+            f.write("\nSPECGRID\n")
             f.write(f"{ni} {nj} {nk}  1  F /\n")
             
             # COORD
-            f = self._write_coord(f, coord)
+            f = GRDECLWriter._write_array(f, "COORD", coord, rle=rle)
             
             # ZCORN
-            f = self._write_zcorn(f, zcorn)
+            f = GRDECLWriter._write_array(f, "ZCORN", zcorn, rle=rle)
             
             # ACTNUM
-            f  = self._write_actnum(f, actnum)
+            if actnum is not None:
+                f = GRDECLWriter._write_array(f, "ACTNUM", actnum, type=np.int8, nan_fill=0, rle=rle)
             
             # Properties
-            # for prop_name, prop_array in self.properties.items():
-            #     self._write_property(f, prop_name, prop_array, format_style)
-        
-    def _array_to_string(self, arr: np.ndarray, ncol: int = 8) -> str:
-        """Convert a numpy array to a formatted string."""
-        flat = arr.ravel(order="C")
-        flat2d = flat.reshape(-1, ncol)
-        return "\n".join(" ".join(f"{x:.8f}" for x in row) for row in flat2d)
-    
+            if property_values:
+                for idx, prop_name in enumerate(property_keywords):
+                    prop_array = property_values[idx]
+                    f = GRDECLWriter._write_array(f, prop_name, prop_array, rle=rle)
 
-
-    
 
     def _write_header(
         self, 
@@ -127,7 +144,7 @@ class GRDECLWriter:
         """Write file header with metadata."""
         now = datetime.now()
         date_str = now.strftime("%A, %B %d %Y %H:%M:%S")
-        f.write(f"-- Format      : Generic ECLIPSE style (ASCII) grid geometry and properties (*.GRDECL)\n")
+        f.write(f"-- Format      : Generic Eclipse style (ASCII) grid geometry and properties (*.GRDECL)\n")
         f.write(f"-- Exported by : Petres\n")
         f.write(f"-- Date        : {date_str}\n")
         f.write(f"-- Grid        : 3D Grid ({ni}X{nj}X{nk})\n")
@@ -150,213 +167,132 @@ class GRDECLWriter:
         ]
     
     @staticmethod
-    def _write_coord(
-        f: TextIO,
-        coord: np.ndarray,
-        ncol: int = 6,
-    ):
-        """
-        coord shape: (ny+1, nx+1, 6)
-        """
-
-        # Flatten in ECLIPSE order
-        flat = coord.reshape(-1, ncol)
-
-        f.write("COORD\n")
-        np.savetxt(
-            f,
-            flat,
-            fmt="%.8f",
-        )
-        f.write("/\n\n")
-        return f
+    def _write_array(
+        f: TextIO, 
+        keyword: str,
+        array: np.ndarray, 
+        ncol: int = 20, 
+        type: np.dtype = np.float32, 
+        decimals: int | None = None,
+        nan_fill: float | int | None = None,
+        rle: bool = False
+    ):  
         
-    @staticmethod
-    def _write_zcorn(
-        f: TextIO,
-        zcorn: np.ndarray,
-        ncol: int = 8,
-    ):
-        """
-        zcorn shape: (2*nz, 2*ny, 2*nx)
-        """
-        # ECLIPSE requires Fortran ordering
-        flat = zcorn.reshape(-1, ncol)
+        if np.isinf(array).any():
+            raise ValueError(f" Array '{keyword}' contains infinite values.")
 
-        f.write("ZCORN\n")
-        np.savetxt(
-            f,
-            flat,  # savetxt wants 2D
-            fmt="%.8f",
-        )
+        if nan_fill is not None:
+            array = np.nan_to_num(array, nan=nan_fill, copy=False)
+        else:
+            if np.isnan(array).any():
+                raise GRDECLMissingValueError(keyword=keyword)
+        if rle:
+            return GRDECLWriter._write_array_rle(f, keyword, array, ncol, type, decimals)
+        else:
+            return GRDECLWriter._write_array_raw(f, keyword, array, ncol, type, decimals)
+
+    @staticmethod
+    def _normalize_keyword(keyword: str) -> str:
+        """Normalize property name to valid Eclipse keyword format."""
+        if not isinstance(keyword, str):
+            raise TypeError(f"Keyword must be a string, got {type(keyword)}.")
+        return keyword.strip().upper()
+
+    @staticmethod
+    def _write_array_raw(
+        f: TextIO, 
+        keyword: str,
+        array: np.ndarray, 
+        ncol: int = 20, 
+        type: np.dtype = np.float32, 
+        decimals: int | None = None
+    ) -> None:
+        flat = np.asarray(array, dtype=type).ravel(order="C")
+        keyword = GRDECLWriter._normalize_keyword(keyword)
+
+        fmt = GRDECLWriter._get_fmt(flat, decimals)
+        flat2d = flat.reshape(-1, ncol)
+        f.write(f"\n{keyword}\n")
+        np.savetxt(f, flat2d, fmt=fmt)
         f.write("/\n\n")
         return f
     
     @staticmethod
-    def _write_actnum(
+    def _write_array_rle(
         f: TextIO,
-        actnum: np.ndarray,
-        *,
-        compress: bool = True,
-        ncol: int = 20,
-        tokens_per_line: int = 12,
-    ) -> None:
-        if compress:
-            f = GRDECLWriter._write_actnum_rle(f, actnum, tokens_per_line=tokens_per_line)
-        else:
-            f = GRDECLWriter._write_actnum_raw(f, actnum, ncol=ncol)
-        return f
+        keyword: str,
+        array: np.ndarray,
+        ncol: int = 12,
+        type: np.dtype = np.float32,
+        decimals: int | None = None,
+    ):
+        flat = np.asarray(array, dtype=type).ravel(order="C")
 
-    @staticmethod
-    def _write_actnum_raw(f: TextIO, actnum: np.ndarray, ncol: int = 20) -> None:
-        flat = np.asarray(actnum, dtype=np.int8).ravel(order="C")
-        flat2d = flat.reshape(-1, ncol)
-        f.write("ACTNUM\n")
-        np.savetxt(f, flat2d, fmt="%d")
+        # For float data, normalize before exact-equality RLE
+        if np.issubdtype(flat.dtype, np.floating) and decimals is not None:
+            flat = np.round(flat, decimals)
+
+        lengths, values = GRDECLWriter._rle(flat)
+        keyword = GRDECLWriter._normalize_keyword(keyword)
+        f.write(f"\n{keyword}\n")
+        GRDECLWriter._rle_writer(f, lengths, values, ncol)
         f.write("/\n\n")
         return f
-        
+            
     @staticmethod
-    def _write_actnum_rle(
-        f: TextIO,
-        active: np.ndarray,
-        tokens_per_line: int = 12,
-    ) -> None:
-        flat = np.asarray(active, dtype=np.bool_).ravel(order="C").astype(np.int8)
-
-        lengths, values = GRDECLWriter._rle_01(flat)
-
-        f.write("ACTNUM\n")
-
-        # line wrap
+    def _rle_writer(f: TextIO, lengths: np.ndarray, values: np.ndarray, ncol: int = 12) -> None:
+        """Helper to write RLE data with line wrapping."""
         line = []
         for n, v in zip(lengths, values):
-            tok = f"{int(n)}*{int(v)}" if n > 1 else f"{int(v)}"
+            tok = f"{int(n)}*{v}" if n > 1 else f"{v}"
             line.append(tok)
-            if len(line) >= tokens_per_line:
+            if len(line) >= ncol:
                 f.write(" ".join(line) + "\n")
                 line = []
         if line:
             f.write(" ".join(line) + "\n")
-        f.write("/\n\n")
         return f
 
     @staticmethod
-    def _rle_01(flat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def _rle(flat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
-        Vectorized RLE for 0/1 array.
-        Returns (lengths, values).
+        Vectorized run-length encoding using exact equality.
+
+        This is ideal for integer and boolean data. For float data, values should
+        usually be normalized beforehand (for example by rounding) so that exact
+        equality is meaningful.
+
+        Returns
+        -------
+        lengths : np.ndarray
+            Run lengths.
+        values : np.ndarray
+            Run values.
         """
-        flat = np.asarray(flat, dtype=np.int8)
-        if flat.size == 0:
-            return np.array([], dtype=np.int64), np.array([], dtype=np.int8)
+        flat = np.asarray(flat).ravel()
+        n = flat.size
 
-        # indices where value changes
-        change_idx = np.flatnonzero(np.diff(flat)) + 1
-        starts = np.r_[0, change_idx]
-        ends = np.r_[change_idx, flat.size]
+        if n == 0:
+            return np.empty(0, dtype=np.int64), np.empty(0, dtype=flat.dtype)
 
-        lengths = ends - starts
-        values = flat[starts]
-        return lengths.astype(np.int64), values
+        change = np.empty(n, dtype=bool)
+        change[0] = True
+        change[1:] = flat[1:] != flat[:-1]
 
+        starts = np.flatnonzero(change)
 
+        lengths = np.empty(starts.size, dtype=np.int64)
+        lengths[:-1] = starts[1:] - starts[:-1]
+        lengths[-1] = n - starts[-1]
 
-
-
+        return lengths, flat[starts]
 
     @staticmethod
-    def _write_property(f, prop_name, prop_array, format_style="%.6f", ncol: int = 6):
-        """
-        Write a cell-based property array to GRDECL file.
-
-        prop_array shape: (Nz, Ny, Nx)
-        Ordering: i fastest, then j, then k (Fortran order)
-        """
-
-        f.write(f"\n{prop_name.upper()}\n")
-
-        expected_shape = (self.Nz, self.Ny_cells, self.Nx_cells)
-        if prop_array.shape != expected_shape:
-            raise ValueError(
-                f"Property '{prop_name}' has incorrect shape {prop_array.shape}, "
-                f"expected {expected_shape}"
-            )
-
-        # Replace NaNs (no copy if possible)
-        if np.issubdtype(prop_array.dtype, np.floating):
-            data = np.nan_to_num(prop_array, nan=0.0, copy=False)
-        else:
-            data = prop_array
-
-        # ECLIPSE flattening
-        flat = data.reshape(-1, ncol)
-
-        # Integer vs float formatting
-        is_integer = np.issubdtype(flat.dtype, np.integer)
-        fmt = "%d" if is_integer else format_style
-
-        # Write efficiently (single buffered call)
-        np.savetxt(
-            f,
-            flat[np.newaxis],   # savetxt requires 2D
-            fmt=fmt,
-        )
-
-        f.write("\n/\n")
+    def _get_fmt(array: np.ndarray, decimals: int | None) -> str:
+        is_integer = np.issubdtype(array.dtype, np.integer)
+        fmt = "%d" if is_integer else f"%.{decimals}f" if decimals is not None else "%g"
+        return fmt
     
-    def _write_array(self, f, values, format_style, is_integer=False):
-        """Write array values with proper formatting."""
-        
-        if format_style == "columns":
-            # Write 6 values per line (standard ECLIPSE format)
-            values_per_line = 6
-            
-            for i, val in enumerate(values):
-                if i > 0 and i % values_per_line == 0:
-                    f.write("\n")
-                
-                if is_integer:
-                    f.write(f"{int(val):8d} ")
-                else:
-                    # Use scientific notation for better precision
-                    f.write(f"{val:14.6e} ")
-            
-            f.write("\n")
-        
-        elif format_style == "single":
-            # Write one value per line
-            for val in values:
-                if is_integer:
-                    f.write(f"{int(val)}\n")
-                else:
-                    f.write(f"{val:.6e}\n")
-        
-        else:
-            raise ValueError(f"Unknown format_style: {format_style}")
     
-    def add_property(self, name: str, array: np.ndarray):
-        """
-        Add a property to be exported.
-        
-        Parameters:
-        - name: Property name (e.g., 'PORO', 'PERMX', 'SATW')
-        - array: (Nz, Ny_cells, Nx_cells) array of property values
-        """
-        if array.shape != (self.Nz, self.Ny_cells, self.Nx_cells):
-            raise ValueError(
-                f"Property array has incorrect shape {array.shape}, "
-                f"expected ({self.Nz}, {self.Ny_cells}, {self.Nx_cells})"
-            )
-        self.properties[name] = array
-    
-    def remove_property(self, name: str):
-        """Remove a property from export."""
-        if name in self.properties:
-            del self.properties[name]
-    
-    def list_properties(self):
-        """List all properties that will be exported."""
-        return list(self.properties.keys())
 
 

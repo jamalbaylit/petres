@@ -2,7 +2,7 @@ Petres
 ======
 
 **Petres** is an open-source Python library designed for **reservoir engineers**
-to build, analyze, and visualize **ECLIPSE-compatible corner-point grids**
+to build, analyze, and visualize **Eclipse-compatible corner-point grids**
 and subsurface models.
 
 It provides a **fully scriptable alternative** to commercial reservoir modeling
@@ -56,12 +56,12 @@ Create a simple grid:
 
 
 What You Can Do with Petres
---------------------------
+---------------------------
 
 Petres provides a programmatic workflow for building reservoir models
 from the ground up:
 
-- Generate **corner-point grids** compatible with ECLIPSE simulators  
+- Generate **corner-point grids** compatible with Eclipse simulators  
 - Define **pillar geometry** and explicitly control grid topology  
 - Construct grids from **rectilinear inputs or custom geometries**  
 - Create and manage **horizons and zones** using interpolation methods  
@@ -74,7 +74,7 @@ This enables fully reproducible reservoir modeling workflows entirely within Pyt
 
 
 Core Capabilities
-----------------
+-----------------
 
 .. grid:: 2
    :gutter: 3
@@ -85,7 +85,7 @@ Core Capabilities
    .. grid-item-card:: 🌍 Horizons and Zones
       Define subsurface structure using interpolation-based surfaces.
 
-   .. grid-item-card:: ⚙️ ECLIPSE Compatibility
+   .. grid-item-card:: ⚙️ Eclipse Compatibility
       Read and write GRDECL data (COORD, ZCORN, ACTNUM).
 
    .. grid-item-card:: 📊 Visualization
@@ -94,7 +94,7 @@ Core Capabilities
 
 
 Design Philosophy
-----------------
+-----------------
 
 Petres is built around a **code-first modeling approach**:
 
@@ -127,7 +127,7 @@ reservoir grid systems, designed both as a reference and as educational material
 - Structured vs unstructured grids  
 - Rectilinear, regular, and Cartesian grids  
 - Corner-point grid geometry  
-- ECLIPSE data representation (COORD, ZCORN, ACTNUM)
+- Eclipse data representation (COORD, ZCORN, ACTNUM)
 
 👉 Start here: :doc:`Grid Types in Reservoir Simulation <fundamentals/grid-types>`
 
@@ -144,9 +144,9 @@ reservoir grid systems, designed both as a reference and as educational material
    :maxdepth: 2
    :caption: Getting Started
    :hidden:
-   
-   getting_started/installation
-   getting_started/quickstart
+
+   getting-started/installation
+   getting-started/quickstart
 
 
 .. toctree::
@@ -158,12 +158,13 @@ reservoir grid systems, designed both as a reference and as educational material
    fundamentals/grid-types
    fundamentals/corner-point-grids
 
-
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: User Guide
    :hidden:
 
-   tutorials
+   tutorials/index
    examples
    api/index
+
+

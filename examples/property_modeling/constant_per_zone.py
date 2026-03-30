@@ -20,7 +20,7 @@ zones = [
   # Zone("Reservoir", top=h2, base=h3).divide(fractions=[0.2,0.3,0.5]),
   Zone("Base", top=h3, base=h4).divide(nk=3),
 ]
-viewer.add_zones(zones, x=np.linspace(0,100,50), y=np.linspace(0,100,50), colormap="viridis", show_layers=True)
+viewer.add_zones(zones, x=np.linspace(0,100,50), y=np.linspace(0,100,50), cmap="viridis", show_layers=True)
 viewer.show()
 
 pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=50, nj=50)
@@ -29,16 +29,24 @@ grid.show(show_inactive=False)
 
 
 porosity = grid.properties.create(
-    "poro",
-    eclipse_keyword="PORO",
-    description="Porosity"
+  "poro",
+  eclipse_keyword="PORO",
+  description="Porosity"
 )
 
 porosity.fill(0.20, zone="Caprock")
 porosity.fill(0.5, zone="Base")
 
+
+
+porosity.show(show_inactive=True)
+
+# Fill any remaining NaN values
+porosity.fill_nan(0)  
+porosity.show(show_inactive=True)
 porosity.show(show_inactive=False)
 
+porosity.to_grdecl("poro_constant_per_zone.grdecl")
 
 
 

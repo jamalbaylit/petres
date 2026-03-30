@@ -52,13 +52,13 @@ class VerticalWell:
         self,
         name: str,
         value: float,
-        z: float | None = None,
+        depth: float | None = None,
     ) -> None:
         name = _validate_nonempty_string(name, "name")
         value = _validate_finite_float(value, "value")
-        if z is not None:
+        if depth is not None:
             mode = 'depth'
-            z = _validate_finite_float(z, "z")
+            depth = _validate_finite_float(depth, "depth")
         else:
             mode = 'scalar'
 
@@ -70,29 +70,30 @@ class VerticalWell:
                 f"existing samples for this property are in mode '{current_mode}'."
             )
         
-        if z in depth_map:
+        if depth in depth_map:
             raise ValueError(
-                f"Sample for '{name}' at z={z} already exists in well '{self.name}'."
+                f"Sample for '{name}' at depth={depth} already exists in well '{self.name}'."
             )
 
-        depth_map[z] = value
+        depth_map[depth] = value
 
     def get_sample(
         self,
         name: str,
-        z: float | None = None,
+        depth: float | None = None,
     ) -> float:
         name = _validate_nonempty_string(name, "name")
-        if z is not None:
-            z = _validate_finite_float(z, "z")
+        if depth is not None:
+            depth = _validate_finite_float(depth, "depth")
 
-        if name not in self.samples or z not in self.samples[name]:
+
+        if name not in self.samples or depth not in self.samples[name]:
             raise KeyError(
-                f"Sample for property '{name}' at z={z} "
+                f"Sample for property '{name}' at depth={depth} "
                 f"not found in well '{self.name}'."
             )
 
-        return self.samples[name][z]
+        return self.samples[name][depth]
 
     def get_samples(
         self,
@@ -104,19 +105,19 @@ class VerticalWell:
     def remove_sample(
         self,
         name: str,
-        z: float | None = None,
+        depth: float | None = None,
     ) -> None:
         name = _validate_nonempty_string(name, "name")
-        if z is not None:
-            z = _validate_finite_float(z, "z")
+        if depth is not None:
+            depth = _validate_finite_float(depth, "depth")
 
-        if name not in self.samples or z not in self.samples[name]:
+        if name not in self.samples or depth not in self.samples[name]:
             raise KeyError(
-                f"Sample for property '{name}' at z={z} "
+                f"Sample for property '{name}' at depth={depth} "
                 f"not found in well '{self.name}'."
             )
 
-        del self.samples[name][z]
+        del self.samples[name][depth]
 
         if not self.samples[name]:
             del self.samples[name]

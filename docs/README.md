@@ -63,40 +63,34 @@ docs/
 
 ## Build Commands
 
-### Windows
+### Windows (recommended)
 ```bash
-# Clean previous build
-cd docs
-.\make.bat clean
-
-# Build HTML
-.\make.bat html
+# From repository root
+.\docs\make.bat clean
+.\docs\make.bat html
 
 # View documentation
-start build\html\index.html
+start docs\build\html\index.html
 ```
 
-### Unix/Linux/macOS
+### Unix/Linux/macOS (recommended)
 ```bash
-# Clean previous build
-cd docs
-make clean
-
-# Build HTML
-make html
+# From repository root
+make -C docs clean
+make -C docs html
 
 # View documentation (Linux)
-xdg-open build/html/index.html
+xdg-open docs/build/html/index.html
 
 # View documentation (macOS)
-open build/html/index.html
+open docs/build/html/index.html
 ```
 
-### Using uv (recommended)
+### Using uv directly
 ```bash
-cd docs
-uv run sphinx-build -M clean source build
-uv run sphinx-build -M html source build
+uv sync --group docs
+uv run --group docs sphinx-build -M clean docs/source docs/build
+uv run --group docs sphinx-build -M html docs/source docs/build
 ```
 
 ## Configuration
@@ -211,8 +205,8 @@ uv sync --group docs
 
 1. **Write code** with NumPy-style docstrings
 2. **Export via `__all__`** in `__init__.py` files
-3. **Run build**: `uv run sphinx-build -M html source build`
-4. **View docs**: Open `build/html/index.html`
+3. **Run build**: `make -C docs html` (Unix/macOS) or `.\docs\make.bat html` (Windows)
+4. **View docs**: Open `docs/build/html/index.html`
 
 That's it! No manual `.rst` editing required.
 

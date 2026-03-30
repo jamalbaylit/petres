@@ -1,12 +1,12 @@
 from __future__ import annotations
+from matplotlib.colors import to_rgba
+from matplotlib.pyplot import cm
 from dataclasses import dataclass
 from typing import Any
+import numpy as np
+import warnings
 
 
-try:
-    from matplotlib.colors import to_rgba
-except Exception:  # optional dependency
-    to_rgba = None
 
 @dataclass(frozen=True)
 class Color:
@@ -123,12 +123,7 @@ class Color:
 
 
     def __init__(self, value: Any, opacity: float | None = None):
-        if to_rgba is None:
-            import warnings
-            warnings.warn("`matplotlib` is not installed. It is suggested to install `matplotlib` for better color parsing support. Falling back to basic parsing which only supports hex or (r,g,b[,a]) tuples.")
-            r, g, b, a = self._parse(value)
-        else:
-            r, g, b, a = to_rgba(value)
+        r, g, b, a = self.to_rgba(value)
         
         if opacity is not None:
             if not (0.0 <= opacity <= 1.0):
@@ -140,7 +135,14 @@ class Color:
         object.__setattr__(self, "b", b)
         object.__setattr__(self, "a", a)
 
-    def _parse(self, value: Any) -> tuple[float, float, float, float]:
+    def to_rgba(self, value: Any) -> tuple[float, float, float, float]:
+        try:
+            rgba = to_rgba(value)
+            return rgba
+        except Exception as e:
+            raise ValueError(f"Failed to parse color using matplotlib: {value}") from e
+        
+    def _parse_color(self, value: Any) -> tuple[float, float, float, float]:
         if isinstance(value, Color):
             return value.r, value.g, value.b, value.a
 
@@ -205,4 +207,12 @@ class Color:
             return f"#{r:02X}{g:02X}{b:02X}{a:02X}"
         return f"#{r:02X}{g:02X}{b:02X}"
     
-
+    @staticmethod
+    def get_discrete_cmap(n: int, cmap: str):
+        if n <= 0:
+            raise ValueError("Number of colors must be positive.")
+        try:
+            colors = cm.get_cmap(cmap)(np.linspace(0, 1, n))
+            return [tuple(c[:3]) for c in colors]  # Convert to RGB tuples
+        except Exception as e:
+            raise ValueError(f"Failed to get discrete cmap for '{cmap}'. Ensure the colormap name is valid.") from e 
