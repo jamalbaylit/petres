@@ -460,6 +460,7 @@ class CornerPointGrid:
         scalars: str | None = None,
         color: Any = 'tan', 
         cmap: Optional[str] = 'turbo', 
+        title: Optional[str] = None,
         **kwargs
     ) -> None:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
@@ -467,7 +468,7 @@ class CornerPointGrid:
         scalars = self._resolve_source(scalars) if scalars is not None else None
         color = None if scalars is not None else color
         viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)
-        viewer.show()
+        viewer.show(title=title)
     
     @classmethod
     def from_rectilinear(

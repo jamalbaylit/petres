@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Sequence, Literal
+from typing import Any, Sequence, Literal, Optional
 from dataclasses import dataclass, field
 from shapely.geometry import Polygon
 from shapely import points, contains
@@ -187,6 +187,7 @@ class BoundaryPolygon:
         show_vertices: bool = False,
         vertex_size: float = 24.0,
         aspect: Literal["auto", "equal"] = "auto",
+        title: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -208,6 +209,8 @@ class BoundaryPolygon:
             Whether to show vertex markers.
         vertex_size : float, default=24.0
             Size of vertex markers.
+        title : str, optional
+            Title of the plot. If None, no title is shown.
         **kwargs
             Additional arguments passed to the viewer.
         """
@@ -231,5 +234,5 @@ class BoundaryPolygon:
             **kwargs,
         )
 
-        viewer.show()
+        viewer.show(title=title)
         return viewer

@@ -15,7 +15,7 @@ porosity = grid.properties.create(name="poro", eclipse_keyword="PORO", descripti
 
 # Fill porosity with normal distribution
 porosity.fill_normal(mean=0.24, std=0.03)
-porosity.show()
+porosity.show(title="Porosity with Normal Distribution")
 
 # You can optionally set minimum and maximum limits for the generated normal distribution values
 porosity.fill_normal(mean=0.24, std=0.03, min=0.2, max=0.3)

@@ -84,6 +84,7 @@ class Zone:
         show_contours: bool = True,
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
+        title: Optional[str] = 'auto',
         **kwargs,
     ):
         """
@@ -115,13 +116,16 @@ class Zone:
             Number of contour levels (default: 10).
         aspect : str
             Aspect ratio for the plot (default: "equal").
+        title : str, optional
+            Title of the plot. If 'auto', a default title is used.
         **kwargs
             Additional kwargs passed to the viewer.
         """
         from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
         from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
         
-        title="Zone: " + self.name
+        if title == 'auto':
+            title = "Zone: " + self.name
         viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
         viewer.add_zone(
             self, 
