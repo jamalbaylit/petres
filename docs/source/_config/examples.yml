@@ -1,122 +1,26 @@
 pages:
-  # - slug: getting-started
-  #   title: Getting Started
-  #   location: getting_started
-  #   summary: Learn the basic Petres workflow and create your first models.
-  #   description: |
-  #     This guide introduces the basic Petres workflow and shows the minimum
-  #     steps required to start working with Petres.
-
-  #     See :class:`petres.grids.CornerPointGrid` for the main grid object.
-  #   difficulty: beginner
-  #   tags: [basics, grid]
-  #   sections:
-  #     - title: Create your first grid
-  #       description: |
-  #         This example shows how to create a first model and inspect it.
-
-  #         See :class:`petres.grids.CornerPointGrid`.
-  #       examples:
-  #         - path: examples/getting_started.py
-  #           title: First Petres workflow
-  #           description: |
-  #             A minimal runnable example to get started with Petres.
-
-  - slug: grid-workflows
-    title: Grid Workflows
-    location: tutorials
-    summary: Create, inspect, read, and export corner-point grids.
-    description: |
-      These workflows focus on :class:`petres.grids.CornerPointGrid`
-      and related grid operations.
-    difficulty: beginner
-    tags: [grid, grdecl]
-    sections:
-      - title: Create a corner-point grid from a regular grid
-        description: |
-          Use this workflow when your model starts from regular x, y, z arrays.
-
-          See :class:`petres.grids.CornerPointGrid`.
-        examples:
-          - path: examples/create_cornerpoint_grid_from_regular.py
-            title: Regular-grid example
-            description: |
-              Builds a corner-point grid from regular coordinate arrays.
-
-      - title: Create a corner-point grid from a rectilinear grid
-        description: |
-          Use rectilinear coordinates when spacing varies along one or more axes.
-        examples:
-          - path: examples/create_cornerpoint_grid_from_rectilinear.py
-
-      - title: Read and export GRDECL grids
-        description: |
-          Import and export simulator-oriented corner-point grids.
-        examples:
-          - path: examples/read_eclipse_grdecl.py
-            title: Read a GRDECL grid
-          - path: examples/export_corner_point_grid_to_eclipse_grdecl_file.py
-            title: Export a grid to GRDECL
-
-  - slug: property-modeling
-    title: Property Modeling
-    location: tutorials
-    summary: Build and apply grid-based property distributions.
-    description: |
-      These examples show how to create and apply properties on grids.
-
-      See :class:`petres.property.GridProperty` and related APIs.
-    difficulty: intermediate
-    tags: [property, modeling]
-    sections:
-      - title: Create a property distribution
-        description: |
-          Start with a general property distribution workflow.
-        examples:
-          - path: examples/create_property_distribution.py
-
-      - title: Apply constant properties
-        description: |
-          These examples show constant-value assignments over different supports.
-        examples:
-          - path: examples/property_modeling/constant_full_grid.py
-            title: Constant value in the full grid
-          - path: examples/property_modeling/constant_per_zone.py
-            title: Constant value per zone
-
-      - title: Build properties from wells and statistical models
-        description: |
-          Generate properties from samples or stochastic distributions.
-        examples:
-          - path: examples/property_modeling/from_wells.py
-            title: Property modeling from wells
-          - path: examples/property_modeling/normal_distribution.py
-            title: Normal distribution example
-          - path: examples/property_modeling/lognormal_distribution.py
-            title: Lognormal distribution example
-
-      - title: Apply a property model
-        description: |
-          Apply the generated property model to the target grid.
-        examples:
-          - path: examples/property_modeling/apply.py
-
-  - slug: visualization
-    title: Visualization
+  - slug: grid-generation
+    title: Grid Generation
     location: examples
-    summary: Focused visualization examples for 2D workflows.
-    description: |
-      These examples show different 2D visualization patterns.
-    difficulty: beginner
-    tags: [visualization, 2d]
+    summary: Focused on examples for generating grids.
+    # description: |
+      # These examples show different 2D visualization patterns.
+    # difficulty: beginner
+    # tags: [grid-generation, 2d]
     sections:
-      - title: View boundaries and zones in 2D
+      - title: Generate Basic Grid Types
         description: |
-          Basic 2D visualization examples.
+          Basic grid generation like Rectilinear, and Regular grids.
         examples:
-          - path: examples/view_boundary_2d.py
-            title: View a boundary in 2D
-          - path: examples/view_zone_2d.py
-            title: View a zone in 2D
-          - path: examples/view_2d_advanced.py
-            title: Advanced 2D visualization
+          - path: examples/grid/create_cornerpoint_grid_from_rectilinear.py
+            title: Generate a Rectilinear Grid
+          - path: examples/grid/create_cornerpoint_grid_from_regular.py
+            title: Generate a Regular Grid
+
+      - title: Generate Corner-Point Grid from Zones
+        description: |
+          Generate a Corner-Point grid from horizon and zone data.
+        examples:
+          - path: examples/grid/create_cornerpoint_grid_from_zones.py
+            title: Generate a Corner-Point Grid from Zones
+

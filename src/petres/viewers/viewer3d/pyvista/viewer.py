@@ -1,6 +1,7 @@
 # backend.py
 from __future__ import annotations
 
+from turtle import color
 from typing import Any, Self, Optional
 import pyvista as pv
 import numpy as np
@@ -17,6 +18,7 @@ from .._core.base import Base3DViewer
 from ...._utils._color import Color
 from .layers.zone import _add_zone
 from ....models.zone import Zone
+from petres.viewers.viewer3d.pyvista.layers import horizon
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -138,6 +140,7 @@ class PyVista3DViewer(Base3DViewer):
     def _add_corner_point_grid(self, grid, show_inactive: bool = False, scalars: Optional[np.ndarray] = None, cmap: Optional[str] = None, color: Optional[Color] = None, **kwargs) -> None:
         return _add_corner_point_grid(self, grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color, **kwargs)
 
+
     def add_zones(
         self,
         zones: list[Zone],
@@ -151,7 +154,7 @@ class PyVista3DViewer(Base3DViewer):
         dx: float | None = None,
         dy: float | None = None,
         show_layers: bool = True,
-        colormap: str = "gist_rainbow",
+        cmap: str = "gist_rainbow",
         **kwargs,
     ) -> Self:
         x, y = _resolve_xy_vertices(
@@ -160,46 +163,36 @@ class PyVista3DViewer(Base3DViewer):
             ni=ni, nj=nj,
             dx=dx, dy=dy,
         )
-        # Create a consistent color scheme for zones automatically based on color map
-        try:
-            from matplotlib.pyplot import cm
-        except ImportError:
-            # If matplotlib is not available, use a default color scheme
-            colors = [(i/len(zones), 0.5, 1-i/len(zones)) for i in range(len(zones))]
-            warnings.warn(f"Failed to use colormap '{colormap}'. `matplotlib` is not installed. Install `matplotlib` for better color support. Falling back to basic color scheme.")
-        else:
-            colors = cm.get_cmap(colormap)(np.linspace(0, 1, len(zones)))
-            colors = [tuple(c[:3]) for c in colors]  # Convert to RGB tuples
-
+        colors = Color.get_discrete_cmap(len(zones), cmap=cmap)
         for i, zone in enumerate(zones):
             self.add_zone(zone, x=x, y=y, color=colors[i], show_layers=show_layers, **kwargs)
         return self
 
     def add_zone(
-            self,
-            zone: Zone,
-            *,
-            x: np.ndarray | None = None,
-            y: np.ndarray | None = None,
-            xlim: tuple[float, float] | None = None,
-            ylim: tuple[float, float] | None = None,
-            ni: int | None = None,
-            nj: int | None = None,
-            dx: float | None = None,
-            dy: float | None = None,
-            color: Any | None = None,
-            show_layers: bool = True,
-            **kwargs,
-        ) -> Self:
-            x, y = _resolve_xy_vertices(
-                x=x, y=y,
-                xlim=xlim, ylim=ylim,
-                ni=ni, nj=nj,
-                dx=dx, dy=dy,
-            )
-            color = Color(color).as_rgb() if color is not None else None
-            _add_zone(self, zone, x=x, y=y, color=color, show_layers=show_layers, **kwargs)
-            return self
+        self,
+        zone: Zone,
+        *,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
+        color: Any | None = None,
+        show_layers: bool = True,
+        **kwargs,
+    ) -> Self:
+        x, y = _resolve_xy_vertices(
+            x=x, y=y,
+            xlim=xlim, ylim=ylim,
+            ni=ni, nj=nj,
+            dx=dx, dy=dy,
+        )
+        color = Color(color).as_rgb() if color is not None else None
+        _add_zone(self, zone, x=x, y=y, color=color, show_layers=show_layers, **kwargs)
+        return self
     
 
     def add_horizon(
@@ -215,6 +208,8 @@ class PyVista3DViewer(Base3DViewer):
         dx: float | None = None,
         dy: float | None = None,
         color: Any | None = None,
+        scalars: bool = True,
+        cmap: str | None = None,
         **kwargs,
     ) -> Self:
         x, y = _resolve_xy_vertices(
@@ -223,9 +218,34 @@ class PyVista3DViewer(Base3DViewer):
             ni=ni, nj=nj,
             dx=dx, dy=dy,
         )
-        _add_horizon(self, horizon, x=x, y=y, color=color, **kwargs)
+        _add_horizon(self, horizon, x=x, y=y, color=color, scalars=scalars, cmap=cmap, **kwargs)
         return self
         
+    def add_horizons(
+        self,
+        horizons: list[Zone],
+        *,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
+        cmap: str = "turbo",
+        **kwargs,
+    ):
+        x, y = _resolve_xy_vertices(
+            x=x, y=y,
+            xlim=xlim, ylim=ylim,
+            ni=ni, nj=nj,
+            dx=dx, dy=dy,
+        )
+        colors = Color.get_discrete_cmap(len(horizons), cmap=cmap)
+        for i, horizon in enumerate(horizons):
+            self.add_horizon(horizon, x=x, y=y, color=colors[i], **kwargs)
+        return self
 
 
 

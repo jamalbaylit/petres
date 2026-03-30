@@ -5,7 +5,7 @@
 
 
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
-[![Python Version](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petres.readthedocs.io)
 
 </div>
@@ -23,7 +23,7 @@ Petres is a modern Python package for petroleum reservoir modeling and simulatio
 
 - **Grid Generation**: Create and manipulate structured and unstructured reservoir grids
 - **Fluid Properties**: Calculate PVT properties for oil, gas, and water
-- **Modern Python**: Built for Python 3.13+ with type hints and modern tooling
+- **Modern Python**: Built for Python 3.11+ with type hints and modern tooling
 - **Extensible**: Modular design for easy customization and extension
 
 ## Installation

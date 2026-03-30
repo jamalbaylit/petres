@@ -94,6 +94,13 @@ a{
 
 
 
+.highlight, body:not([data-theme="light"]) .highlight {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-sidebar-background-border);
+}   
+body:not([data-theme="light"]) .sidebar-tree .toctree-l1>.reference:not(.current), body:not([data-theme="light"]) .sidebar-tree .toctree-l1>label .icon:not(.current) {
+    color: white;
+}
 
 table caption{
     margin-bottom: .5rem;
@@ -120,4 +127,8 @@ table.docutils th{
 /* .eclipse-keyword-table td:nth-child(2),
 .eclipse-keyword-table th:nth-child(2) {
     text-align: left;
+} */
+
+/* .admonition, .topic{
+    background: var(--color-sidebar-background);
 } */

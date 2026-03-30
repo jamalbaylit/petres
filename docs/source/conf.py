@@ -49,6 +49,7 @@ extensions = [
     "sphinx_copybutton",
     "apigen",
     "exampledocs",
+    "furo_nav_sections",
 ]
 
 templates_path = ["_templates"]
@@ -60,6 +61,7 @@ exclude_patterns = [
 ]
 
 root_doc = "index"
+furo_nav_sections_maxdepth = 3
 numfig = True
 numtables = True
 numfig_format = {
@@ -143,6 +145,8 @@ html_context = {
 html_theme_options = {
     "light_logo": "logo-lockup-light.svg",
     "dark_logo": "logo-lockup-dark.svg",
+    
+
     "footer_icons": [],
     "light_css_variables": {
         "color-brand-primary": main_color1,
@@ -151,11 +155,19 @@ html_theme_options = {
         'color-link--visited--hover': main_color1_bright,
 
         "color-highlight-on-target": main_color2_soft,
+
+        "color-admonition-title-background--notes": main_color1_soft,
         "color-admonition-title-background--note": main_color1_soft,
+        "color-admonition-title--notes": main_color1,
         "color-admonition-title--note": main_color1,
-        
+
+
+        "color-admonition-title-background--important": main_color2_soft,
+        "color-admonition-title--important": "#8FBF26",
+
         "color-heading-1": main_color1,
         # "color-heading-2": main_color1,
+
     },
     "dark_css_variables": {
         "color-brand-primary": main_color2,
@@ -164,11 +176,18 @@ html_theme_options = {
         'color-link--visited--hover': main_color2_soft,
 
         "color-highlight-on-target": main_color1_soft,
-        "color-admonition-title-background--note": main_color2_soft,
-        "color-admonition-title--note": main_color2,
+        "color-admonition-title-background--notes": main_color1_soft,
+        "color-admonition-title-background--note": main_color1_soft,
+        "color-admonition-title--notes": main_color1_bright,
+        "color-admonition-title--note": main_color1_bright,
+
+        "color-admonition-title-background--important": main_color2_soft,
+        "color-admonition-title--important": main_color2,
 
         "color-heading-1": main_color2,
         "color-heading-2": "#FFFFFF",
+
+
     },
 }
 

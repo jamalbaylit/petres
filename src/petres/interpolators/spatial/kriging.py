@@ -326,8 +326,8 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
     3D:
         wraps pykrige.uk3d.UniversalKriging3D
 
-    Notes
-    -----
+    Note
+    ----
     2D supports:
         - regional_linear
         - point_log

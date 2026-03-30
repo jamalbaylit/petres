@@ -2,20 +2,61 @@ from __future__ import annotations
 
 from typing import Any, Optional, Dict, Self, Tuple, Sequence
 from dataclasses import dataclass, field
+from typing import Callable
 from pathlib import Path
 import numpy as np
 import warnings
 
 
+
+
 from ..grids.sampling._validation import _validate_vertex_array
 from ..grids.sampling._vertices import _resolve_xyz_vertices
 from .builders.cornerpoint import _build_zcorn_from_zones
+from ..errors.property import MissingEclipseKeywordError
+from ..errors.grid import UnsupportedGridAttributeError
 from ..eclipse.grids.write import GRDECLWriter
 from ..eclipse.grids.read import GRDECLReader
 from .pillar import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
 from ..grids.properties import GridProperties, GridProperty
+
+
+
+@dataclass(frozen=True)
+class GridAttributeSpec:
+    name: str
+    description: str
+    resolver: Callable[["CornerPointGrid"], np.ndarray]
+    aliases: tuple[str, ...] = ()
+
+
+GRID_ATTRIBUTES = (
+    GridAttributeSpec("x", "cell-center x coordinate", lambda g: g.cell_centers[..., 0]),
+    GridAttributeSpec("y", "cell-center y coordinate", lambda g: g.cell_centers[..., 1]),
+    GridAttributeSpec(
+        "depth",
+        "cell-center depth (positive downward)",
+        lambda g: g.cell_centers[..., 2],
+        aliases=("z",),
+    ),
+    GridAttributeSpec("top", "top depth of cell", lambda g: g._cell_top_depth()),
+    GridAttributeSpec("bottom", "bottom depth of cell", lambda g: g._cell_bottom_depth()),
+    GridAttributeSpec("thickness", "cell thickness", lambda g: g._cell_thickness()),
+    GridAttributeSpec("active", "1 for active cells, 0 for inactive", lambda g: g.active.astype(int)),
+)
+
+GRID_ATTRIBUTE_BY_NAME = {spec.name: spec for spec in GRID_ATTRIBUTES}
+
+GRID_ATTRIBUTE_BY_ALIAS = {
+    alias: spec
+    for spec in GRID_ATTRIBUTES
+    for alias in (spec.name, *spec.aliases)
+}
+
+RESERVED_GRID_PROPERTY_NAMES = frozenset(GRID_ATTRIBUTE_BY_ALIAS)
+
 
 @dataclass
 class CornerPointGrid:
@@ -107,6 +148,36 @@ class CornerPointGrid:
         zone_id = self._get_zone_id_from_name(zone_name)
         return self.zone_index == zone_id
 
+    def summary(self) -> str:
+        nk, nj, ni = self.shape
+        total_cells = self.n_cells
+        active = self.n_active
+        inactive = self.n_inactive
+
+        active_pct = 100 * active / total_cells if total_cells else 0.0
+        inactive_pct = 100.0 - active_pct
+
+        prop_names = list(self._properties.keys())
+        zone_names = list(self.zone_names.values()) if self.zone_names else []
+
+        def fmt(items: list[str], max_items: int = 4) -> str:
+            if not items:
+                return "Not Defined"
+            if len(items) <= max_items:
+                return ", ".join(items)
+            return f"{', '.join(items[:max_items])}, … (+{len(items) - max_items} more)"
+
+        lines = [
+            "Grid Summary",
+            "════════════",
+            f"Shape         : {nk}×{nj}×{ni} (k×j×i)",
+            f"Cells         : {total_cells}",
+            f"Active        : {active} ({active_pct:.2f}%)",
+            f"Inactive      : {inactive} ({inactive_pct:.2f}%)",
+            f"Properties    : {fmt(prop_names)}",
+            f"Zones         : {fmt(zone_names)}",
+        ]
+        return "\n".join(lines)
 
     @staticmethod
     def _normalize_zone_name(zone: str | Zone) -> str:
@@ -120,7 +191,7 @@ class CornerPointGrid:
     
     def _get_zone_id_from_name(self, name: str) -> int:
         if name not in self._zone_name_to_id:
-            raise ValueError(f"Zone name '{name}' not found in grid zones.")
+            raise ValueError(f"Zone '{name}' not found in grid zones.")
         return self._zone_name_to_id[name]
 
     def set_zones(
@@ -263,9 +334,13 @@ class CornerPointGrid:
     @property
     def n_active(self) -> int:
         """Number of active cells."""
-        return np.sum(self.active)
+        return int(np.nansum(self.active))
     
-
+    @property
+    def n_inactive(self) -> int:
+        """Number of inactive cells."""
+        return self.n_cells - self.n_active
+    
     @property
     def cell_centers(self) -> np.ndarray:
         """Cell centers (average of 8 corners).
@@ -339,18 +414,59 @@ class CornerPointGrid:
         pillars = PillarGrid.from_eclipse_coord(coord)
         return cls(pillars=pillars, zcorn=zcorn, active=actnum)
 
-    def to_grdecl(self, path: str | Path):
+    def to_grdecl(
+        self, 
+        path: str | Path, 
+        *,
+        properties: Optional[Sequence[str]] = None,
+        include_actnum: bool = True,
+    ) -> None:
         """Export grid to GRDECL format."""
         coord = self.pillars.to_eclipse_coord()
         zcorn = self.zcorn
-        actnum = self.active.astype(int)
+        actnum = self.active.astype(int) if include_actnum else None
         writer = GRDECLWriter()
-        writer.write(path=path, coord=coord, zcorn=zcorn, actnum=actnum)
+        if properties is None:
+            properties = list(self._properties.keys())
+        else:
+            try:
+                properties = tuple(properties)
+            except Exception as e:
+                raise TypeError(f"`properties` must be a sequence of property names.") from e
+        
+        property_values = []
+        property_keywords = []
+        for prop_name in properties:
+            prop = self.properties[prop_name]
+            eclipse_keyword = prop.eclipse_keyword
+            if eclipse_keyword is None:
+                raise MissingEclipseKeywordError(property_name=prop_name)
+                
+            property_values.append(prop.values)
+            property_keywords.append(prop.eclipse_keyword)
 
-    def show(self, show_inactive: bool = False, color: Any = 'tan', **kwargs) -> None:
+        return writer.write(
+            path=path, 
+            coord=coord, 
+            zcorn=zcorn, 
+            actnum=actnum, 
+            property_values=property_values, 
+            property_keywords=property_keywords,
+        )
+
+    def show(
+        self, 
+        show_inactive: bool = False, 
+        scalars: str | None = None,
+        color: Any = 'tan', 
+        cmap: Optional[str] = 'turbo', 
+        **kwargs
+    ) -> None:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
-        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, **kwargs)
+        scalars = self._resolve_source(scalars) if scalars is not None else None
+        color = None if scalars is not None else color
+        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)
         viewer.show()
     
     @classmethod
@@ -460,7 +576,6 @@ class CornerPointGrid:
         
         self.active &= inside_mask
         
-
     def _compute_cell_corners(self) -> np.ndarray:
         """Compute 3D coordinates of all 8 corners for each cell.
         
@@ -524,8 +639,88 @@ class CornerPointGrid:
         
         return corners
 
+    def _cell_top_bottom_depths(self) -> tuple[np.ndarray, np.ndarray]:
+        zcorn = self._compute_cell_corners()[..., 2]
+        z_top = np.min(zcorn[..., :4], axis=-1)
+        z_bottom = np.max(zcorn[..., 4:], axis=-1)
+        return z_top, z_bottom
 
+    def _cell_top_depth(self) -> np.ndarray:
+        z_top, _ = self._cell_top_bottom_depths()
+        return z_top
 
+    def _cell_bottom_depth(self) -> np.ndarray:
+        _, z_bottom = self._cell_top_bottom_depths()
+        return z_bottom
+
+    def _cell_thickness(self) -> np.ndarray:
+        z_top, z_bottom = self._cell_top_bottom_depths()
+        return np.abs(z_bottom - z_top)
+
+    def _target_mask(
+        self,
+        zone: str | Zone | None = None,
+        include_inactive: bool = False,
+    ) -> np.ndarray:
+        """
+        Return boolean mask of target cells.
+        """
+        mask = np.ones(self.shape, dtype=bool)
+
+        if not include_inactive:
+            mask &= np.asarray(self.active, dtype=bool)
+
+        if zone is not None:
+            mask &= self._zone_mask(zone)
+
+        return mask
+    
+
+    def _resolve_source(
+        self,
+        source: str | "GridProperty",
+    ) -> np.ndarray:
+        """
+        Resolve one source to a full-grid ndarray.
+
+        source can be:
+        - built-in geometry source name
+        - another GridProperty
+        """
+        if isinstance(source, str):
+            if source in self._properties:
+                prop = self._properties[source]
+                return prop.values
+            else:
+                return self._get_attribute(source)
+
+        if isinstance(source, GridProperty):
+            if source.grid is not self:
+                raise ValueError(
+                    "Source GridProperty must belong to the same grid."
+                )
+            return source.values
+
+        raise TypeError(
+            "`source` entries must be either str or GridProperty."
+        )
+    
+    def _get_attribute(self, name: str) -> np.ndarray:
+        try:
+            spec = GRID_ATTRIBUTE_BY_ALIAS[name]
+        except KeyError as e:
+            raise UnsupportedGridAttributeError(attribute_name=name, supported_names=GRID_ATTRIBUTE_BY_ALIAS.keys()) from e
+        return spec.resolver(self)
+
+            
+    def __repr__(self) -> str:
+        nk, nj, ni = self.shape
+    
+        return (
+            f"{self.__class__.__name__}(shape=({nk}, {nj}, {ni}), "
+            f"n_active={self.n_active}/{self.n_cells}, "
+            f"properties={list(self._properties.keys())})"
+        )
     # # ----------------------------
     # # Cell geometry
     # # ----------------------------
@@ -798,11 +993,6 @@ class CornerPointGrid:
         
     #     return cls.from_layers(pillars, layer_z, active, properties)
 
-    # def __repr__(self) -> str:
-    #     """String representation."""
-    #     return (
-    #         f"CornerPointGrid(shape={self.shape}, "
-    #         f"n_active={self.n_active}/{self.n_cells}, "
-    #         f"properties={list(self.properties.keys())})"
-    #     )
+
+        
     
