@@ -58,11 +58,20 @@ class GridProperty:
             if not self.name.strip():
                 raise ValueError("`name` cannot be empty.")
 
-    def show(self, show_inactive: bool = False, cmap: Optional[str] = 'turbo', **kwargs) -> None:
+    def show(
+        self,
+        *, 
+        show_inactive: bool = False, 
+        cmap: Optional[str] = 'turbo',
+        title: Optional[str] = 'auto', 
+        **kwargs
+    ) -> None:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
         viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
-        viewer.show()
+        if title == 'auto':
+            title = f"Property: {self.name}"
+        viewer.show(title=title)
                           
     @property
     def shape(self) -> Tuple[int, int, int]:

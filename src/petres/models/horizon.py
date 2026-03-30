@@ -167,6 +167,7 @@ class Horizon:
         color: Any | None = 'tan',
         scalars: bool = True,
         cmap: Optional[str] = 'turbo',
+        title: Optional[str] = 'auto',
     ):
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
@@ -178,7 +179,8 @@ class Horizon:
             show_colorbar=True,
             colorbar_title='Depth',
         )
-        title="Horizon: " + self.name
+        if title == 'auto':
+            title = "Horizon: " + self.name
         viewer.show(title=title)
 
     def show2d(
