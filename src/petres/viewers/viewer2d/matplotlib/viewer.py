@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, Self
+import matplotlib
+
+# Use non-interactive backend to allow headless environments (e.g., CI)
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes

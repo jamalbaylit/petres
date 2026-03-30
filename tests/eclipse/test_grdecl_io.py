@@ -47,7 +47,8 @@ def test_grdecl_reader_use_actnum_false_returns_none(minimal_grdecl_path: Path):
 def test_writer_rle_compresses_binary_actnum_tokens():
     f = StringIO()
     actnum = np.array([[[1, 1, 1, 0, 0, 1]]], dtype=bool)
-    GRDECLWriter._write_actnum_rle(f, actnum, tokens_per_line=10)
+    f = GRDECLWriter._write_array(f, "ACTNUM", actnum, type=np.int8, nan_fill=0, rle=True)
+    
     text = f.getvalue()
 
     assert "3*1" in text

@@ -5,6 +5,7 @@ import pytest
 
 from petres.interpolators import IDWInterpolator
 from petres.models import VerticalWell
+from petres.errors import ExistingPropertyNameError
 
 
 def test_create_property_initializes_full_grid_shape(simple_cornerpoint_grid):
@@ -16,7 +17,7 @@ def test_create_property_initializes_full_grid_shape(simple_cornerpoint_grid):
 
 def test_create_duplicate_property_name_raises(simple_cornerpoint_grid):
     simple_cornerpoint_grid.properties.create("poro")
-    with pytest.raises(ValueError, match="already exists"):
+    with pytest.raises(ExistingPropertyNameError, match="already exists"):
         simple_cornerpoint_grid.properties.create("poro")
 
 
@@ -67,8 +68,8 @@ def test_from_wells_xyz_rejects_scalar_samples(simple_cornerpoint_grid):
 def test_from_wells_rejects_duplicate_xy_samples(simple_cornerpoint_grid):
     w1 = VerticalWell(name="W1", x=10.0, y=20.0)
     w2 = VerticalWell(name="W2", x=10.0, y=20.0)
-    w1.add_sample("poro", 0.1)
-    w2.add_sample("poro", 0.2)
+    w1.add_sample("poro", value=0.1)
+    w2.add_sample("poro", value=0.2)
 
     poro = simple_cornerpoint_grid.properties.create("poro")
     with pytest.raises(ValueError, match="Duplicate sample locations"):

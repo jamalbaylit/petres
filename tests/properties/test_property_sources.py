@@ -3,6 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from petres.errors import UnsupportedGridAttributeError
+
 
 def test_apply_rejects_callable_returning_wrong_shape(simple_cornerpoint_grid):
     poro = simple_cornerpoint_grid.properties.create("poro")
@@ -14,7 +16,7 @@ def test_apply_rejects_callable_returning_wrong_shape(simple_cornerpoint_grid):
 def test_apply_rejects_unsupported_source_name(simple_cornerpoint_grid):
     poro = simple_cornerpoint_grid.properties.create("poro")
 
-    with pytest.raises(ValueError, match="Unsupported source"):
+    with pytest.raises(UnsupportedGridAttributeError):
         poro.apply(lambda x: x, source="bad_source")
 
 
