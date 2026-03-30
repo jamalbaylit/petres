@@ -142,6 +142,7 @@ The ``source`` argument may refer to:
 You can also refer to a property using its name:
 
 .. code-block:: python
+    
     permeability.apply(lambda poro: 100 * poro**3, source="poro")
 
 
@@ -204,6 +205,7 @@ The :meth:`apply` method can combine multiple sources, including both
 properties and grid-derived attributes.
 
 .. code-block:: python
+
     permeability.apply(
         lambda poro, depth: 100*poro*thickness + depth,
         source=(porosity, "depth", 'thickness'),
@@ -349,6 +351,7 @@ sample points and must be distributed throughout the grid.
 First, define the wells and add property samples:
 
 .. code-block:: python
+
     from petres.interpolators import UKInterpolator
     from petres.models import VerticalWell
 
