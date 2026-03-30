@@ -55,6 +55,12 @@ zone1.divide(levels=[0.0, 0.2, 1.0])
 zone1.show(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50),
+    view="2d",
+)
+zone1.show(
+    x=np.linspace(0, 100, 50),
+    y=np.linspace(0, 100, 50),
+    view="2d",
 )
 
 # Alternatively, you can define the sampling region using axis limits

@@ -32,7 +32,6 @@ class Matplotlib2DViewerTheme:
     show_labels: bool = True
 
     # Title
-    title: str | None = None
     title_fontsize: float = 13.0
 
     # Spines / ticks

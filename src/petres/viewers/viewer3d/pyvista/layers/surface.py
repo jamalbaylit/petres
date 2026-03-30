@@ -19,6 +19,10 @@ def _add_surface(
     color: Color | None = None,
     scalars: bool | None = True,
     cmap: str | None = None,
+
+    # Colorbar Options
+    show_colorbar: bool = True,
+    colorbar_title: str | None = None,
     # Contour Options
     show_contours: bool = True,
     contour_levels: int = 10,
@@ -66,6 +70,13 @@ def _add_surface(
 
     # Attach scalar data for coloring / contouring
     grid.point_data["z"] = depth.ravel(order="F")
+    
+
+    scalar_bar_args = None
+    if show_colorbar:
+        scalar_bar_args = {
+            "title": "" if colorbar_title is None else colorbar_title
+        }
 
     if scalars:
         color = None
@@ -75,6 +86,8 @@ def _add_surface(
             name=name,
             scalars="z",
             cmap=cmap,
+            scalar_bar_args=scalar_bar_args,
+            show_scalar_bar=show_colorbar,
             **mesh_kwargs,
         )
     else:
@@ -82,61 +95,10 @@ def _add_surface(
             grid,
             name=name,
             color=color,
+            scalar_bar_args=scalar_bar_args,
+            show_scalar_bar=show_colorbar,
             **mesh_kwargs,
         )
-
-    # if show_contours:
-    #     zmin = float(np.nanmin(depth))
-    #     zmax = float(np.nanmax(depth))
-
-    #     if contour_levels < 1:
-    #         raise ValueError("`contour_levels` must be at least 1.")
-
-    #     contour_values = np.linspace(zmin, zmax, contour_levels)
-
-    #     contours = grid.contour(
-    #         isosurfaces=contour_values,
-    #         scalars="z",
-    #     )
-
-    #     backend.plotter.add_mesh(
-    #         contours,
-    #         color=contour_color,
-    #         opacity=contour_opacity,
-    #         line_width=contour_linewidth,
-    #         name=f"{name}_contours" if name else None,
-    #     )
-
-    #     if show_contour_labels and contours.n_points > 0:
-    #         # Use contour points directly as label anchors
-    #         label_points = contours.points
-
-    #         # The contour filter usually preserves scalar values on the contour points
-    #         if "z" in contours.point_data:
-    #             label_values = contours.point_data["z"]
-    #         else:
-    #             label_values = np.full(contours.n_points, np.nan)
-
-    #         # Reduce label density a bit so it does not become too crowded
-    #         if contour_levels > 0 and contours.n_points > contour_levels:
-    #             step = max(1, contours.n_points // contour_levels)
-    #             label_points = label_points[::step]
-    #             label_values = label_values[::step]
-
-    #         labels = [f"{val:.2f}" for val in label_values]
-
-    #         backend.plotter.add_point_labels(
-    #             label_points,
-    #             labels,
-    #             font_size=contour_label_fontsize,
-    #             text_color=contour_color,
-    #             shape_opacity=0.0,
-    #             show_points=False,
-    #             name=f"{name}_contour_labels" if name else None,
-    #         )
-
-
-
 
     # Contour labels fixed:
     if show_contours:

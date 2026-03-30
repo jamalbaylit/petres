@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Sequence, Literal
 from dataclasses import dataclass
-from typing import Any, Sequence
 import numpy as np
 
 
@@ -31,12 +31,34 @@ class Zone:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
+        view: Literal["3d", "2d"] = "3d",
+    ):
+        view = view.strip().lower()
+        if view == "3d":
+            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+        elif view == "2d":
+            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+        else:
+            raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
+
+    def show3d(
+        self,
+        *,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        xlim: tuple[float, float] | None = None,
+        ylim: tuple[float, float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
 
         color: Any | None = 'gray',
         show_layers: bool = True,
         show_edges: bool = True,
     ):
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
+        title="Zone: " + self.name
         viewer = PyVista3DViewer()
         viewer.add_zone(
             self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
@@ -44,7 +66,7 @@ class Zone:
             show_layers=show_layers,
             show_edges=show_edges,
         )
-        viewer.show()
+        viewer.show(title=title)
 
     def show2d(
         self,
@@ -57,12 +79,11 @@ class Zone:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-        show_top: bool = True,
-        show_base: bool = True,
-        show_thickness: bool = False,
-        cmap: str = "viridis",
+        mode: Literal["top", "base", "thickness"] = "thickness",
+        cmap: str = "turbo",
         show_contours: bool = True,
         contour_levels: int = 10,
+        aspect: Literal["auto", "equal"] = "auto",
         **kwargs,
     ):
         """
@@ -86,39 +107,35 @@ class Zone:
             Spacing in x direction.
         dy : float, optional
             Spacing in y direction.
-        show_top : bool
-            Whether to show top surface (default: True).
-        show_base : bool
-            Whether to show base surface (default: True).
-        show_thickness : bool
-            Whether to show thickness map (default: False).
         cmap : str
-            Colormap name (default: "viridis").
+            Colormap name (default: "turbo").
         show_contours : bool
             Whether to show contour lines (default: True).
         contour_levels : int
             Number of contour levels (default: 10).
+        aspect : str
+            Aspect ratio for the plot (default: "equal").
         **kwargs
             Additional kwargs passed to the viewer.
         """
         from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
-
-        viewer = Matplotlib2DViewer()
+        from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
+        
+        title="Zone: " + self.name
+        viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
         viewer.add_zone(
             self, 
             x=x, y=y, 
             xlim=xlim, ylim=ylim, 
             ni=ni, nj=nj, 
             dx=dx, dy=dy,
-            show_top=show_top,
-            show_base=show_base,
-            show_thickness=show_thickness,
+            mode=mode,
             cmap=cmap,
             show_contours=show_contours,
             contour_levels=contour_levels,
             **kwargs
         )
-        viewer.show()
+        viewer.show(title=title)
 
     def divide(
         self,
@@ -209,12 +226,8 @@ class Zone:
         lv = np.linspace(0.0, 1.0, nk + 1, dtype=float)
         return self._validate_levels(lv)
 
-
-    # def to_grid(self, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    #     x = np.asarray(x, dtype=float).ravel()
-    #     y = np.asarray(y, dtype=float).ravel()
-    #     xx, yy = np.meshgrid(x, y)
-    #     pts = np.column_stack([xx.ravel(), yy.ravel()])
-    #     top_z = self.top.sample(pts).reshape(y.size, x.size)
-    #     base_z = self.base.sample(pts).reshape(y.size, x.size)
-    #     return xx, yy, top_z, base_z
+    def to_grid(self, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        top_z = self.top.to_grid(x, y)
+        base_z = self.base.to_grid(x, y)
+        return top_z, base_z
+    

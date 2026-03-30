@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -64,18 +64,17 @@ class Matplotlib2DViewer(Base2DViewer):
             ax.set_xlabel(theme.xlabel)
             ax.set_ylabel(theme.ylabel)
 
-        if theme.title:
-            ax.set_title(theme.title, fontsize=theme.title_fontsize, pad=10)
-
         ax.tick_params(labelsize=theme.tick_labelsize)
 
         if theme.hide_top_right_spines:
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
 
-    def show(self) -> None:
+    def show(self, *, title: str | None = None) -> None:
         self.ax.relim()
         self.ax.autoscale_view()
+        if title:   
+            self.ax.set_title(str(title), fontsize=self.theme.title_fontsize, pad=10)
         self.apply_theme()
         plt.show()
 
@@ -126,22 +125,7 @@ class Matplotlib2DViewer(Base2DViewer):
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-        show_top: bool = True,
-        show_base: bool = True,
-        show_thickness: bool = False,
-        cmap: str = "viridis",
-        show_contours: bool = True,
-        contour_levels: int = 10,
-        show_contour_labels: bool = False,
-        show_colorbar: bool = True,
-        colorbar_shrink: float = 0.95,
-        top_color: str = "#2563eb",
-        base_color: str = "#dc2626",
-        top_linewidth: float = 1.0,
-        base_linewidth: float = 1.0,
-        base_linestyle: str = "--",
-        thickness_contour_color: str = "black",
-        thickness_contour_linewidth: float = 0.6,
+        mode: Literal["top", "base", "thickness"] = "thickness",
         **kwargs: Any,
     ) -> Self:
         """Add a zone to the plot."""
@@ -155,31 +139,27 @@ class Matplotlib2DViewer(Base2DViewer):
             dx=dx,
             dy=dy,
         )
+        top, base = zone.to_grid(x, y)
+        
+        if mode == "top":
+            scalars = top
+        elif mode == "base":
+            scalars = base
+        elif mode == "thickness":
+            scalars = np.abs(base - top)
+        else:
+            raise ValueError(f"Invalid mode: {mode!r}. Must be 'top', 'base', or 'thickness'.")
 
-        _add_zone(
+        _add_surface(
             self.ax,
-            zone,
+            scalars=scalars,
             x=x,
             y=y,
-            show_top=show_top,
-            show_base=show_base,
-            show_thickness=show_thickness,
-            cmap=cmap,
-            show_contours=show_contours,
-            contour_levels=contour_levels,
-            show_contour_labels=show_contour_labels,
-            show_colorbar=show_colorbar,
-            colorbar_shrink=colorbar_shrink,
-            top_color=top_color,
-            base_color=base_color,
-            top_linewidth=top_linewidth,
-            base_linewidth=base_linewidth,
-            base_linestyle=base_linestyle,
-            thickness_contour_color=thickness_contour_color,
-            thickness_contour_linewidth=thickness_contour_linewidth,
             **kwargs,
         )
         return self
+    
+
 
     def add_boundary_polygon(
         self,
