@@ -5,7 +5,7 @@ import numpy as np
 
 xy = np.array([[0, 0], [1, 5], [2, 1], [1, 1]])
 z = np.array([0, 1, 1, 0])
-horizon1 = Horizon(name="Horizon 1", interpolator=IDWInterpolator(), xy=xy, z=z)
+horizon1 = Horizon(name="Horizon 1", interpolator=IDWInterpolator(), xy=xy, depth=z)
 horizon1.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50))
 
 # Or directly via Viewer3D:

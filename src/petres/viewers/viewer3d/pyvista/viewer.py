@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from turtle import color
-from typing import Any, Self, Optional
+from typing import Any, Optional, Self, Sequence
 import pyvista as pv
 import numpy as np
 import warnings
@@ -22,6 +22,13 @@ from petres.viewers.viewer3d.pyvista.layers import surface
 
 
 class PyVista3DViewer(Base3DViewer):
+    """Render and manage 3D geoscience scenes using PyVista.
+
+    This viewer configures a PyVista plotter with a scene theme and camera,
+    and provides helpers to add domain objects such as corner-point grids,
+    zones, and horizons.
+    """
+
     theme: SceneTheme3D
     camera: Camera3D
     plotter: pv.Plotter
@@ -31,7 +38,27 @@ class PyVista3DViewer(Base3DViewer):
         plotter: pv.Plotter | None = None,
         theme: SceneTheme3D | None = None,
         camera: Camera3D | None = None,
-    ):
+    ) -> None:
+        """Initialize a 3D viewer instance.
+
+        If arguments are omitted, sensible defaults are created for the plotter,
+        scene theme, and camera.
+
+        Parameters
+        ----------
+        plotter : pyvista.Plotter or None, default=None
+            Existing PyVista plotter to use. If ``None``, a new plotter is created.
+        theme : SceneTheme3D or None, default=None
+            Visual scene configuration. If ``None``, a default theme is used.
+        camera : Camera3D or None, default=None
+            Camera configuration. If ``None``, an isometric default camera setup
+            is used.
+
+        Returns
+        -------
+        None
+            This constructor initializes viewer state in place.
+        """
         self.set_theme(theme or SceneTheme3D())
         self.set_camera(camera or Camera3D(
             view="iso",
@@ -43,18 +70,81 @@ class PyVista3DViewer(Base3DViewer):
         self.set_plotter(plotter or pv.Plotter())  
 
     def set_plotter(self, plotter: pv.Plotter) -> None:
+        """Assign the underlying PyVista plotter.
+
+        Parameters
+        ----------
+        plotter : pyvista.Plotter
+            Plotter instance used for all rendering operations.
+
+        Returns
+        -------
+        None
+            The viewer plotter reference is updated in place.
+
+        Raises
+        ------
+        AssertionError
+            If ``plotter`` is not a ``pyvista.Plotter`` instance.
+        """
         assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
         self.plotter = plotter
 
     def set_theme(self, theme: SceneTheme3D) -> None:
+        """Assign the active scene theme.
+
+        Parameters
+        ----------
+        theme : SceneTheme3D
+            Theme containing background, axes, and title display settings.
+
+        Returns
+        -------
+        None
+            The viewer theme reference is updated in place.
+
+        Raises
+        ------
+        AssertionError
+            If ``theme`` is not a ``SceneTheme3D`` instance.
+        """
         assert isinstance(theme, SceneTheme3D), "`theme` must be a SceneTheme3D instance or None."
         self.theme = theme
 
     def set_camera(self, camera: Camera3D) -> None:
+        """Assign the active camera configuration.
+
+        Parameters
+        ----------
+        camera : Camera3D
+            Camera preset and relative view adjustments used for rendering.
+
+        Returns
+        -------
+        None
+            The viewer camera reference is updated in place.
+
+        Raises
+        ------
+        AssertionError
+            If ``camera`` is not a ``Camera3D`` instance.
+        """
         assert isinstance(camera, Camera3D), "`camera` must be a Camera3D instance or None."
         self.camera = camera
 
-    def apply_theme(self, theme: SceneTheme3D):
+    def apply_theme(self, theme: SceneTheme3D) -> None:
+        """Apply scene styling options to the active plotter.
+
+        Parameters
+        ----------
+        theme : SceneTheme3D
+            Theme values controlling background color and axes visibility.
+
+        Returns
+        -------
+        None
+            Theme settings are applied directly to the plotter.
+        """
         p = self.plotter
         p.set_background(theme.background, top=theme.background)
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
@@ -67,11 +157,34 @@ class PyVista3DViewer(Base3DViewer):
         # p.camera.up = theme.camera_up
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
 
-    def reset_camera(self):
+    def reset_camera(self) -> None:
+        """Reset camera position and clipping range to defaults.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+            Camera and clipping range are reset on the active plotter.
+        """
         self.plotter.reset_camera()
         self.plotter.reset_camera_clipping_range()
 
     def show(self, *, title: str | None = None) -> None:
+        """Render the current scene and open the interactive viewer window.
+
+        Parameters
+        ----------
+        title : str or None, default=None
+            Optional scene title text displayed at the configured theme position.
+
+        Returns
+        -------
+        None
+            The scene is displayed and a fresh plotter is prepared afterward.
+        """
         self.apply_theme(self.theme)
         # self.plotter.set_viewup((-1, 0, 0))
         # self._set_y_front_slight_top(self.plotter, tilt=0.5)
@@ -94,9 +207,35 @@ class PyVista3DViewer(Base3DViewer):
         color: Any = None,
         scalars: Optional[np.ndarray] = None,
         cmap: Optional[str] = None,
-        **kwargs
+        **kwargs: Any,
     ) -> Self:
-        """Add a grid to the current 3D scene (rectilinear, corner-point, etc.)."""
+        """Add a supported grid to the current 3D scene.
+
+        Parameters
+        ----------
+        grid : CornerPointGrid
+            Grid object to visualize.
+        show_inactive : bool, default=False
+            If ``True``, include inactive cells in the rendered geometry.
+        color : Any, default=None
+            Optional fixed color override for the grid mesh.
+        scalars : numpy.ndarray or None, default=None
+            Optional scalar values for per-cell or per-point colormapping.
+        cmap : str or None, default=None
+            Matplotlib-compatible colormap name used when ``scalars`` is provided.
+        **kwargs : Any
+            Additional keyword arguments forwarded to the grid layer renderer.
+
+        Returns
+        -------
+        Self
+            The current viewer instance for fluent chaining.
+
+        Raises
+        ------
+        TypeError
+            If ``grid`` is not a supported grid type.
+        """
 
         match grid:
             case CornerPointGrid():
@@ -105,7 +244,25 @@ class PyVista3DViewer(Base3DViewer):
                 raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
         return self
     
-    def apply_camera(self, cam):
+    def apply_camera(self, cam: Camera3D) -> None:
+        """Apply a camera preset and relative camera adjustments.
+
+        Parameters
+        ----------
+        cam : Camera3D
+            Camera configuration containing a view preset and optional turn,
+            tilt, roll, zoom, and depth orientation adjustments.
+
+        Returns
+        -------
+        None
+            Camera settings are applied directly to the active plotter.
+
+        Raises
+        ------
+        ValueError
+            If ``cam.view`` is not a recognized view preset.
+        """
         p = self.plotter
         # Base view preset
         if cam.view == "iso":
@@ -144,13 +301,43 @@ class PyVista3DViewer(Base3DViewer):
         p.reset_camera_clipping_range()
 
 
-    def _add_corner_point_grid(self, grid, show_inactive: bool = False, scalars: Optional[np.ndarray] = None, cmap: Optional[str] = None, color: Optional[Color] = None, **kwargs) -> None:
+    def _add_corner_point_grid(
+        self,
+        grid: CornerPointGrid,
+        show_inactive: bool = False,
+        scalars: Optional[np.ndarray] = None,
+        cmap: Optional[str] = None,
+        color: Optional[Color] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Add a corner-point grid layer to the plotter.
+
+        Parameters
+        ----------
+        grid : CornerPointGrid
+            Corner-point grid model to render.
+        show_inactive : bool, default=False
+            Whether inactive cells should be displayed.
+        scalars : numpy.ndarray or None, default=None
+            Optional scalar values used to color the rendered mesh.
+        cmap : str or None, default=None
+            Colormap name used when ``scalars`` is provided.
+        color : Color or None, default=None
+            Fixed color to apply when scalar coloring is not used.
+        **kwargs : Any
+            Extra keyword arguments forwarded to the layer renderer.
+
+        Returns
+        -------
+        None
+            The grid is added to the active scene.
+        """
         return _add_corner_point_grid(self, grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color, **kwargs)
 
 
     def add_zones(
         self,
-        zones: list[Zone],
+        zones: Sequence[Zone],
         *,
         x: np.ndarray | None = None,
         y: np.ndarray | None = None,
@@ -162,8 +349,42 @@ class PyVista3DViewer(Base3DViewer):
         dy: float | None = None,
         show_layers: bool = True,
         cmap: str = "gist_rainbow",
-        **kwargs,
+        **kwargs: Any,
     ) -> Self:
+        """Add multiple zones to the scene using a discrete colormap.
+
+        Parameters
+        ----------
+        zones : Sequence[Zone]
+            Zone models to render.
+        x : numpy.ndarray or None, default=None
+            X-vertex coordinates. If ``None``, computed from grid arguments.
+        y : numpy.ndarray or None, default=None
+            Y-vertex coordinates. If ``None``, computed from grid arguments.
+        xlim : tuple[float, float] or None, default=None
+            X-axis bounds used when generating vertices.
+        ylim : tuple[float, float] or None, default=None
+            Y-axis bounds used when generating vertices.
+        ni : int or None, default=None
+            Number of cells along X used for vertex generation.
+        nj : int or None, default=None
+            Number of cells along Y used for vertex generation.
+        dx : float or None, default=None
+            Cell size along X used for vertex generation.
+        dy : float or None, default=None
+            Cell size along Y used for vertex generation.
+        show_layers : bool, default=True
+            Whether to render individual layers within each zone.
+        cmap : str, default="gist_rainbow"
+            Colormap name used to assign a distinct color per zone.
+        **kwargs : Any
+            Additional keyword arguments forwarded to zone rendering.
+
+        Returns
+        -------
+        Self
+            The current viewer instance for fluent chaining.
+        """
         x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
@@ -189,8 +410,42 @@ class PyVista3DViewer(Base3DViewer):
         dy: float | None = None,
         color: Any | None = None,
         show_layers: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> Self:
+        """Add a single zone to the scene.
+
+        Parameters
+        ----------
+        zone : Zone
+            Zone model to render.
+        x : numpy.ndarray or None, default=None
+            X-vertex coordinates. If ``None``, computed from grid arguments.
+        y : numpy.ndarray or None, default=None
+            Y-vertex coordinates. If ``None``, computed from grid arguments.
+        xlim : tuple[float, float] or None, default=None
+            X-axis bounds used when generating vertices.
+        ylim : tuple[float, float] or None, default=None
+            Y-axis bounds used when generating vertices.
+        ni : int or None, default=None
+            Number of cells along X used for vertex generation.
+        nj : int or None, default=None
+            Number of cells along Y used for vertex generation.
+        dx : float or None, default=None
+            Cell size along X used for vertex generation.
+        dy : float or None, default=None
+            Cell size along Y used for vertex generation.
+        color : Any or None, default=None
+            Optional color override, converted to RGB when provided.
+        show_layers : bool, default=True
+            Whether to render individual zone layers.
+        **kwargs : Any
+            Additional keyword arguments forwarded to zone rendering.
+
+        Returns
+        -------
+        Self
+            The current viewer instance for fluent chaining.
+        """
         x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
@@ -217,8 +472,44 @@ class PyVista3DViewer(Base3DViewer):
         color: Any | None = None,
         scalars: bool = True,
         cmap: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Self:
+        """Add a single horizon surface to the scene.
+
+        Parameters
+        ----------
+        horizon : Horizon
+            Horizon model used to compute a depth surface.
+        x : numpy.ndarray or None, default=None
+            X-vertex coordinates. If ``None``, computed from grid arguments.
+        y : numpy.ndarray or None, default=None
+            Y-vertex coordinates. If ``None``, computed from grid arguments.
+        xlim : tuple[float, float] or None, default=None
+            X-axis bounds used when generating vertices.
+        ylim : tuple[float, float] or None, default=None
+            Y-axis bounds used when generating vertices.
+        ni : int or None, default=None
+            Number of cells along X used for vertex generation.
+        nj : int or None, default=None
+            Number of cells along Y used for vertex generation.
+        dx : float or None, default=None
+            Cell size along X used for vertex generation.
+        dy : float or None, default=None
+            Cell size along Y used for vertex generation.
+        color : Any or None, default=None
+            Optional fixed surface color.
+        scalars : bool, default=True
+            If ``True``, scalar-based coloring is enabled for the surface.
+        cmap : str or None, default=None
+            Colormap name used when scalar coloring is enabled.
+        **kwargs : Any
+            Additional keyword arguments forwarded to surface rendering.
+
+        Returns
+        -------
+        Self
+            The current viewer instance for fluent chaining.
+        """
         x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,
@@ -231,7 +522,7 @@ class PyVista3DViewer(Base3DViewer):
         
     def add_horizons(
         self,
-        horizons: list[Zone],
+        horizons: Sequence[Horizon],
         *,
         x: np.ndarray | None = None,
         y: np.ndarray | None = None,
@@ -242,8 +533,40 @@ class PyVista3DViewer(Base3DViewer):
         dx: float | None = None,
         dy: float | None = None,
         cmap: str = "turbo",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> Self:
+        """Add multiple horizons to the scene with distinct colors.
+
+        Parameters
+        ----------
+        horizons : Sequence[Horizon]
+            Horizon models to render.
+        x : numpy.ndarray or None, default=None
+            X-vertex coordinates. If ``None``, computed from grid arguments.
+        y : numpy.ndarray or None, default=None
+            Y-vertex coordinates. If ``None``, computed from grid arguments.
+        xlim : tuple[float, float] or None, default=None
+            X-axis bounds used when generating vertices.
+        ylim : tuple[float, float] or None, default=None
+            Y-axis bounds used when generating vertices.
+        ni : int or None, default=None
+            Number of cells along X used for vertex generation.
+        nj : int or None, default=None
+            Number of cells along Y used for vertex generation.
+        dx : float or None, default=None
+            Cell size along X used for vertex generation.
+        dy : float or None, default=None
+            Cell size along Y used for vertex generation.
+        cmap : str, default="turbo"
+            Colormap name used to assign a distinct color per horizon.
+        **kwargs : Any
+            Additional keyword arguments forwarded to horizon rendering.
+
+        Returns
+        -------
+        Self
+            The current viewer instance for fluent chaining.
+        """
         x, y = _resolve_xy_vertices(
             x=x, y=y,
             xlim=xlim, ylim=ylim,

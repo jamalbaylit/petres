@@ -61,7 +61,7 @@ field_boundary = BoundaryPolygon.from_bbox(0, 0, 100, 100, name="Field")
 # Create a horizon
 xy = np.array([[10, 10], [90, 10], [90, 90], [10, 90], [50, 50]])
 z = np.array([100, 105, 110, 102, 106])
-horizon = Horizon(name="Top Reservoir", interpolator=IDWInterpolator(), xy=xy, z=z)
+horizon = Horizon(name="Top Reservoir", interpolator=IDWInterpolator(), xy=xy, depth=z)
 
 # Plot together
 viewer2 = Viewer2D()

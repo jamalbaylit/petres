@@ -9,14 +9,14 @@ from petres.viewers import Viewer3D
 horizon1 = Horizon(
     name="H1",
     xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-    z=[0, 1, 0, 1],
+    depth=[0, 1, 0, 1],
     interpolator=IDWInterpolator(),
 )
 
 horizon2 = Horizon(
     name="H2",
     xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-    z=[2, 2, 3, 3],
+    depth=[2, 2, 3, 3],
     interpolator=IDWInterpolator(),
 )
 
@@ -90,7 +90,7 @@ zone1.show(
 horizon3 = Horizon(
     name="H3",
     xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-    z=[5, 7, 8, 4],
+    depth=[5, 7, 8, 4],
     interpolator=IDWInterpolator(),
 )
 

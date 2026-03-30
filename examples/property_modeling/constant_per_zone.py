@@ -4,10 +4,10 @@ from petres.models import Zone, Horizon
 from petres.viewers import Viewer3D
 import numpy as np
 
-h1 = Horizon("H1", xy=[[0,0],[100,0],[100,100],[0,100]], z=[0,1,0,1], interpolator=IDWInterpolator())
-h2 = Horizon("H2", xy=[[0,0],[100,0],[100,100],[0,100]], z=[2,2,3,3], interpolator=IDWInterpolator())
-h3 = Horizon("H3", xy=[[0,0],[100,0],[100,100],[0,100]], z=[5,7,8,4], interpolator=IDWInterpolator())
-h4 = Horizon("H4", xy=[[0,0],[100,0],[100,100],[0,100]], z=[11,14,13,12], interpolator=IDWInterpolator())
+h1 = Horizon("H1", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[0,1,0,1], interpolator=IDWInterpolator())
+h2 = Horizon("H2", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[2,2,3,3], interpolator=IDWInterpolator())
+h3 = Horizon("H3", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[5,7,8,4], interpolator=IDWInterpolator())
+h4 = Horizon("H4", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[11,14,13,12], interpolator=IDWInterpolator())
 viewer = Viewer3D()
 viewer.add_horizon(h1, x=np.linspace(0,100,50), y=np.linspace(0,100,50), color="red")
 viewer.add_horizon(h2, x=np.linspace(0,100,50), y=np.linspace(0,100,50), color="green")

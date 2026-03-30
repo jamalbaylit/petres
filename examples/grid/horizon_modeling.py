@@ -25,7 +25,7 @@ import numpy as np
 horizon1 = Horizon(
     name="H1",
     xy=[[20, 78], [55, 65], [90, 35.5]],
-    z=[100, 110, 90],
+    depth=[100, 110, 90],
     interpolator=IDWInterpolator(),
 )
 
