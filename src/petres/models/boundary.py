@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from typing import Any, Sequence, Literal
 from dataclasses import dataclass, field
 from shapely.geometry import Polygon
 from shapely import points, contains
 from numpy.typing import ArrayLike
-from typing import Any, Sequence
 import numpy as np
 
 
@@ -179,62 +179,46 @@ class BoundaryPolygon:
     def show(
         self,
         *,
-        x: np.ndarray | None = None,
-        y: np.ndarray | None = None,
-        xlim: tuple[float, float] | None = None,
-        ylim: tuple[float, float] | None = None,
-        ni: int | None = None,
-        nj: int | None = None,
-        dx: float | None = None,
-        dy: float | None = None,
-        color: Any | None = None,
-    ):
-        from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
-        viewer.add_boundary_polygon(
-            self, 
-            x=x, y=y, 
-            xlim=xlim, ylim=ylim,
-            ni=ni, nj=nj,
-            dx=dx, dy=dy,
-            color=color
-        )
-        viewer.show()
-    
-    def show2d(
-        self,
-        *,
-        facecolor: str | tuple = 'lightblue',
-        edgecolor: str | tuple = 'black',
-        linewidth: float = 2.0,
-        alpha: float = 0.3,
+        facecolor: str | tuple = "#7ec8e3",
+        edgecolor: str | tuple = "#1f2937",
+        linewidth: float = 1.8,
+        alpha: float = 0.30,
         show_fill: bool = True,
         show_vertices: bool = False,
+        vertex_size: float = 24.0,
+        aspect: Literal["auto", "equal"] = "auto",
         **kwargs,
     ):
         """
-        Show boundary polygon in 2D matplotlib view.
-        
+        Quick visualization of the boundary polygon using Matplotlib.
+
         Parameters
         ----------
-        facecolor : str or tuple
-            Fill color for the polygon (default: 'lightblue').
-        edgecolor : str or tuple
-            Edge/border color (default: 'black').
-        linewidth : float
-            Width of the boundary line (default: 2.0).
-        alpha : float
-            Transparency of the fill (0-1, default: 0.3).
-        show_fill : bool
-            Whether to fill the polygon (default: True).
-        show_vertices : bool
-            Whether to show vertex markers (default: False).
+        facecolor : str or tuple, default="#7ec8e3"
+            Fill color of the polygon.
+        edgecolor : str or tuple, default="#1f2937"
+            Edge (border) color of the polygon.
+        linewidth : float, default=1.8
+            Width of the polygon boundary line.
+        alpha : float, default=0.30
+            Transparency of the fill (0–1).
+        show_fill : bool, default=True
+            Whether to fill the polygon.
+        show_vertices : bool, default=False
+            Whether to show vertex markers.
+        vertex_size : float, default=24.0
+            Size of vertex markers.
         **kwargs
-            Additional kwargs passed to the viewer.
+            Additional arguments passed to the viewer.
         """
-        from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
 
-        viewer = Matplotlib2DViewer()
+        from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
+        from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
+
+        viewer = Matplotlib2DViewer(
+            theme=Matplotlib2DViewerTheme(aspect=aspect)
+        )
+
         viewer.add_boundary_polygon(
             self,
             facecolor=facecolor,
@@ -243,6 +227,9 @@ class BoundaryPolygon:
             alpha=alpha,
             show_fill=show_fill,
             show_vertices=show_vertices,
-            **kwargs
+            vertex_size=vertex_size,
+            **kwargs,
         )
+
         viewer.show()
+        return viewer

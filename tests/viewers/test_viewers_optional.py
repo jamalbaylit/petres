@@ -34,7 +34,7 @@ def test_horizon_show2d_delegates_to_matplotlib_viewer(monkeypatch, horizon_plan
     import petres.viewers.viewer2d.matplotlib.viewer as viewer_mod
     monkeypatch.setattr(viewer_mod, "Matplotlib2DViewer", DummyViewer)
 
-    horizon_plane_top.show2d(x=[0, 10], y=[0, 10])
+    horizon_plane_top.show()
 
     assert calls["added"] and calls["shown"]
 

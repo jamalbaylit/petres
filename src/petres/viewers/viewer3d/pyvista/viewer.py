@@ -11,14 +11,14 @@ from .layers.cornerpoint import _add_corner_point_grid
 from .._core.theme import SceneTheme3D, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
 from ....grids.sampling._vertices import _resolve_xy_vertices
-from .layers.horizon import _add_horizon
+from .layers.surface import _add_surface
 from ....grids.pillar import PillarGrid
 from ....models.horizon import Horizon
 from .._core.base import Base3DViewer
 from ...._utils._color import Color
 from .layers.zone import _add_zone
 from ....models.zone import Zone
-from petres.viewers.viewer3d.pyvista.layers import horizon
+from petres.viewers.viewer3d.pyvista.layers import surface
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -218,7 +218,8 @@ class PyVista3DViewer(Base3DViewer):
             ni=ni, nj=nj,
             dx=dx, dy=dy,
         )
-        _add_horizon(self, horizon, x=x, y=y, color=color, scalars=scalars, cmap=cmap, **kwargs)
+        depth = horizon.to_grid(x, y)  # shape: (ny, nx)
+        _add_surface(self, depth, x=x, y=y, color=color, scalars=scalars, cmap=cmap, **kwargs)
         return self
         
     def add_horizons(

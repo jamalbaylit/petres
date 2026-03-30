@@ -1,92 +1,84 @@
 from __future__ import annotations
 
 from typing import Any, Self
-import matplotlib
-
-# Use non-interactive backend to allow headless environments (e.g., CI)
-matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from .layers.boundary import _add_boundary_polygon
-from .layers.horizon import _add_horizon
+from .layers.surface import _add_surface
 from .layers.zone import _add_zone
 from .theme import Matplotlib2DViewerTheme
 from .._core.base import Base2DViewer
+from ....grids.sampling._vertices import _resolve_xy_vertices
+from ....models.boundary import BoundaryPolygon
 from ....models.horizon import Horizon
 from ....models.zone import Zone
-from ....models.boundary import BoundaryPolygon
-from ....grids.sampling._vertices import _resolve_xy_vertices
 
 
 class Matplotlib2DViewer(Base2DViewer):
-    """
-    Matplotlib-based 2D viewer for geological surfaces.
-    """
-    
-    theme: Matplotlib2DViewerTheme
-    fig: Figure
-    ax: Axes
-    
-    def __init__(
-        self, 
-        fig: Figure | None = None,
-        ax: Axes | None = None,
-        theme: Matplotlib2DViewerTheme | None = None,
-    ):
+    def __init__(self, fig=None, ax=None, theme=None) -> None:
         self.set_theme(theme or Matplotlib2DViewerTheme())
-        
+
         if fig is not None and ax is not None:
+            if ax.figure is not fig:
+                raise ValueError("`ax` does not belong to the provided `fig`.")
             self.fig = fig
             self.ax = ax
+        elif ax is not None:
+            self.ax = ax
+            self.fig = ax.figure
         elif fig is not None:
             self.fig = fig
-            self.ax = fig.gca()
+            self.ax = fig.add_subplot(111)
         else:
             self.fig, self.ax = plt.subplots(
                 figsize=self.theme.figure_size,
-                dpi=self.theme.dpi
+                dpi=self.theme.dpi,
+                constrained_layout=self.theme.constrained_layout,
             )
-    
+
     def set_theme(self, theme: Matplotlib2DViewerTheme) -> None:
-        """Apply theme settings to the viewer."""
-        assert isinstance(theme, Matplotlib2DViewerTheme), "`theme` must be a Matplotlib2DViewerTheme instance."
         self.theme = theme
-    
+
     def apply_theme(self) -> None:
-        """Apply current theme to the axes."""
         ax = self.ax
-        
-        # Background
-        ax.set_facecolor(self.theme.background)
-        
-        # Grid
-        if self.theme.grid:
-            ax.grid(True, alpha=self.theme.grid_alpha)
+        theme = self.theme
+
+        ax.set_facecolor(theme.background)
+        ax.set_aspect(theme.aspect, adjustable="box")
+
+        if theme.grid:
+            ax.grid(
+                True,
+                alpha=theme.grid_alpha,
+                linestyle=theme.grid_linestyle,
+                linewidth=theme.grid_linewidth,
+            )
         else:
             ax.grid(False)
-        
-        # Labels
-        if self.theme.show_labels:
-            ax.set_xlabel(self.theme.xlabel)
-            ax.set_ylabel(self.theme.ylabel)
-        
-        # Title
-        if self.theme.title:
-            ax.set_title(self.theme.title)
-        
-        # Aspect ratio
-        ax.set_aspect(self.theme.aspect)
-    
+
+        if theme.show_labels:
+            ax.set_xlabel(theme.xlabel)
+            ax.set_ylabel(theme.ylabel)
+
+        if theme.title:
+            ax.set_title(theme.title, fontsize=theme.title_fontsize, pad=10)
+
+        ax.tick_params(labelsize=theme.tick_labelsize)
+
+        if theme.hide_top_right_spines:
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+
     def show(self) -> None:
-        """Show the current plot."""
+        self.ax.relim()
+        self.ax.autoscale_view()
         self.apply_theme()
-        plt.tight_layout()
         plt.show()
-    
+
     def add_horizon(
         self,
         horizon: Horizon,
@@ -99,66 +91,29 @@ class Matplotlib2DViewer(Base2DViewer):
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-        cmap: str | None = None,
-        show_contours: bool = True,
-        contour_levels: int = 10,
-        show_colorbar: bool | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Add a horizon to the plot.
-        
-        Parameters
-        ----------
-        horizon : Horizon
-            Horizon to visualize.
-        x : np.ndarray
-            1D array of x coordinates.
-        y : np.ndarray
-            1D array of y coordinates.
-        cmap : str, optional
-            Colormap name (default: uses theme cmap).
-        show_contours : bool
-            Whether to show contour lines (default: True).
-        contour_levels : int
-            Number of contour levels (default: 10).
-        show_colorbar : bool, optional
-            Whether to show colorbar (default: uses theme setting).
-        **kwargs
-            Additional kwargs passed to pcolormesh.
-        
-        Returns
-        -------
-        Self
-            Returns self for method chaining.
-        """
-        if cmap is None:
-            cmap = self.theme.cmap
-        
-        if show_colorbar is None:
-            show_colorbar = self.theme.show_colorbar
-        
+        """Add a horizon to the plot."""
         x, y = _resolve_xy_vertices(
-            x=x, y=y,
-            xlim=xlim, ylim=ylim,
-            ni=ni, nj=nj,
-            dx=dx, dy=dy,
-        )
-
-        _add_horizon(
-            self.ax,
-            horizon,
             x=x,
             y=y,
-            cmap=cmap,
-            show_contours=show_contours,
-            contour_levels=contour_levels,
-            show_colorbar=show_colorbar,
+            xlim=xlim,
+            ylim=ylim,
+            ni=ni,
+            nj=nj,
+            dx=dx,
+            dy=dy,
+        )
+        scalars = horizon.to_grid(x, y)
+        _add_surface(
+            self.ax,
+            scalars,
+            x=x,
+            y=y,
             **kwargs,
         )
-        
         return self
-    
+
     def add_zone(
         self,
         zone: Zone,
@@ -171,59 +126,36 @@ class Matplotlib2DViewer(Base2DViewer):
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-
         show_top: bool = True,
         show_base: bool = True,
         show_thickness: bool = False,
-        cmap: str | None = None,
+        cmap: str = "viridis",
         show_contours: bool = True,
         contour_levels: int = 10,
-        show_colorbar: bool | None = None,
+        show_contour_labels: bool = False,
+        show_colorbar: bool = True,
+        colorbar_shrink: float = 0.95,
+        top_color: str = "#2563eb",
+        base_color: str = "#dc2626",
+        top_linewidth: float = 1.0,
+        base_linewidth: float = 1.0,
+        base_linestyle: str = "--",
+        thickness_contour_color: str = "black",
+        thickness_contour_linewidth: float = 0.6,
         **kwargs: Any,
     ) -> Self:
-        """
-        Add a zone to the plot.
-        
-        Parameters
-        ----------
-        zone : Zone
-            Zone to visualize.
-        x : np.ndarray
-            1D array of x coordinates.
-        y : np.ndarray
-            1D array of y coordinates.
-        show_top : bool
-            Whether to show top surface (default: True).
-        show_base : bool
-            Whether to show base surface (default: True).
-        show_thickness : bool
-            Whether to show thickness map (default: False).
-        cmap : str, optional
-            Colormap name (default: uses theme cmap).
-        show_contours : bool
-            Whether to show contour lines (default: True).
-        contour_levels : int
-            Number of contour levels (default: 10).
-        show_colorbar : bool, optional
-            Whether to show colorbar (default: uses theme setting).
-        **kwargs
-            Additional kwargs passed to pcolormesh or contour.
-        
-        Returns
-        -------
-        Self
-            Returns self for method chaining.
-        """
+        """Add a zone to the plot."""
         x, y = _resolve_xy_vertices(
-            x=x, y=y,
-            xlim=xlim, ylim=ylim,
-            ni=ni, nj=nj,
-            dx=dx, dy=dy,
+            x=x,
+            y=y,
+            xlim=xlim,
+            ylim=ylim,
+            ni=ni,
+            nj=nj,
+            dx=dx,
+            dy=dy,
         )
 
-        if show_colorbar is None:
-            show_colorbar = self.theme.show_colorbar
-        
         _add_zone(
             self.ax,
             zone,
@@ -235,51 +167,40 @@ class Matplotlib2DViewer(Base2DViewer):
             cmap=cmap,
             show_contours=show_contours,
             contour_levels=contour_levels,
+            show_contour_labels=show_contour_labels,
             show_colorbar=show_colorbar,
+            colorbar_shrink=colorbar_shrink,
+            top_color=top_color,
+            base_color=base_color,
+            top_linewidth=top_linewidth,
+            base_linewidth=base_linewidth,
+            base_linestyle=base_linestyle,
+            thickness_contour_color=thickness_contour_color,
+            thickness_contour_linewidth=thickness_contour_linewidth,
             **kwargs,
         )
-        
         return self
-    
+
     def add_boundary_polygon(
         self,
         boundary: BoundaryPolygon,
         *,
-        facecolor: str | tuple = 'lightblue',
-        edgecolor: str | tuple = 'black',
-        linewidth: float = 2.0,
-        alpha: float = 0.3,
+        facecolor: str | tuple = "#7ec8e3",
+        edgecolor: str | tuple = "#1f2937",
+        linewidth: float = 1.8,
+        alpha: float = 0.30,
         show_fill: bool = True,
         show_vertices: bool = False,
+        vertex_color: str | tuple | None = None,
+        vertex_size: float = 24.0,
+        show_label: bool = True,
+        label: str | None = None,
+        label_fontsize: float = 10.0,
+        label_box: bool = True,
+        pad_ratio: float | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Add a boundary polygon to the plot.
-        
-        Parameters
-        ----------
-        boundary : BoundaryPolygon
-            Boundary polygon to visualize.
-        facecolor : str or tuple
-            Fill color for the polygon (default: 'lightblue').
-        edgecolor : str or tuple
-            Edge/border color (default: 'black').
-        linewidth : float
-            Width of the boundary line (default: 2.0).
-        alpha : float
-            Transparency of the fill (0-1, default: 0.3).
-        show_fill : bool
-            Whether to fill the polygon (default: True).
-        show_vertices : bool
-            Whether to show vertex markers (default: False).
-        **kwargs
-            Additional kwargs passed to matplotlib Polygon.
-        
-        Returns
-        -------
-        Self
-            Returns self for method chaining.
-        """
+        """Add a boundary polygon to the plot."""
         _add_boundary_polygon(
             self.ax,
             boundary,
@@ -289,7 +210,13 @@ class Matplotlib2DViewer(Base2DViewer):
             alpha=alpha,
             show_fill=show_fill,
             show_vertices=show_vertices,
+            vertex_color=edgecolor if vertex_color is None else vertex_color,
+            vertex_size=vertex_size,
+            show_label=show_label,
+            label=label,
+            label_fontsize=label_fontsize,
+            label_box=label_box,
+            pad_ratio=self.theme.margins if pad_ratio is None else pad_ratio,
             **kwargs,
         )
-        
         return self
