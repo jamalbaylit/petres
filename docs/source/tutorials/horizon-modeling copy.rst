@@ -1,210 +1,169 @@
-.. _tutorial-horizons:
+.. _horizon-modeling:
 
 Horizon Modeling
 ================
 
-This tutorial demonstrates how to construct, manipulate, and visualize
-**horizons** in Petres.
+This tutorial introduces horizon modeling in Petres and demonstrates how to define and visualize horizons.
 
-A *Horizon* represents a continuous subsurface surface:
-
-.. math::
-
-   z = f(x, y)
-
-It is defined from discrete depth picks and an interpolation method,
-commonly derived from seismic interpretation or well tops.
-
----
+A horizon represents a continuous subsurface surface defined as
+:math:`z = f(x, y)`, where depth or elevation varies spatially across
+the model domain. In Petres, horizons are created from sampled
+:math:`(x, y, z)` data and reconstructed using an interpolation method.
 
 Overview
 --------
 
-In this tutorial, you will learn how to:
+A :class:`~petres.models.Horizon` is defined by:
 
-- Create a Horizon from scattered picks
-- Build a Horizon from well tops
-- Modify well tops
-- Evaluate horizon–well intersections
-- Visualize horizons using different sampling strategies
-- Display multiple horizons in a 3D scene
+- ``name``: Horizon name
+- ``xy``: Spatial coordinates of the input points
+- ``z``: Depth or elevation values at those points
+- ``interpolator``: Interpolation method used to reconstruct the surface
 
----
+Once defined, the horizon behaves as a continuous surface and can be
+sampled or visualized over any desired grid.
 
-Creating a Horizon from Scattered Picks
----------------------------------------
+.. important::
 
-A Horizon can be constructed directly from discrete ``(x, y, z)`` points
-using an interpolator.
+   A horizon is a **continuous surface**, not a grid.
+   It is evaluated on demand using an interpolator and does not
+   contain any inherent discretization.
 
-.. code-block:: python
 
-   from petres.interpolators import IDWInterpolator
-   from petres.models import Horizon
-   import numpy as np
-
-   horizon = Horizon(
-       name="H1",
-       xy=[[20, 78], [55, 65], [90, 35.5]],
-       z=[100, 110, 90],
-       interpolator=IDWInterpolator(),
-   )
-
-   horizon.show(
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
-   )
-
-**Notes**
-
-- The interpolator defines how the surface is reconstructed between points.
-- Any compatible interpolator can be used (see :ref:`interpolators`).
-
----
-
-Creating a Horizon from Well Tops
----------------------------------
-
-In many workflows, horizons are derived from well tops rather than
-manually defined points.
-
-.. code-block:: python
-
-   from petres.models import VerticalWell
-
-   well1 = VerticalWell(name="Well 1", x=20, y=78, tops={"Horizon 1": 100})
-   well2 = VerticalWell(name="Well 2", x=55, y=65, tops={"Horizon 1": 110})
-   well3 = VerticalWell(name="Well 3", x=90, y=35.5, tops={"Horizon 1": 90})
-
-Additional tops can be assigned after well creation:
-
-.. code-block:: python
-
-   well1.add_top(horizon="Horizon 2", depth=140)
-   well2.add_top(horizon="Horizon 2", depth=125)
-   well3.add_top(horizon="Horizon 2", depth=110)
-
-A Horizon can then be constructed from wells that contain the required
-top:
-
-.. code-block:: python
-
-   from petres.interpolators import IDWInterpolator
-   from petres.models import Horizon
-
-   horizon = Horizon.from_wells(
-       name="Horizon 1",
-       wells=[well1, well2, well3],
-       interpolator=IDWInterpolator(),
-   )
-
-   horizon.show(
-       x=np.linspace(0, 100, 100),
-       y=np.linspace(0, 100, 100),
-   )
-
----
-
-Well–Horizon Intersection
--------------------------
-
-The depth at which a horizon intersects a well can be evaluated directly:
-
-.. code-block:: python
-
-   print(horizon.intersect(well2))
-
-The well does not need to be used during horizon construction.
-
----
-
-Updating Well Tops
+Creating a Horizon
 ------------------
 
-A horizon top cannot be added again if it already exists in a well.
-To update a value, remove the existing top first:
+The following example creates a horizon from four sample points using
+Inverse Distance Weighting (IDW) interpolation.
 
 .. code-block:: python
 
-   well2.remove_top("Horizon 1")
-   well2.add_top("Horizon 1", 120)
+   import numpy as np
 
----
+   from petres.interpolators import IDWInterpolator
+   from petres.models import Horizon
 
-Horizon Visualization
+   horizon1 = Horizon(
+      name="H1",
+      xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
+      z=[0, 1, 0, 1],
+      interpolator=IDWInterpolator(),
+   )
+
+
+.. note::
+
+   The choice of interpolator directly affects the geometry of the surface.
+   See :doc:`/tutorials/interpolators` for more details and additional options.
+
+
+Creating Additional Horizons
+----------------------------
+
+In practical workflows, multiple horizons are typically defined to
+represent different structural or stratigraphic surfaces.
+
+.. code-block:: python
+
+   horizon2 = Horizon(
+      name="H2",
+      xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
+      z=[2, 2, 3, 3],
+      interpolator=IDWInterpolator(),
+   )
+
+   horizon3 = Horizon(
+       name="H3",
+       xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
+       z=[5, 7, 8, 4],
+       interpolator=IDWInterpolator(),
+   )
+
+
+Visualizing a Horizon
 ---------------------
 
-Since horizons are continuous surfaces, they must be sampled on a discrete
-set of points for visualization.
+A horizon is continuous, so it must be sampled on a discrete set of
+points for visualization.
 
-**Option 1 — Explicit sampling**
+Petres supports multiple ways to define the sampling grid.
+
+
+Direct Coordinate Sampling
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can provide ``x`` and ``y`` coordinates directly:
 
 .. code-block:: python
 
-   horizon.show(
+   horizon1.show(
        x=np.linspace(0, 100, 50),
        y=np.linspace(0, 100, 50),
    )
 
-**Option 2 — Domain limits with resolution**
+
+Sampling with Limits and Resolution
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
-   horizon.show(
+   horizon1.show(
        xlim=(0, 100),
        ylim=(0, 100),
        ni=50,
        nj=50,
    )
 
-**Option 3 — Domain limits with spacing**
+
+Sampling with Grid Spacing
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
-   horizon.show(
+   horizon1.show(
        xlim=(0, 100),
        ylim=(0, 100),
        dx=2,
        dy=2,
    )
 
----
+
+.. note::
+
+   These approaches differ only in how the sampling grid is defined.
+   The resulting surface is still evaluated from the same interpolated
+   horizon model.
+
 
 Visualizing Multiple Horizons
 -----------------------------
 
-Multiple horizons can be displayed in a single 3D scene.
+Multiple horizons can be displayed together using
+:class:`~petres.viewers.Viewer3D`.
 
 .. code-block:: python
 
    from petres.viewers import Viewer3D
-   import numpy as np
-
-   horizon2 = Horizon.from_wells(
-       name="Horizon 2",
-       wells=[well1, well2, well3],
-       interpolator=IDWInterpolator(),
-   )
 
    viewer = Viewer3D()
-
    viewer.add_horizons(
-       horizons=[horizon, horizon2],
+       horizons=[horizon1, horizon2, horizon3],
        x=np.linspace(0, 100, 50),
        y=np.linspace(0, 100, 50),
        cmap="viridis",
    )
-
    viewer.show()
 
-Alternatively, horizons can be added individually with explicit colors:
+
+Manual Color Assignment
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
    viewer = Viewer3D()
 
    viewer.add_horizon(
-       horizon,
+       horizon1,
        x=np.linspace(0, 100, 50),
        y=np.linspace(0, 100, 50),
        color="red",
@@ -217,26 +176,45 @@ Alternatively, horizons can be added individually with explicit colors:
        color="blue",
    )
 
+   viewer.add_horizon(
+       horizon3,
+       x=np.linspace(0, 100, 50),
+       y=np.linspace(0, 100, 50),
+       color="green",
+   )
+
    viewer.show()
 
----
+
+.. important::
+
+   Horizons are reusable objects and can be used:
+
+   - to define multiple zones
+   - to construct grids
+   - to evaluate depth at arbitrary locations
+
+   They form the structural backbone of the model.
+
+
+Expected Output
+---------------
+
+- An interactive 3D visualization window
+- One or more interpolated surfaces
+- Geometry consistent with input data and interpolation method
+
 
 Summary
 -------
 
-In this tutorial, you have:
+- Horizons represent continuous surfaces :math:`z = f(x, y)`
+- They are defined from scattered data and interpolated
+- They are reusable across multiple modeling workflows
 
-- Constructed horizons from scattered data and well tops
-- Managed well top data
-- Evaluated horizon intersections
-- Explored multiple visualization approaches
-- Rendered multiple horizons in a shared 3D environment
-
----
 
 Next Steps
 ----------
 
-- :ref:`tutorial-zones` — Build zones between horizons
-- :ref:`corner-point-grids` — Generate grids from geological models
-- :ref:`properties` — Assign and visualize reservoir properties
+- :ref:`zone-modeling`
+- :ref:`grid-from-zones-tutorial`

@@ -40,9 +40,9 @@ def test_property_from_wells_then_apply_transform(simple_cornerpoint_grid):
         VerticalWell(name="W2", x=200.0, y=0.0),
         VerticalWell(name="W3", x=0.0, y=200.0),
     ]
-    wells[0].add_sample("poro", 0.15)
-    wells[1].add_sample("poro", 0.25)
-    wells[2].add_sample("poro", 0.2)
+    wells[0].add_sample("poro", value=0.15)
+    wells[1].add_sample("poro", value=0.25)
+    wells[2].add_sample("poro", value=0.2)
 
     poro = simple_cornerpoint_grid.properties.create("poro")
     perm = simple_cornerpoint_grid.properties.create("perm")

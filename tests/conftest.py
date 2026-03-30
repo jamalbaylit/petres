@@ -135,8 +135,8 @@ def sample_wells():
     ]
     values = [0.15, 0.2, 0.25, 0.3]
     for w, v in zip(wells, values, strict=True):
-        w.add_sample("poro", v)
-        w.add_sample("perm", 100.0 + 1000.0 * v, z=1050.0)
+        w.add_sample("poro", value=v)
+        w.add_sample("perm", value=100.0 + 1000.0 * v, depth=1050.0)
     return wells
 
 

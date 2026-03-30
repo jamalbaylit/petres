@@ -1,6 +1,6 @@
 from .base import PetresError, VisualizationError, ExportError
-from .grid import GridError
-from .property import PropertyError, MissingEclipseKeywordError, MissingPropertyValueError
+from .grid import GridError, UnsupportedGridAttributeError
+from .property import PropertyError, MissingEclipseKeywordError, MissingPropertyValueError, ExistingPropertyNameError
 from .horizon import HorizonError
 from .zone import ZoneError
 from .interpolation import InterpolationError
@@ -19,4 +19,6 @@ __all__ = [
     "MissingEclipseKeywordError",
     "MissingPropertyValueError",
     "GRDECLMissingValueError",
+    'UnsupportedGridAttributeError',
+    'ExistingPropertyNameError',
 ]

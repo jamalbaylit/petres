@@ -92,7 +92,8 @@ class GRDECLWriter:
         - format_style: 'columns' (6 per line) or 'single' (1 per line)
         """
         
-        ni, nj, nk = zcorn.shape[2], zcorn.shape[1], zcorn.shape[0] // 2
+        # zcorn is shaped (2*nk, 2*nj, 2*ni); convert back to cell counts
+        ni, nj, nk = zcorn.shape[2] // 2, zcorn.shape[1] // 2, zcorn.shape[0] // 2
 
         with open(path, 'w') as f:
             # Header

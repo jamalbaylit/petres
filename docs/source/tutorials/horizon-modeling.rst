@@ -3,39 +3,29 @@
 Horizon Modeling
 ================
 
-This tutorial introduces **horizon modeling** in Petres.
+This tutorial introduces horizon modeling in Petres and demonstrates how to define and visualize horizons.
 
 A horizon represents a continuous subsurface surface defined as
 :math:`z = f(x, y)`, where depth or elevation varies spatially across
 the model domain. In Petres, horizons are created from sampled
-``(x, y, z)`` data and reconstructed using an interpolation method.
-
-This tutorial covers:
-
-- defining horizons from scattered data
-- selecting an interpolator
-- visualizing horizons using different sampling strategies
-- rendering multiple horizons in the same 3D view
-
+:math:`(x, y, z)` data and reconstructed using an interpolation method.
 
 Overview
 --------
 
 A :class:`~petres.models.Horizon` is defined by:
 
-- ``name``: horizon name
-- ``xy``: spatial coordinates of the input points
-- ``z``: depth or elevation values at those points
-- ``interpolator``: interpolation method used to reconstruct the surface
+- ``name``: Horizon name
+- ``xy``: Spatial coordinates of the input points
+- ``z``: Depth or elevation values at those points
+- ``interpolator``: Interpolation method used to reconstruct the surface
 
 Once defined, the horizon behaves as a continuous surface and can be
 sampled or visualized over any desired grid.
 
-
 .. important::
 
-   A horizon is a **continuous mathematical surface**, not a grid.
-
+   A horizon is a **continuous surface**, not a grid.
    It is evaluated on demand using an interpolator and does not
    contain any inherent discretization.
 
@@ -43,8 +33,8 @@ sampled or visualized over any desired grid.
 Creating a Horizon
 ------------------
 
-The following example creates a horizon from four corner points using
-inverse distance weighting (IDW) interpolation.
+The following example creates a horizon from four sample points using
+Inverse Distance Weighting (IDW) interpolation.
 
 .. code-block:: python
 
@@ -54,61 +44,40 @@ inverse distance weighting (IDW) interpolation.
    from petres.models import Horizon
 
    horizon1 = Horizon(
-       name="H1",
-       xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-       z=[0, 1, 0, 1],
-       interpolator=IDWInterpolator(),
+      name="H1",
+      xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
+      z=[0, 1, 0, 1],
+      interpolator=IDWInterpolator(),
    )
 
 
 .. note::
 
-   The choice of interpolator directly affects the geometry of the surface,
-   including smoothness, continuity, and local variations between data points.
-
-
-Creating Additional Horizons
-----------------------------
-
-In practical workflows, multiple horizons are typically defined to
-represent different structural or stratigraphic surfaces.
-
-.. code-block:: python
-
-   horizon2 = Horizon(
-       name="H2",
-       xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-       z=[2, 2, 3, 3],
-       interpolator=IDWInterpolator(),
-   )
-
-   horizon3 = Horizon(
-       name="H3",
-       xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-       z=[5, 7, 8, 4],
-       interpolator=IDWInterpolator(),
-   )
+   The choice of interpolator directly affects the geometry of the surface.
+   See :doc:`/tutorials/interpolators` for more details and additional options.
 
 
 Visualizing a Horizon
 ---------------------
 
-A horizon is continuous, so it must be sampled on a discrete set of
-points for visualization.
+A horizon is mathematically a continuous surface. However, it is not
+possible to represent or visualize a truly continuous function on a
+computer, since numerical data must be stored at a finite number of points.
+Therefore, the surface is sampled on a discrete set of points for
+visualization.
 
-Petres supports multiple ways to define the sampling grid.
-
+Petres provides multiple ways to define this sampling grid.
 
 Direct Coordinate Sampling
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can provide ``x`` and ``y`` coordinates directly:
+You can provide ``x`` and ``y`` coordinates defining the spatial sampling grid of the horizon surface:
 
 .. code-block:: python
 
    horizon1.show(
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
    )
 
 
@@ -118,10 +87,10 @@ Sampling with Limits and Resolution
 .. code-block:: python
 
    horizon1.show(
-       xlim=(0, 100),
-       ylim=(0, 100),
-       ni=50,
-       nj=50,
+      xlim=(0, 100),
+      ylim=(0, 100),
+      ni=50,
+      nj=50,
    )
 
 
@@ -131,10 +100,10 @@ Sampling with Grid Spacing
 .. code-block:: python
 
    horizon1.show(
-       xlim=(0, 100),
-       ylim=(0, 100),
-       dx=2,
-       dy=2,
+      xlim=(0, 100),
+      ylim=(0, 100),
+      dx=2,
+      dy=2,
    )
 
 

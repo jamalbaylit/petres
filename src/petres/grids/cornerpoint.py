@@ -639,6 +639,24 @@ class CornerPointGrid:
         
         return corners
 
+    def _cell_top_bottom_depths(self) -> tuple[np.ndarray, np.ndarray]:
+        zcorn = self._compute_cell_corners()[..., 2]
+        z_top = np.min(zcorn[..., :4], axis=-1)
+        z_bottom = np.max(zcorn[..., 4:], axis=-1)
+        return z_top, z_bottom
+
+    def _cell_top_depth(self) -> np.ndarray:
+        z_top, _ = self._cell_top_bottom_depths()
+        return z_top
+
+    def _cell_bottom_depth(self) -> np.ndarray:
+        _, z_bottom = self._cell_top_bottom_depths()
+        return z_bottom
+
+    def _cell_thickness(self) -> np.ndarray:
+        z_top, z_bottom = self._cell_top_bottom_depths()
+        return np.abs(z_bottom - z_top)
+
     def _target_mask(
         self,
         zone: str | Zone | None = None,

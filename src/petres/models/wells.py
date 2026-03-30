@@ -51,7 +51,6 @@ class VerticalWell:
     def add_sample(
         self,
         name: str,
-        *,
         value: float,
         depth: float | None = None,
     ) -> None:

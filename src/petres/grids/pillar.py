@@ -110,12 +110,9 @@ class PillarGrid:
         """
         coord = np.asarray(coord)
 
-        if coord.ndim != 3:
-            raise ValueError(f"COORD must be 3D, got ndim={coord.ndim}")
-
-        if coord.shape[2] != 6:
+        if coord.ndim != 3 or coord.shape[2] != 6:
             raise ValueError(
-                f"Last dimension must be 6 (x1,y1,z1,x2,y2,z2), got {coord.shape[2]}"
+                f"COORD array must have shape (nj+1, ni+1, 6); got {coord.shape}"
             )
         pillar_top = coord[:, :, :3].copy()
         pillar_bottom = coord[:, :, 3:].copy()
