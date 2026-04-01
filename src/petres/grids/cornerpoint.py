@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Self, Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Callable
 from pathlib import Path
-import numpy as np
+from typing import Any, Self
 import warnings
+
+import numpy as np
 
 
 
@@ -102,9 +103,9 @@ class CornerPointGrid:
     
     pillars: PillarGrid
     zcorn: np.ndarray                     # Shape (2*nk, 2*nj, 2*ni)
-    active: Optional[np.ndarray] = None      # Shape (nk, nj, ni), boolean, or None for all active
+    active: np.ndarray | None = None      # Shape (nk, nj, ni), boolean, or None for all active
 
-    zone_index: Optional[np.ndarray] = None        # shape (nk, nj, ni), int
+    zone_index: np.ndarray | None = None        # shape (nk, nj, ni), int
     zone_names: dict[int, str] = field(default_factory=dict)
     
     _properties: dict[str, GridProperty] = field(default_factory=dict, repr=False)
@@ -112,18 +113,6 @@ class CornerPointGrid:
     
     def __post_init__(self) -> None:
         """Validate dimensions, active mask, and zone/property consistency.
-
-        Parameters
-        ----------
-        None
-            This hook receives dataclass-initialized attributes from
-            :class:`CornerPointGrid`.
-
-        Returns
-        -------
-        None
-            Updates validated attributes in place and initializes zone lookup
-            metadata.
 
         Raises
         ------
@@ -317,11 +306,6 @@ class CornerPointGrid:
             Mapping from zone id to zone name.
             If not provided, names will be auto-generated as "Zone {id}".
 
-        Returns
-        -------
-        None
-            Stores normalized zone arrays and lookup dictionaries on the grid.
-
         Raises
         ------
         ValueError
@@ -426,7 +410,7 @@ class CornerPointGrid:
 
     @property
     def ni(self) -> int:
-        """Get the number of cells in the i direction.
+        """Return the number of cells in the i direction.
 
         Returns
         -------
@@ -437,7 +421,7 @@ class CornerPointGrid:
 
     @property
     def nj(self) -> int:
-        """Get the number of cells in the j direction.
+        """Return the number of cells in the j direction.
 
         Returns
         -------
@@ -448,7 +432,7 @@ class CornerPointGrid:
 
     @property
     def nk(self) -> int:
-        """Get the number of layers in the k direction.
+        """Return the number of layers in the k direction.
 
         Returns
         -------
@@ -459,7 +443,7 @@ class CornerPointGrid:
 
     @property
     def shape(self) -> tuple[int, int, int]:
-        """Get grid dimensions ordered as ``(nk, nj, ni)``.
+        """Return grid dimensions ordered as ``(nk, nj, ni)``.
 
         Returns
         -------
@@ -470,7 +454,7 @@ class CornerPointGrid:
 
     @property
     def n_cells(self) -> int:
-        """Get the total number of cells in the grid.
+        """Return the total number of cells in the grid.
 
         Returns
         -------
@@ -481,7 +465,7 @@ class CornerPointGrid:
 
     @property
     def n_active(self) -> int:
-        """Get the number of active cells.
+        """Return the number of active cells.
 
         Returns
         -------
@@ -492,7 +476,7 @@ class CornerPointGrid:
     
     @property
     def n_inactive(self) -> int:
-        """Get the number of inactive cells.
+        """Return the number of inactive cells.
 
         Returns
         -------
@@ -619,7 +603,7 @@ class CornerPointGrid:
         self, 
         path: str | Path, 
         *,
-        properties: Optional[Sequence[str]] = None,
+        properties: Sequence[str] | None = None,
         include_actnum: bool = True,
     ) -> None:
         """Write grid geometry and selected properties to a GRDECL file.
@@ -633,11 +617,6 @@ class CornerPointGrid:
             written.
         include_actnum : bool, default True
             Whether to export ``ACTNUM`` from the grid active mask.
-
-        Returns
-        -------
-        None
-            Writes GRDECL content to disk.
 
         Raises
         ------
@@ -683,8 +662,8 @@ class CornerPointGrid:
         show_inactive: bool = False, 
         scalars: str | None = None,
         color: Any = 'tan', 
-        cmap: Optional[str] = 'turbo', 
-        title: Optional[str] = None,
+        cmap: str | None = 'turbo', 
+        title: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Render the grid in 3D PyVista viewer.
@@ -703,11 +682,6 @@ class CornerPointGrid:
             Figure title.
         **kwargs
             Forwarded to viewer ``add_grid``.
-
-        Returns
-        -------
-        None
-            Opens an interactive 3D rendering window.
         """
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
@@ -844,11 +818,6 @@ class CornerPointGrid:
         Notes
         -----
         Updates ``active`` in place; cached property masks may become stale.
-
-        Returns
-        -------
-        None
-            Applies the boundary mask directly to ``active``.
         """
         # Get cell centers (nk, nj, ni, 3)
         centers = self.cell_centers
