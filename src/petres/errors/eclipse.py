@@ -1,5 +1,7 @@
 """Eclipse/GRDECL-related error definitions."""
 
+from __future__ import annotations
+
 from typing import ClassVar
 
 from .base import ExportError, PetresError
