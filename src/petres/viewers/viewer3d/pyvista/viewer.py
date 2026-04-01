@@ -1,24 +1,21 @@
-# backend.py
 from __future__ import annotations
 
-from turtle import color
-from typing import Any, Optional, Self, Sequence
-import pyvista as pv
-import numpy as np
-import warnings
+from collections.abc import Sequence
+from typing import Any, Self
 
-from .layers.cornerpoint import _add_corner_point_grid
-from .._core.theme import SceneTheme3D, Camera3D
+import numpy as np
+import pyvista as pv
+
+from .._core.base import Base3DViewer
+from .._core.theme import Camera3D, SceneTheme3D
 from ....grids.cornerpoint import CornerPointGrid
 from ....grids.sampling._vertices import _resolve_xy_vertices
-from .layers.surface import _add_surface
-from ....grids.pillar import PillarGrid
 from ....models.horizon import Horizon
-from .._core.base import Base3DViewer
-from ...._utils._color import Color
-from .layers.zone import _add_zone
 from ....models.zone import Zone
-from petres.viewers.viewer3d.pyvista.layers import surface
+from ...._utils._color import Color
+from .layers.cornerpoint import _add_corner_point_grid
+from .layers.surface import _add_surface
+from .layers.zone import _add_zone
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -27,6 +24,16 @@ class PyVista3DViewer(Base3DViewer):
     This viewer configures a PyVista plotter with a scene theme and camera,
     and provides helpers to add domain objects such as corner-point grids,
     zones, and horizons.
+
+    Parameters
+    ----------
+    plotter : pyvista.Plotter or None, default=None
+        Existing PyVista plotter to use. If ``None``, a new plotter is created.
+    theme : SceneTheme3D or None, default=None
+        Visual scene configuration. If ``None``, a default theme is used.
+    camera : Camera3D or None, default=None
+        Camera configuration. If ``None``, an isometric default camera setup
+        is used.
     """
 
     theme: SceneTheme3D
@@ -39,26 +46,7 @@ class PyVista3DViewer(Base3DViewer):
         theme: SceneTheme3D | None = None,
         camera: Camera3D | None = None,
     ) -> None:
-        """Initialize a 3D viewer instance.
-
-        If arguments are omitted, sensible defaults are created for the plotter,
-        scene theme, and camera.
-
-        Parameters
-        ----------
-        plotter : pyvista.Plotter or None, default=None
-            Existing PyVista plotter to use. If ``None``, a new plotter is created.
-        theme : SceneTheme3D or None, default=None
-            Visual scene configuration. If ``None``, a default theme is used.
-        camera : Camera3D or None, default=None
-            Camera configuration. If ``None``, an isometric default camera setup
-            is used.
-
-        Returns
-        -------
-        None
-            This constructor initializes viewer state in place.
-        """
+        """Initialize viewer state with optional plotter, theme, and camera."""
         self.set_theme(theme or SceneTheme3D())
         self.set_camera(camera or Camera3D(
             view="iso",
@@ -77,11 +65,6 @@ class PyVista3DViewer(Base3DViewer):
         plotter : pyvista.Plotter
             Plotter instance used for all rendering operations.
 
-        Returns
-        -------
-        None
-            The viewer plotter reference is updated in place.
-
         Raises
         ------
         AssertionError
@@ -97,11 +80,6 @@ class PyVista3DViewer(Base3DViewer):
         ----------
         theme : SceneTheme3D
             Theme containing background, axes, and title display settings.
-
-        Returns
-        -------
-        None
-            The viewer theme reference is updated in place.
 
         Raises
         ------
@@ -119,11 +97,6 @@ class PyVista3DViewer(Base3DViewer):
         camera : Camera3D
             Camera preset and relative view adjustments used for rendering.
 
-        Returns
-        -------
-        None
-            The viewer camera reference is updated in place.
-
         Raises
         ------
         AssertionError
@@ -139,11 +112,6 @@ class PyVista3DViewer(Base3DViewer):
         ----------
         theme : SceneTheme3D
             Theme values controlling background color and axes visibility.
-
-        Returns
-        -------
-        None
-            Theme settings are applied directly to the plotter.
         """
         p = self.plotter
         p.set_background(theme.background, top=theme.background)
@@ -158,17 +126,7 @@ class PyVista3DViewer(Base3DViewer):
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
 
     def reset_camera(self) -> None:
-        """Reset camera position and clipping range to defaults.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-            Camera and clipping range are reset on the active plotter.
-        """
+        """Reset camera position and clipping range to defaults."""
         self.plotter.reset_camera()
         self.plotter.reset_camera_clipping_range()
 
@@ -179,11 +137,6 @@ class PyVista3DViewer(Base3DViewer):
         ----------
         title : str or None, default=None
             Optional scene title text displayed at the configured theme position.
-
-        Returns
-        -------
-        None
-            The scene is displayed and a fresh plotter is prepared afterward.
         """
         self.apply_theme(self.theme)
         # self.plotter.set_viewup((-1, 0, 0))
@@ -205,8 +158,8 @@ class PyVista3DViewer(Base3DViewer):
         *,
         show_inactive: bool = False,
         color: Any = None,
-        scalars: Optional[np.ndarray] = None,
-        cmap: Optional[str] = None,
+        scalars: np.ndarray | None = None,
+        cmap: str | None = None,
         **kwargs: Any,
     ) -> Self:
         """Add a supported grid to the current 3D scene.
@@ -252,11 +205,6 @@ class PyVista3DViewer(Base3DViewer):
         cam : Camera3D
             Camera configuration containing a view preset and optional turn,
             tilt, roll, zoom, and depth orientation adjustments.
-
-        Returns
-        -------
-        None
-            Camera settings are applied directly to the active plotter.
 
         Raises
         ------
@@ -305,9 +253,9 @@ class PyVista3DViewer(Base3DViewer):
         self,
         grid: CornerPointGrid,
         show_inactive: bool = False,
-        scalars: Optional[np.ndarray] = None,
-        cmap: Optional[str] = None,
-        color: Optional[Color] = None,
+        scalars: np.ndarray | None = None,
+        cmap: str | None = None,
+        color: Color | None = None,
         **kwargs: Any,
     ) -> None:
         """Add a corner-point grid layer to the plotter.
@@ -326,11 +274,6 @@ class PyVista3DViewer(Base3DViewer):
             Fixed color to apply when scalar coloring is not used.
         **kwargs : Any
             Extra keyword arguments forwarded to the layer renderer.
-
-        Returns
-        -------
-        None
-            The grid is added to the active scene.
         """
         return _add_corner_point_grid(self, grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color, **kwargs)
 
