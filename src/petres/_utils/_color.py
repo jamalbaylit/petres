@@ -1,10 +1,13 @@
 from __future__ import annotations
-from matplotlib.colors import to_rgba
-from matplotlib.pyplot import cm
+
 from dataclasses import dataclass
 from typing import Any
-import numpy as np
+
 import warnings
+
+import numpy as np
+from matplotlib.colors import to_rgba
+from matplotlib.pyplot import cm
 
 
 
@@ -122,7 +125,18 @@ class Color:
     a: float = 1.0
 
 
-    def __init__(self, value: Any, opacity: float | None = None):
+    def __init__(self, value: Any, opacity: float | None = None) -> None:
+        """Initialize the Color instance from the given color specification.
+
+        Raises
+        ------
+        ValueError
+            If ``opacity`` is outside [0.0, 1.0], if a hex string has an
+            invalid length, or if a tuple does not contain 3 or 4 elements.
+        TypeError
+            If the input type is unsupported or invalid for the current
+            parsing mode.
+        """
         r, g, b, a = self.to_rgba(value)
         
         if opacity is not None:
@@ -136,7 +150,7 @@ class Color:
         object.__setattr__(self, "a", a)
 
     def to_rgba(self, value: Any) -> tuple[float, float, float, float]:
-        """Parse input into normalized RGBA tuple using matplotlib's parser.
+        """Parse a color specification into a normalized RGBA tuple.
 
         Parameters
         ----------
@@ -160,7 +174,18 @@ class Color:
             raise ValueError(f"Failed to parse color using matplotlib: {value}") from e
         
     def _parse_color(self, value: Any) -> tuple[float, float, float, float]:
-        """Fallback color parser used when matplotlib formats are unavailable."""
+        """Parse a color value using the fallback parser (no matplotlib).
+
+        Parameters
+        ----------
+        value : Any
+            Hex string, RGB/RGBA tuple or list, or another ``Color`` instance.
+
+        Returns
+        -------
+        tuple[float, float, float, float]
+            Normalized RGBA values in [0, 1].
+        """
         if isinstance(value, Color):
             return value.r, value.g, value.b, value.a
 
@@ -211,15 +236,39 @@ class Color:
     # Backend exports
     # -----------------------------
     def as_rgb(self) -> tuple[float, float, float]:
-        """Return the color as an ``(r, g, b)`` tuple in [0, 1]."""
+        """Return the color as an RGB tuple.
+
+        Returns
+        -------
+        tuple[float, float, float]
+            Red, green, and blue channels, each in [0.0, 1.0].
+        """
         return (self.r, self.g, self.b)
 
     def as_rgba(self) -> tuple[float, float, float, float]:
-        """Return the color as an ``(r, g, b, a)`` tuple in [0, 1]."""
+        """Return the color as an RGBA tuple.
+
+        Returns
+        -------
+        tuple[float, float, float, float]
+            Red, green, blue, and alpha channels, each in [0.0, 1.0].
+        """
         return (self.r, self.g, self.b, self.a)
 
     def as_hex(self, include_alpha: bool = False) -> str:
-        """Return the color as a hex string, optionally including alpha."""
+        """Return the color as a CSS hex string.
+
+        Parameters
+        ----------
+        include_alpha : bool, optional
+            When ``True``, appends the alpha channel as a two-digit hex
+            suffix (e.g. ``"#RRGGBBAA"``). Defaults to ``False``.
+
+        Returns
+        -------
+        str
+            Hex color string in ``"#RRGGBB"`` or ``"#RRGGBBAA"`` format.
+        """
         r = int(round(self.r * 255))
         g = int(round(self.g * 255))
         b = int(round(self.b * 255))
@@ -229,8 +278,27 @@ class Color:
         return f"#{r:02X}{g:02X}{b:02X}"
     
     @staticmethod
-    def get_discrete_cmap(n: int, cmap: str):
-        """Generate ``n`` discrete colors sampled from a Matplotlib colormap."""
+    def get_discrete_cmap(n: int, cmap: str) -> list[tuple[float, float, float]]:
+        """Sample ``n`` discrete RGB colors from a Matplotlib colormap.
+
+        Parameters
+        ----------
+        n : int
+            Number of colors to sample. Must be positive.
+        cmap : str
+            Name of a valid Matplotlib colormap (e.g. ``"viridis"``).
+
+        Returns
+        -------
+        list[tuple[float, float, float]]
+            List of ``n`` RGB tuples, each with values in [0.0, 1.0].
+
+        Raises
+        ------
+        ValueError
+            If ``n`` is not positive or if ``cmap`` is not a recognized
+            Matplotlib colormap name.
+        """
         if n <= 0:
             raise ValueError("Number of colors must be positive.")
         try:
