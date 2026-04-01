@@ -33,7 +33,65 @@ def _add_zone(
     thickness_contour_linewidth: float = 0.6,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    """Add a zone visualization showing top/base contours or thickness map."""
+    """Add a zone visualization showing top/base contours or thickness map.
+
+    Parameters
+    ----------
+    ax : Axes
+        Matplotlib axes to draw on.
+    zone : Zone
+        Stratigraphic zone containing top and base horizons.
+    x : np.ndarray
+        1D array of x-coordinates (easting). Must be 1D after ravelling.
+    y : np.ndarray
+        1D array of y-coordinates (northing). Must be 1D after ravelling.
+    show_top : bool, default True
+        Whether to draw top-horizon contours when not in thickness mode.
+    show_base : bool, default True
+        Whether to draw base-horizon contours when not in thickness mode.
+    show_thickness : bool, default False
+        When ``True``, render a color-mapped thickness map instead of
+        top/base contours.
+    cmap : str, default 'viridis'
+        Colormap name used for the thickness pcolormesh.
+    show_contours : bool, default True
+        Whether to overlay contour lines on the thickness map.
+    contour_levels : int, default 10
+        Number of contour levels.
+    show_contour_labels : bool, default False
+        Whether to annotate contour lines with their values.
+    show_colorbar : bool, default True
+        Whether to attach a color bar to the thickness mesh.
+    colorbar_shrink : float, default 0.95
+        Fractional size of the color bar relative to the axes.
+    top_color : str, default '#2563eb'
+        Line color for top-horizon contours.
+    base_color : str, default '#dc2626'
+        Line color for base-horizon contours.
+    top_linewidth : float, default 1.0
+        Line width for top-horizon contours.
+    base_linewidth : float, default 1.0
+        Line width for base-horizon contours.
+    base_linestyle : str, default '--'
+        Line style for base-horizon contours.
+    thickness_contour_color : str, default 'black'
+        Color for contour lines drawn over the thickness map.
+    thickness_contour_linewidth : float, default 0.6
+        Line width for thickness-map contour lines.
+    **kwargs : Any
+        Extra keyword arguments forwarded to ``ax.pcolormesh``.
+
+    Returns
+    -------
+    dict[str, Any]
+        Mapping of artist names to Matplotlib objects.  Possible keys:
+        ``'thickness'``, ``'thickness_contours'``, ``'top'``, ``'base'``.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` or ``y`` are not 1D after ravelling.
+    """
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
 
