@@ -13,8 +13,34 @@ CameraView = Literal[
     "left",     # look from -X
 ]
 
+
 @dataclass(frozen=True)
 class Camera3D:
+    """Immutable 3-D camera configuration.
+
+    Parameters
+    ----------
+    view : CameraView, optional
+        Named preset direction from which the scene is observed.
+        Defaults to ``"iso"`` (diagonal isometric view).
+    tilt : float, optional
+        Vertical offset in degrees.  Positive values reveal more of the
+        top surface; negative values reveal more of the bottom.
+        Defaults to ``0.0``.
+    turn : float, optional
+        Rotation around the vertical axis in degrees.  Defaults to ``0.0``.
+    roll : float, optional
+        Screen-plane rotation in degrees.  Keep at ``0.0`` for an upright
+        horizon.  Defaults to ``0.0``.
+    zoom : float, optional
+        Magnification factor where ``1.0`` is the default field of view,
+        values above ``1.0`` zoom in, and values below ``1.0`` zoom out.
+        Defaults to ``1.0``.
+    depth_down : bool, optional
+        When ``True`` the depth (Z) axis is oriented visually downward on
+        the screen.  Defaults to ``True``.
+    """
+
     view: CameraView = "iso"
 
     # “small intuitive knobs”
@@ -26,10 +52,38 @@ class Camera3D:
     # optional: keep depth (Z) visually downward on screen
     depth_down: bool = True
 
-Color = str | tuple[float, float, float] 
-@dataclass(frozen=True)
 
+Color = str | tuple[float, float, float]
+
+
+@dataclass(frozen=True)
 class SceneTheme3D:
+    """Immutable visual theme for a 3-D scene.
+
+    Parameters
+    ----------
+    background : Color, optional
+        Background color expressed as a CSS name string or an RGB
+        triple of floats in ``[0, 1]``.  Defaults to ``"white"``.
+    show_orientation_widget : bool, optional
+        Display the orientation cube / compass widget.  Defaults to ``True``.
+    show_coordinate_axes : bool, optional
+        Overlay the XYZ axis triad.  Defaults to ``True``.
+    scale : tuple[float, float, float], optional
+        Multiplicative scale factors applied to the X, Y, and Z axes
+        respectively.  Defaults to ``(1.0, 1.0, 1.0)``.
+    title_fontsize : int, optional
+        Font size (in points) for the scene title.  Defaults to ``12``.
+    title_color : Color, optional
+        Color of the scene title text.  Defaults to ``"black"``.
+    title_position : str, optional
+        Anchor position for the title label (e.g. ``"upper_edge"``).
+        Defaults to ``"upper_edge"``.
+    camera : Camera3D, optional
+        Camera configuration applied to the scene.
+        Defaults to :class:`Camera3D` with all defaults.
+    """
+
     background: Color = "white"
     show_orientation_widget: bool = True
     show_coordinate_axes: bool = True
