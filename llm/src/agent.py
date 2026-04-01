@@ -5,38 +5,57 @@ from pathlib import Path
 import time
 import glob
 
+from github.GithubException import GithubException
+from github.Issue import Issue
 from github.PullRequest import PullRequest
 from github.Repository import Repository
 from github import Github
 
+from .toolkit import GithubToolkit
 
 class CopilotAutoRefactor:
     open_issues = None
     agent_name = "copilot-swe-agent[bot]"
-    target_branch_name = "dev"
+
     
     def __init__(
         self,
         github_token: str,
         repo_name: str,
         instruction_path: str,
+        target_branch_name: str = "dev",
+        working_branch_name: str = "copilot/auto-refactor",
         auto_merge: bool = False,
+        auto_review: bool = False, 
         max_wait_seconds: int = 600,
         poll_interval: int = 7,
     ):
-        self.github = Github(github_token)
-        self.repo: Repository = self.github.get_repo(repo_name)
+        self.github = GithubToolkit(github_token, repo_name)
+
+
+
+
+        # self.github = Github(github_token)
+        # self.repo: Repository = self.github.get_repo(repo_name)
         self.instruction_path = Path(instruction_path)
         self.instruction_name = self.instruction_path.stem
         self.auto_merge = auto_merge
+        self.auto_review = auto_review
         self.max_wait_seconds = max_wait_seconds
         self.poll_interval = poll_interval
+        self.target_branch_name = target_branch_name
+        self.working_branch_name = working_branch_name
 
-    @staticmethod
-    def _create_branch(self, new_branch_name: str, base_branch_name: str):
-        base_branch = self.repo.get_branch(base_branch_name)
-        self.repo.create_git_ref(ref=f"refs/heads/{new_branch_name}", sha=base_branch.commit.sha)
-        print(f"Created new branch: {new_branch_name}")
+        try:
+            self.github.get_branch(self.working_branch_name)
+            print(f"⚠️ Branch '{self.working_branch_name}' already exists.")
+        except GithubException:
+            self.github.create_branch(
+                self.working_branch_name, 
+                self.target_branch_name
+            )
+
+
 
     # ---------------------------
     # PUBLIC ENTRYPOINT
@@ -45,47 +64,79 @@ class CopilotAutoRefactor:
         self, 
         file_regex: str, 
         source_dir: str, 
-        max_rounds: int = 1
     ):
         target_files = self._find_target_files(file_regex, source_dir)
-        self.workflow(target_files, max_rounds)
+        if not target_files:
+            print("No target files found. Exiting.")
+            return
+        self.workflow(target_files)
 
-    def _find_target_files(self, file_regex: str, source_dir: str) -> List[str]:
-        """
-        Search for files matching the regex in the source directory.
-        Returns a list of file paths.
-        """
-        if not Path(source_dir).is_dir():
-            raise ValueError("`source_dir` must be a directory.")
 
-        return glob.glob(f"{source_dir}/**/{file_regex}", recursive=True)
+    def workflow(self, target_files: List[str]):
+        print(f"🚀 Starting workflow for {len(target_files)} target files...")
+        # issues = self.create_issues_concurrently(target_files)
+        # print('=' * 50)
+        # print(f"✅ Created {len(issues)} issues. Issue numbers: {issues}")
+        # prs = self._wait_for_pr(issues)
+        # if prs is None:
+        #     print("❌ Workflow failed due to missing PRs.")
+        #     return
 
-    def workflow(self, target_files: List[str], max_rounds: int = 1):
-        for i in range(max_rounds):
-            print(f"\n🚀 ROUND {i+1}")
+        for file in target_files:
 
-            issue_numbers = self.create_issues_concurrently(target_files)
 
-            pr = self._wait_for_pr(issue_numbers)
+            completed = 0
+                    
+            # if self.auto_review or self.auto_merge:
 
-            if not pr:
-                print("❌ No PR created.")
-                return
 
-            if not self._validate_pr(pr):
-                print("❌ Validation failed.")
-                return
 
-            if self.auto_merge:
-                self._merge_pr(pr)
+            start = time.time()    
+            completed = 0
+            while time.time() - start < self.max_wait_seconds:
+                issues = [self._create_issue(file, purpose=self.instruction_name)]
+                prs = self.github.filter_prs(
+                    owner='Copilot',
+                    from_branch_pattern="copilot/*",
+                    to_branch=self.working_branch_name,
+                    state="open",
+                )
+                print(f"⏳ Waiting for all Copilot PRs... Found {completed}/{len(issues)} PRs so far.")
+                completed += len(prs)
+                for pr in prs:
+                    if self.auto_review:
+                        pr = self.github.convert_draft_to_ready(pr)
+                        print(f"✅ Reviewed PR #{pr.number} with APPROVE.")
+                    if self.auto_merge:
+                        pr.merge(
+                            commit_title=f"Auto-merged by {self.agent_name}.",
+                            merge_method="squash",
+                            delete_branch=True,
+                        )
+                        print(f"✅ Merged PR #{pr.number}.")
 
+                if completed >= len(issues):
+                    print(f"✅ All PRs have been processed (reviewed/merged).")
+                    break
+                time.sleep(self.poll_interval)
+
+
+            print(
+                f"❌ Timed out after {self.max_wait_seconds}s. "
+                f"Expected {len(issues)} PRs but completed {completed}."
+            )
+
+
+            # delete issues after PR is merged
+            print('=' * 50)
+            for issue in issues:
+                issue = self.github.get_issue(issue)
+                issue.edit(state="closed")
+                print(f"✅ Closed issue #{issue.number} after merging PR #{pr.number}.")
     # ---------------------------
     # ISSUE CREATION
     # ---------------------------
-    def _get_open_issues(self):
-        if self.open_issues is None:
-            self.open_issues = list(self.repo.get_issues(state="open"))
-        return self.open_issues
+
 
     def create_issues_concurrently(self, files_to_fix: List[str], purpose="Refactor") -> List[int]:
         """
@@ -93,45 +144,38 @@ class CopilotAutoRefactor:
         Skips files that already have an open issue.
         Returns a list of newly created issue numbers.
         """
-        issue_numbers = []
+        issues = set()  # Use a set to avoid duplicates
 
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(self._create_issue, f, purpose) for f in files_to_fix]
             for future in as_completed(futures):
                 result = future.result()
                 if result is not None:  # Skip if _create_issue returned None
-                    issue_numbers.append(result)
-
-        return issue_numbers
+                    issues.add(result)
+        return issues
     
-    def get_assignees(self, issue_number: int) -> List[str]:
-        if isinstance(issue_number, int):
-            issue = self.repo.get_issue(number=issue_number)
-        elif hasattr(issue_number, "assignees"):  # already an issue object
-            issue = issue_number
-        return [assignee.login for assignee in issue.assignees]  # list of usernames
 
-    def _is_open_issue_exist(self, target_file, purpose) -> Optional[int]:
+    def _is_open_issue_exist(self, target_file, purpose) -> Issue | None:
         """
         Check if an open issue already exists for the target file and purpose.
         Returns the issue number if found, otherwise None.
         """
-        issues = self._get_open_issues()
+        issues = self.github.get_open_issues()
         for issue in issues:
             if target_file in issue.title and purpose in issue.title:
                 return issue
         return None
     
 
-    def _create_issue(self, target_file, purpose="Refactor"):
+    def _create_issue(self, target_file, purpose="Refactor") -> int:
         """
-        Creates a single GitHub issue and returns its number.
+        Creates a single GitHub issue and returns it.
         """
         issue = self._is_open_issue_exist(target_file, purpose)
 
         if issue is not None:
-            # check assignees
-            assignees = self.get_assignees(issue)
+            # Check assignees
+            assignees = self.github.get_issue_assignees(issue)
             if 'Copilot' in assignees:
                 print(f"⚠️ Issue already exists for {target_file} with issue number: {issue.number}")
                 return issue.number
@@ -139,14 +183,23 @@ class CopilotAutoRefactor:
                 issue.edit(state="closed")
                 print(f"🚨 Closed existing issue #{issue.number} for {target_file} since it's not assigned to the agent.")
 
+        # Need to create a new issue
         title = self._generate_issue_title(target_file, purpose)
         body = self._generate_issue_body(target_file)
-        issue = self.repo.create_issue(
-            title=title, 
-            body=body, 
-            assignees=["copilot-swe-agent[bot]"],
+        # issue = self.github.create_issue(
+        #     title=title, 
+        #     body=body, 
+        #     assignees=["copilot-swe-agent[bot]"],
+        # )
+
+        issue = self.github.create_issue_with_copilot_agent(
+            title=title,
+            body=body,
+            base_branch=self.working_branch_name,
         )
-        return issue.number
+        print(f"✅ Created issue #{issue['number']} for {target_file}")
+        issue_number = issue["number"] if isinstance(issue, dict) else issue.number
+        return issue_number
     
     def _generate_issue_title(self, target_file, purpose="Refactor"):
         """
@@ -168,8 +221,6 @@ Apply instructions from `{self.instruction_path}` to `{target_file}`.
 {self.instruction_path.read_text()}
 
 """
-        if self.target_branch_name is not None:
-            body += f"- **IMPORTANT**: Open the pull request targeting the `{self.target_branch_name}` branch, NOT `main` or `master`.\n"
         return body
    
     
@@ -177,49 +228,44 @@ Apply instructions from `{self.instruction_path}` to `{target_file}`.
     # ---------------------------
     # WAIT FOR PR
     # ---------------------------
-    def _wait_for_pr(self, issue_numbers: List[int]) -> Optional[PullRequest]:
-        print("⏳ Waiting for Copilot PR...")
+    def _wait_for_pr(self, issue_numbers: List[int]) -> Optional[List[PullRequest]]:
         start = time.time()
 
-        issue_refs = set([f"#{n}" for n in issue_numbers])
-
-
         while time.time() - start < self.max_wait_seconds:
-            pulls = self.repo.get_pulls(state="open")
 
-            for pr in pulls:
-                body = pr.body or ""
-                print(pr)
-                print("body:", body)
+            prs = self.github.filter_prs(
+                owner='Copilot',
+                from_branch_pattern="copilot/*",
+                to_branch=self.working_branch_name,
+                state="open",
+            )
+            print(f"⏳ Waiting for all Copilot PRs... Found {len(prs)}/{len(issue_numbers)} PRs so far.")
 
-                # ✅ Primary: explicit reference
-                if any(ref in body for ref in issue_refs):
-                    print(f"✅ PR found (by issue ref): {pr.html_url}")
-                    return pr   
-            time.sleep(self.poll_interval)         
+            if len(prs) == len(issue_numbers):
+                print(f"✅ Found all {len(prs)} PRs.")
+                return prs
 
-    # ---------------------------
-    # VALIDATION HOOK
-    # ---------------------------
-    def _validate_pr(self, pr: PullRequest) -> bool:
-        print("🧪 Validating PR...")
+            time.sleep(self.poll_interval)
 
-        # 🔧 Customize this:
-        # - run tests
-        # - run mypy
-        # - run flake8
-        # - check diff size, etc.
+        print(
+            f"❌ Timed out after {self.max_wait_seconds}s. "
+            f"Expected {len(issue_numbers)} PRs but found {len(prs)}."
+        )
 
-        commits = pr.get_commits()
-        for c in commits:
-            print(f"• {c.commit.message}")
+        return None
 
-        return True  # <-- plug real validation here
 
-    # ---------------------------
-    # MERGE
-    # ---------------------------
-    def _merge_pr(self, pr: PullRequest):
-        print("🔀 Merging PR...")
-        pr.merge()
-        print(f"✅ Merged: {pr.html_url}")
+
+
+    def _find_target_files(self, file_regex: str, source_dir: str) -> List[str]:
+        """
+        Search for files matching the regex in the source directory.
+        Returns a list of file paths.
+        """
+        if not Path(source_dir).is_dir():
+            raise ValueError("`source_dir` must be a directory.")
+
+        return set(glob.glob(f"{source_dir}/**/{file_regex}", recursive=True))
+
+
+    
