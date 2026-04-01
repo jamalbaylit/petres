@@ -1,5 +1,7 @@
 """Custom error hierarchy for the petres package."""
 
+from __future__ import annotations
+
 
 class PetresError(Exception):
     """Represent a base exception with optional context-driven formatting.
@@ -7,28 +9,19 @@ class PetresError(Exception):
     This exception provides a consistent error base for the package and supports
     formatting either a provided message template or the class-level
     ``default_message`` using keyword context values.
+
+    Parameters
+    ----------
+    message : str or None, default=None
+        Error message template. If ``None``, ``default_message`` is used.
+    **context : object
+        Keyword values used to format the selected message template.
     """
 
     default_message: str = "An unknown Petres error occurred."
 
     def __init__(self, message: str | None = None, **context: object) -> None:
         """Initialize the exception with optional template formatting context.
-
-        If ``message`` is not provided, the class-level ``default_message`` is
-        formatted with ``context``. When ``message`` is provided, it is used as
-        a template and formatted with ``context`` only if context values exist.
-
-        Parameters
-        ----------
-        message : str or None, default=None
-            Error message template. If ``None``, ``default_message`` is used.
-        **context : object
-            Keyword values used to format the selected message template.
-
-        Returns
-        -------
-        None
-            This method initializes the exception instance.
 
         Raises
         ------
@@ -54,10 +47,6 @@ class PetresError(Exception):
 
     def __repr__(self) -> str:
         """Return a developer-focused representation of the error.
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
