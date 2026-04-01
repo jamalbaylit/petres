@@ -81,6 +81,12 @@ examples = [
     "pandas>=3.0.1",
 ]
 
+llm = [
+    "aiohttp>=3.9.9",
+    "pygithub>=2.9.0",
+    "python-decouple>=3.8",
+]
+
 
 
 
