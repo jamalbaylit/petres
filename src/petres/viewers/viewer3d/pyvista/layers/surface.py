@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any
-from pyparsing import Optional
 import pyvista as pv
 import numpy as np
 
@@ -10,7 +9,7 @@ from ....._utils._color import Color
 
 
 def _add_surface(
-    backend,
+    backend: Any,
     depth: np.ndarray,
     *,
     x: np.ndarray,
@@ -33,25 +32,71 @@ def _add_surface(
     contour_linewidth: float = 3,
     **mesh_kwargs: Any,
 ) -> pv.StructuredGrid:
-    """
-    Add a sampled Horizon surface as a PyVista StructuredGrid.
+    """Add a sampled Horizon surface as a PyVista StructuredGrid.
+
+    Builds a structured grid from regular ``x``/``y`` coordinate arrays and a
+    2-D depth array, attaches depth as a point scalar, renders the mesh, and
+    optionally overlays iso-contour lines with value labels.
 
     Parameters
     ----------
+    backend : Any
+        PyVista viewer instance exposing a ``plotter`` attribute
+        (``pyvista.Plotter``).
+    depth : np.ndarray
+        2-D array of shape ``(len(y), len(x))`` containing depth values.
+    x : np.ndarray
+        1-D array of x-coordinates.  Ravelled to 1-D if not already.
+    y : np.ndarray
+        1-D array of y-coordinates.  Ravelled to 1-D if not already.
+    name : str or None, optional
+        Unique name for the mesh actor inside the plotter.
+    color : Color or None, optional
+        Solid colour used when ``scalars`` is ``False``.  Ignored when
+        ``scalars`` is ``True``.
+    scalars : bool or None, default=True
+        When ``True`` the surface is coloured by depth values using ``cmap``.
+        When ``False`` a solid ``color`` is applied.
+    cmap : str or None, optional
+        Matplotlib colour-map name.  Defaults to ``"viridis"`` when
+        ``scalars`` is ``True``.
+    show_colorbar : bool, default=True
+        Whether to display a scalar bar (colour-bar) legend.
+    colorbar_title : str or None, optional
+        Title shown on the colour-bar.  Empty string when ``None``.
     show_contours : bool, default=True
-        Whether to overlay contour lines on the horizon surface.
+        Whether to overlay iso-contour lines on the surface.
     contour_levels : int, default=10
-        Number of contour levels.
+        Number of evenly-spaced contour iso-values.  Must be at least 1.
     show_contour_labels : bool, default=True
-        Whether to place contour value labels on the contour lines.
-    contour_label_fontsize : int, default=8
-        Font size of contour labels.
+        Whether to place depth-value labels along contour lines.
+    contour_label_fontsize : int, default=10
+        Font size for contour value labels.
     contour_opacity : float, default=0.8
-        Opacity of contour lines.
+        Opacity of contour line actors.
     contour_color : str, default="black"
-        Color of contour lines and labels.
-    contour_linewidth : float, default=0.7
-        Width of contour lines.
+        Colour applied to contour lines and labels.
+    contour_linewidth : float, default=3
+        Line width of contour actors.
+    **mesh_kwargs : Any
+        Additional keyword arguments forwarded to
+        ``pyvista.Plotter.add_mesh``.
+
+    Returns
+    -------
+    pv.StructuredGrid
+        The constructed PyVista structured grid with depth attached as point
+        scalar ``"z"``.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` or ``y`` cannot be reduced to a 1-D array after ravelling.
+    ValueError
+        If ``depth`` is not 2-D or its shape does not match
+        ``(len(y), len(x))``.
+    ValueError
+        If ``contour_levels`` is less than 1.
     """
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
