@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Callable, Literal, Optional, Sequence, Tuple, Dict, Union
+from typing import TYPE_CHECKING, Any, Callable, ItemsView, Literal, Optional, Sequence, ValuesView
 from dataclasses import dataclass, field
 import numpy as np
 import warnings
+from numpy.typing import ArrayLike
 
 
 from .._validation import _validate_nonempty_string
@@ -14,19 +15,97 @@ from ..eclipse.grids.write import GRDECLWriter
 from ..models.wells import VerticalWell
 from ..models.zone import Zone
 
+if TYPE_CHECKING:
+    from .cornerpoint import CornerPointGrid
+
 
 @dataclass
 class GridProperty:
-    """
-    Cell-based property defined on a grid with shape (nk, nj, ni).
+    """Represent a cell-based property defined on a corner-point grid.
+
+    The property stores values per cell with shape ``(nk, nj, ni)`` and
+    provides assignment helpers for constants, random distributions, functions,
+    arrays, and well-based interpolation.
+
+    Parameters
+    ----------
+    name : str
+        Property name (must be unique on the grid).
+    grid : CornerPointGrid
+        Owning grid; used for shape and masking.
+    values : ndarray or None, optional, default None
+        Property values of shape ``(nk, nj, ni)``. If ``None``, initialized to
+        NaN.
+    eclipse_keyword : str or None, optional, default None
+        Optional Eclipse keyword for export.
+    description : str or None, optional, default None
+        Free-form description.
+
+    Notes
+    -----
+    Initialization delegates validation and normalization to
+    :meth:`__post_init__`.
     """
     name: str = field(repr=True)
-    grid: "CornerPointGrid"= field(repr=False)
+    grid: "CornerPointGrid" = field(repr=False)
     values: Optional[np.ndarray] = None 
     eclipse_keyword: Optional[str] = None                 # Eclipse keyword (PORO, PERMX, ...)
     description: Optional[str] = None
 
-    def __post_init__(self):
+    def __init__(
+        self,
+        name: str,
+        grid: "CornerPointGrid",
+        values: ArrayLike | None = None,
+        eclipse_keyword: str | None = None,
+        description: str | None = None,
+    ) -> None:
+        """Initialize a grid property object and normalize optional inputs.
+
+        Parameters
+        ----------
+        name : str
+            Property name.
+        grid : CornerPointGrid
+            Owning grid used for shape and masking operations.
+        values : ArrayLike or None, optional, default None
+            Initial property values. If ``None``, values are initialized to
+            ``NaN`` in :meth:`__post_init__`.
+        eclipse_keyword : str or None, optional, default None
+            Optional Eclipse keyword used during GRDECL export.
+        description : str or None, optional, default None
+            Optional property description.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        All semantic validation is handled by :meth:`__post_init__`.
+        """
+        self.name = name
+        self.grid = grid
+        self.values = None if values is None else np.asarray(values)
+        self.eclipse_keyword = eclipse_keyword
+        self.description = description
+        self.__post_init__()
+
+    def __post_init__(self) -> None:
+        """Validate and normalize property initialization inputs.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        TypeError
+            If ``name`` is not a string or ``eclipse_keyword`` has invalid type.
+        ValueError
+            If ``name`` is empty, ``values`` shape mismatches grid shape, or
+            ``eclipse_keyword`` resolves to an empty keyword.
+        """
         if not isinstance(self.name, str):
             raise TypeError(f"`name` must be str, got {type(self.name)}.")
         
@@ -58,42 +137,151 @@ class GridProperty:
             if not self.name.strip():
                 raise ValueError("`name` cannot be empty.")
 
-    def show(self, show_inactive: bool = False, cmap: Optional[str] = 'turbo', **kwargs) -> None:
+    def show(
+        self,
+        *, 
+        show_inactive: bool = False, 
+        cmap: str | None = "turbo",
+        title: str | Literal["auto"] | None = "auto", 
+        **kwargs: Any
+    ) -> None:
+        """Visualize the property in 3D using the grid viewer.
+
+        Parameters
+        ----------
+        show_inactive : bool, default False
+            Whether to display inactive cells.
+        cmap : str or None, default 'turbo'
+            Colormap used for rendering.
+        title : str or 'auto', default 'auto'
+            Window title; ``'auto'`` uses the property name.
+        **kwargs
+            Forwarded to viewer ``add_grid``.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        ``title='auto'`` expands to ``Property: <name>``.
+        """
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
         viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
-        viewer.show()
+        if title == 'auto':
+            title = f"Property: {self.name}"
+        viewer.show(title=title)
                           
     @property
-    def shape(self) -> Tuple[int, int, int]:
+    def shape(self) -> tuple[int, int, int]:
+        """Return property array shape.
+
+        Returns
+        -------
+        tuple of int
+            Shape ordered as ``(nk, nj, ni)``.
+        """
         return self.values.shape
 
     @property
-    def nk(self) -> int: return self.shape[0]
+    def nk(self) -> int:
+        """Return number of cells in k direction.
+
+        Returns
+        -------
+        int
+            Number of layers.
+        """
+        return self.shape[0]
 
     @property
-    def nj(self) -> int: return self.shape[1]
+    def nj(self) -> int:
+        """Return number of cells in j direction.
+
+        Returns
+        -------
+        int
+            Number of rows.
+        """
+        return self.shape[1]
     
     @property
-    def ni(self) -> int: return self.shape[2]
+    def ni(self) -> int:
+        """Return number of cells in i direction.
+
+        Returns
+        -------
+        int
+            Number of columns.
+        """
+        return self.shape[2]
     
     @property
-    def n_cells(self) -> int: return self.nk * self.nj * self.ni
+    def n_cells(self) -> int:
+        """Return total number of cells.
+
+        Returns
+        -------
+        int
+            Product ``nk * nj * ni``.
+        """
+        return self.nk * self.nj * self.ni
 
     @property
-    def min(self) -> float: return np.nanmin(self.values)
+    def min(self) -> float:
+        """Return minimum finite property value.
+
+        Returns
+        -------
+        float
+            NaN-aware minimum value.
+        """
+        return np.nanmin(self.values)
 
     @property
-    def max(self) -> float: return np.nanmax(self.values)
+    def max(self) -> float:
+        """Return maximum finite property value.
+
+        Returns
+        -------
+        float
+            NaN-aware maximum value.
+        """
+        return np.nanmax(self.values)
 
     @property
-    def mean(self) -> float: return np.nanmean(self.values)
+    def mean(self) -> float:
+        """Return arithmetic mean of finite values.
+
+        Returns
+        -------
+        float
+            NaN-aware mean value.
+        """
+        return np.nanmean(self.values)
 
     @property
-    def median(self) -> float: return np.nanmedian(self.values)
+    def median(self) -> float:
+        """Return median of finite values.
+
+        Returns
+        -------
+        float
+            NaN-aware median value.
+        """
+        return np.nanmedian(self.values)
 
     @property
-    def std(self) -> float: return np.nanstd(self.values)
+    def std(self) -> float:
+        """Return standard deviation of finite values.
+
+        Returns
+        -------
+        float
+            NaN-aware standard deviation.
+        """
+        return np.nanstd(self.values)
 
 
     # ----------------------------
@@ -109,9 +297,8 @@ class GridProperty:
         min: float | None = None,
         max: float | None = None,
         seed: int | None = None,
-    ):
-        """
-        Add normally distributed random noise to this property.
+    ) -> "GridProperty":
+        """Fill target cells with samples from a normal distribution.
 
         Parameters
         ----------
@@ -119,15 +306,26 @@ class GridProperty:
             Mean of the normal distribution.
         std : float
             Standard deviation of the normal distribution.
-        min : float, optional
+        zone : str or Zone or None, optional, default None
+            Restrict assignment to a zone.
+        include_inactive : bool, default True
+            When False, only active cells are assigned.
+        min : float, optional, default None
             Minimum value after adding noise (clipping).
-        max : float, optional
+        max : float, optional, default None
             Maximum value after adding noise (clipping).
+        seed : int or None, optional, default None
+            Seed for reproducible sampling.
 
         Returns
         -------
         GridProperty
             Self, for chaining.
+
+        Raises
+        ------
+        ValueError
+            If ``std`` is negative.
         """
         if std < 0:
             raise ValueError(f"`std` must be >= 0, got {std}.")
@@ -150,7 +348,7 @@ class GridProperty:
         self,
         func: Callable[..., Any],
         *,
-        source: str | "GridProperty" | Sequence[str | "GridProperty"],
+        source: str | GridProperty | Sequence[str | GridProperty],
         zone: Optional[str | Zone] = None,
         include_inactive: bool = True,
     ) -> "GridProperty":
@@ -162,7 +360,7 @@ class GridProperty:
         ----------
         func : callable
             Function applied to the resolved source arrays.
-        source : str | GridProperty | sequence of these, default "depth"
+        source : str | GridProperty | sequence of these
             Input source(s) for the function.
 
             Supported built-in string sources:
@@ -176,10 +374,10 @@ class GridProperty:
 
             You may also pass another GridProperty, or a tuple/list mixing them.
 
-        zone : str | Zone | None, optional
+        zone : str | Zone | None, optional, default None
             Restrict assignment to a zone.
-        include_inactive : bool, default False
-            If False, only active cells are assigned.
+        include_inactive : bool, default True
+            When False, only active cells are assigned.
 
         Returns
         -------
@@ -196,6 +394,14 @@ class GridProperty:
             lambda z, p: (1000 * p**3) * np.exp(-z / 3000.0),
             source=("depth", poro),
         )
+
+        Raises
+        ------
+        TypeError
+            If ``func`` is not callable or ``source`` type is invalid.
+        ValueError
+            If resolved source dimensions are incompatible or function output
+            shape is unsupported.
         """
         if not callable(func):
             raise TypeError("`func` must be callable (e.g. a function or lambda).")
@@ -263,22 +469,26 @@ class GridProperty:
         zone: Optional[str | Zone] = None,
         include_inactive: bool = True,
     ) -> GridProperty:
-        """
-        Fill this property with a constant value.
+        """Fill target cells with a constant numeric value.
 
         Parameters
         ----------
         value : float or int
             Value to assign.
-        zone : str | Zone | None, optional
+        zone : str | Zone | None, optional, default None
             Restrict assignment to a zone.
-        include_inactive : bool, default False
-            If False, only active cells are assigned.
+        include_inactive : bool, default True
+            When False, only active cells are assigned.
 
         Returns
         -------
         GridProperty
             Self, for chaining.
+
+        Raises
+        ------
+        TypeError
+            If ``value`` is not numeric.
         """
         if not isinstance(value, (int, float)):
             raise TypeError("`value` must be a float or int.")
@@ -299,8 +509,7 @@ class GridProperty:
         max: float | None = None,
         seed: int | None = None,
     ) -> "GridProperty":
-        """
-        Fill property by sampling from a lognormal distribution.
+        """Fill target cells with samples from a lognormal distribution.
 
         Parameters
         ----------
@@ -308,20 +517,30 @@ class GridProperty:
             Mean in linear space (e.g. permeability mean).
         std : float
             Standard deviation in linear space.
-        zone : str | Zone | None, optional
+        zone : str | Zone | None, optional, default None
             Restrict to zone.
-        include_inactive : bool, default False
-            If False, only active cells are assigned.
-        min : float | None
+        include_inactive : bool, default True
+            When False, only active cells are assigned.
+        min : float | None, default None
             Optional lower bound.
-        max : float | None
+        max : float | None, default None
             Optional upper bound.
-        seed : int | None
+        seed : int | None, default None
             Random seed.
 
         Notes
         -----
         Internally converts linear mean/std to log-space parameters.
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+
+        Raises
+        ------
+        ValueError
+            If ``mean <= 0`` or ``std < 0``.
         """
         if mean <= 0:
             raise ValueError("`mean` must be > 0 for lognormal distribution.")
@@ -360,6 +579,31 @@ class GridProperty:
         include_inactive: bool = True,
         seed: int | None = None,
     ) -> "GridProperty":
+        """Fill target cells with samples from a uniform distribution.
+
+        Parameters
+        ----------
+        low : float
+            Lower bound of the distribution.
+        high : float
+            Upper bound of the distribution (must be ``>= low``).
+        zone : str or Zone or None, optional, default None
+            Restrict assignment to a zone.
+        include_inactive : bool, default True
+            When False, inactive cells are excluded.
+        seed : int or None, optional, default None
+            Seed for reproducible sampling.
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+
+        Raises
+        ------
+        ValueError
+            If ``high < low``.
+        """
         if high < low:
             raise ValueError(f"`high` must be >= `low`, got {high} < {low}.")
 
@@ -370,17 +614,6 @@ class GridProperty:
         self.values[mask] = rng.uniform(low, high, size=n)
         return self
 
-    def fill(
-        self,
-        value: float | int,
-        *,
-        zone: str | Zone | None = None,
-        include_inactive: bool = True,
-    ) -> GridProperty:
-        mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
-        self.values[mask] = value
-        return self
-
     def fill_nan(
         self,
         value: float | int,
@@ -388,17 +621,54 @@ class GridProperty:
         zone: str | Zone | None = None,
         include_inactive: bool = True,
     ) -> GridProperty:
+        """Fill ``NaN`` entries with a constant value.
+
+        Parameters
+        ----------
+        value : float or int
+            Replacement value for ``NaN`` cells.
+        zone : str or Zone or None, optional, default None
+            Restrict assignment to a zone.
+        include_inactive : bool, default True
+            When False, inactive cells are excluded.
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+        """
         mask = np.isnan(self.values) & self.grid._target_mask(zone=zone, include_inactive=include_inactive)
         self.values[mask] = value
         return self
 
     def from_array(
         self,
-        values: np.ndarray,
+        values: ArrayLike,
         *,
         zone: str | Zone | None = None,
         include_inactive: bool = True,
     ) -> GridProperty:
+        """Assign values from an array, optionally scoped by zone/active mask.
+
+        Parameters
+        ----------
+        values : ndarray
+            Source array shaped ``(nk, nj, ni)``.
+        zone : str or Zone or None, optional, default None
+            Restrict assignment to a zone.
+        include_inactive : bool, default True
+            When False, inactive cells are excluded.
+
+        Returns
+        -------
+        GridProperty
+            Self, for chaining.
+
+        Raises
+        ------
+        ValueError
+            If ``values`` shape does not match grid shape.
+        """
         values = np.asarray(values)
 
         if values.shape != self.grid.shape:
@@ -418,7 +688,7 @@ class GridProperty:
     def from_wells(
         self,
         wells: Sequence["VerticalWell"],
-        interpolator,
+        interpolator: BaseInterpolator,
         *,
         source: str | None = None,
         mode: Literal["xy", "xyz"] = "xy",
@@ -426,23 +696,22 @@ class GridProperty:
         location: Literal["center", "top", "bottom"] = "center",
         include_inactive: bool = True,
     ) -> "GridProperty":
-        """
-        Populate this property by interpolating well samples.
+        """Populate this property by interpolating well samples.
 
         Parameters
         ----------
         wells : sequence of VerticalWell
             Wells containing property samples.
-        interpolator :
+        interpolator : BaseInterpolator
             Interpolator instance with `fit(points, values)` and `predict(query)` methods.
-        source : str | None, optional
+        source : str | None, optional, default None
             Sample property name to read from wells. Defaults to `self.name`.
         location : {"center", "top", "bottom"}, default "center"
             Grid cell location used as interpolation target.
-        zone : str | Zone | None, optional
+        zone : str | Zone | None, optional, default None
             Restrict assignment to a zone.
-        include_inactive : bool, default False
-            If False, only active cells are assigned.
+        include_inactive : bool, default True
+            When False, only active cells are assigned.
         mode : {"xy", "xyz"}, default "xy"
             If "xyz", every sample must have depth values.
 
@@ -450,6 +719,14 @@ class GridProperty:
         -------
         GridProperty
             Self, for chaining.
+
+        Raises
+        ------
+        ValueError
+            If mode, source data, or interpolator output shape is invalid.
+        TypeError
+            If ``interpolator`` is not a ``BaseInterpolator`` or wells contain
+            invalid entries.
         """
         source = self.name if source is None else source
         _validate_nonempty_string(source, "source")
@@ -509,6 +786,24 @@ class GridProperty:
         self, 
         path: str,
     ) -> None:
+        """Write property values to a GRDECL file.
+
+        Parameters
+        ----------
+        path : str
+            Destination file path.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        MissingEclipseKeywordError
+            If this property has no Eclipse keyword.
+        MissingPropertyValueError
+            If value export fails due to missing values.
+        """
         writer = GRDECLWriter()
         if self.eclipse_keyword is None:
             raise MissingEclipseKeywordError(property_name=self.name)
@@ -523,6 +818,13 @@ class GridProperty:
             raise MissingPropertyValueError(property_name=self.name) from e
 
     def summary(self) -> str:
+        """Return a formatted textual summary for the property.
+
+        Returns
+        -------
+        str
+            Multi-line summary string containing metadata and statistics.
+        """
         lines = [
             "Property Summary",
             "════════════        : {self.name}",
@@ -546,8 +848,16 @@ class GridProperty:
         source: str,
         mode: Literal["xy", "xyz"],
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Collect well samples into interpolation coordinate/value arrays.
+        """Collect interpolation coordinates and values from well samples.
+
+        Parameters
+        ----------
+        wells : sequence of VerticalWell
+            Wells providing sampled values.
+        source : str
+            Property key used to read values from each well.
+        mode : {"xy", "xyz"}
+            Coordinate mode for interpolation samples.
 
         Returns
         -------
@@ -598,8 +908,17 @@ class GridProperty:
         self,
         location: Literal["center", "top", "bottom"] = "center",
     ) -> np.ndarray:
-        """
-        Return interpolation target coordinates of shape (nk, nj, ni, 3).
+        """Return interpolation target coordinates for a cell location.
+
+        Parameters
+        ----------
+        location : {"center", "top", "bottom"}, default "center"
+            Which cell location to target for interpolation.
+
+        Returns
+        -------
+        ndarray
+            Target coordinates in XYZ order.
         """
         match location:
             case "center":
@@ -628,8 +947,12 @@ class GridProperty:
 # ============================================================
 
 class GridProperties:
-    """
-    Collection-style API for grid properties.
+    """Collection-style API for grid properties.
+
+    Parameters
+    ----------
+    grid : CornerPointGrid
+        Grid that owns the managed properties.
 
     Examples
     --------
@@ -642,19 +965,56 @@ class GridProperties:
 
     poro2 = grid.properties["poro"]
     print(poro2.mean)
+
     """
 
     def __init__(self, grid: "CornerPointGrid") -> None:
+        """Initialize a property manager bound to one grid.
+
+        Parameters
+        ----------
+        grid : CornerPointGrid
+            Grid instance that stores property objects.
+
+        Returns
+        -------
+        None
+        """
         self._grid = grid
 
     def create(
         self,
         name: str,
         *,
-        eclipse_keyword: Optional[str] = None,
-        description: Optional[str] = None,
+        eclipse_keyword: str | None = None,
+        description: str | None = None,
         fill_value: float = np.nan,
     ) -> GridProperty:
+        """Create and register a new property on the grid.
+
+        Parameters
+        ----------
+        name : str
+            Property name (must be unique and non-reserved).
+        eclipse_keyword : str or None, optional
+            Keyword for GRDECL export.
+        description : str or None, optional
+            Human-readable description.
+        fill_value : float, default NaN
+            Initial fill value for all cells.
+
+        Returns
+        -------
+        GridProperty
+            Newly created property attached to the grid.
+
+        Raises
+        ------
+        ExistingPropertyNameError
+            If a property with the same name already exists.
+        ReservedPropertyNameError
+            If ``name`` conflicts with built-in grid attributes.
+        """
         name = self._validate_property_name(name)
 
         if name in self._grid._properties:
@@ -673,28 +1033,99 @@ class GridProperties:
         return prop
 
     def __getitem__(self, name: str) -> GridProperty:
+        """Return a property by name.
+
+        Parameters
+        ----------
+        name : str
+            Property name.
+
+        Returns
+        -------
+        GridProperty
+            Matching property instance.
+
+        Raises
+        ------
+        KeyError
+            If no property with the given name exists.
+        """
         try:
             return self._grid._properties[name]
         except KeyError as e:
             raise KeyError(f"Property '{name}' does not exist.") from e
 
     def __contains__(self, name: str) -> bool:
+        """Check whether a property name exists.
+
+        Parameters
+        ----------
+        name : str
+            Property name to query.
+
+        Returns
+        -------
+        bool
+            ``True`` if the property exists, else ``False``.
+        """
         return name in self._grid._properties
 
     @property
     def names(self) -> list[str]:
+        """Return property names in insertion order.
+
+        Returns
+        -------
+        list of str
+            Registered property names.
+        """
         return list(self._grid._properties.keys())
 
     @property
-    def items(self):
+    def items(self) -> ItemsView[str, GridProperty]:
+        """Return name/property view.
+
+        Returns
+        -------
+        ItemsView[str, GridProperty]
+            Dictionary-style items view over managed properties.
+        """
         return self._grid._properties.items()
 
     @property
-    def values(self):
+    def values(self) -> ValuesView[GridProperty]:
+        """Return values view of property instances.
+
+        Returns
+        -------
+        ValuesView[GridProperty]
+            Dictionary-style values view over managed properties.
+        """
         return self._grid._properties.values()
 
     @staticmethod
     def _validate_property_name(name: str) -> str:
+        """Validate a candidate property name.
+
+        Parameters
+        ----------
+        name : str
+            Candidate name to validate.
+
+        Returns
+        -------
+        str
+            Validated name.
+
+        Raises
+        ------
+        TypeError
+            If ``name`` is not a string.
+        ValueError
+            If ``name`` is empty after stripping.
+        ReservedPropertyNameError
+            If ``name`` is a reserved grid property name.
+        """
         from .cornerpoint import RESERVED_GRID_PROPERTY_NAMES
         
         if not isinstance(name, str):
@@ -707,7 +1138,3 @@ class GridProperties:
             raise ReservedPropertyNameError(property_name=name, reserved_names=RESERVED_GRID_PROPERTY_NAMES)
 
         return name
-
-
-# class UndefinedEclipseKeywordError(ValueError):
-    

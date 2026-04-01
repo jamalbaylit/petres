@@ -136,6 +136,23 @@ class Color:
         object.__setattr__(self, "a", a)
 
     def to_rgba(self, value: Any) -> tuple[float, float, float, float]:
+        """Parse input into normalized RGBA tuple using matplotlib's parser.
+
+        Parameters
+        ----------
+        value : Any
+            Color specification acceptable by ``matplotlib.colors.to_rgba``.
+
+        Returns
+        -------
+        tuple[float, float, float, float]
+            Parsed RGBA values in [0, 1].
+
+        Raises
+        ------
+        ValueError
+            If parsing fails.
+        """
         try:
             rgba = to_rgba(value)
             return rgba
@@ -143,6 +160,7 @@ class Color:
             raise ValueError(f"Failed to parse color using matplotlib: {value}") from e
         
     def _parse_color(self, value: Any) -> tuple[float, float, float, float]:
+        """Fallback color parser used when matplotlib formats are unavailable."""
         if isinstance(value, Color):
             return value.r, value.g, value.b, value.a
 
@@ -193,12 +211,15 @@ class Color:
     # Backend exports
     # -----------------------------
     def as_rgb(self) -> tuple[float, float, float]:
+        """Return the color as an ``(r, g, b)`` tuple in [0, 1]."""
         return (self.r, self.g, self.b)
 
     def as_rgba(self) -> tuple[float, float, float, float]:
+        """Return the color as an ``(r, g, b, a)`` tuple in [0, 1]."""
         return (self.r, self.g, self.b, self.a)
 
     def as_hex(self, include_alpha: bool = False) -> str:
+        """Return the color as a hex string, optionally including alpha."""
         r = int(round(self.r * 255))
         g = int(round(self.g * 255))
         b = int(round(self.b * 255))
@@ -209,6 +230,7 @@ class Color:
     
     @staticmethod
     def get_discrete_cmap(n: int, cmap: str):
+        """Generate ``n`` discrete colors sampled from a Matplotlib colormap."""
         if n <= 0:
             raise ValueError("Number of colors must be positive.")
         try:

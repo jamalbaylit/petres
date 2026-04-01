@@ -12,7 +12,12 @@ from petres.grids.cornerpoint import CornerPointGrid
 
 
 class AquiferDirection(Enum):
-    """Aquifer connection directions."""
+    """Enumerate lateral aquifer connection directions.
+
+    Notes
+    -----
+    The values map directly to Eclipse AQUANCON face identifiers.
+    """
     I_MINUS = "I-"  # left boundary (scan i increasing)
     I_PLUS = "I+"   # right boundary (scan i decreasing)
     J_MINUS = "J-"  # top boundary (scan j increasing)
@@ -21,7 +26,27 @@ class AquiferDirection(Enum):
 
 @dataclass
 class AquanconEntry:
-    """Single AQUANCON entry."""
+    """Represent one AQUANCON record.
+
+    Parameters
+    ----------
+    aquifer_id : int
+        Identifier of the analytic aquifer in the Eclipse model.
+    i_min : int
+        Minimum I index (1-indexed, inclusive).
+    i_max : int
+        Maximum I index (1-indexed, inclusive).
+    j_min : int
+        Minimum J index (1-indexed, inclusive).
+    j_max : int
+        Maximum J index (1-indexed, inclusive).
+    k_min : int
+        Minimum K index (1-indexed, inclusive).
+    k_max : int
+        Maximum K index (1-indexed, inclusive).
+    face : str
+        Boundary face identifier such as ``'I-'``, ``'I+'``, ``'J-'``, or ``'J+'``.
+    """
     aquifer_id: int
     i_min: int  # 1-indexed
     i_max: int  # 1-indexed
@@ -32,6 +57,13 @@ class AquanconEntry:
     face: str   # 'I-', 'I+', 'J-', 'J+'
 
     def to_eclipse_format(self) -> str:
+        """Format this entry as an Eclipse AQUANCON line.
+
+        Returns
+        -------
+        str
+            Single AQUANCON-formatted line terminated by ``/``.
+        """
         return (
             f"   {self.aquifer_id} {self.i_min} {self.i_max} "
             f"{self.j_min} {self.j_max} {self.k_min} {self.k_max} "
@@ -40,15 +72,27 @@ class AquanconEntry:
 
 
 class AQUANCONGenerator:
-    """
-    Generator for Eclipse AQUANCON keyword entries.
+    """Build Eclipse AQUANCON keyword entries from a corner-point grid.
 
-    Works with CornerPointGrid:
-      - grid.active shape: (nk, nj, ni) and indexed as [k, j, i]
-      - Lateral indexing is j,i everywhere
+    Notes
+    -----
+    This generator assumes CornerPointGrid conventions where:
+    ``grid.active`` has shape ``(nk, nj, ni)`` and lateral indexing is ``[j, i]``.
     """
 
-    def __init__(self, grid: CornerPointGrid):
+    def __init__(self, grid: CornerPointGrid) -> None:
+        """Initialize a generator for one grid.
+
+        Parameters
+        ----------
+        grid : CornerPointGrid
+            Grid used to derive boundary-connected active cells.
+
+        Raises
+        ------
+        AssertionError
+            If ``grid.active.shape`` does not match ``(grid.nk, grid.nj, grid.ni)``.
+        """
         self.grid = grid
         self._entries: List[AquanconEntry] = []
 
@@ -59,17 +103,50 @@ class AQUANCONGenerator:
         )
 
     def clear(self) -> AQUANCONGenerator:
+        """Remove all generated entries.
+
+        Returns
+        -------
+        AQUANCONGenerator
+            The current generator instance to support chaining.
+        """
         self._entries.clear()
         return self
 
     @property
     def entries(self) -> List[AquanconEntry]:
+        """Return a copy of generated AQUANCON entries.
+
+        Returns
+        -------
+        list[AquanconEntry]
+            Snapshot copy of internal entry objects.
+        """
         return self._entries.copy()
 
     def to_eclipse_format(self) -> List[str]:
+        """Convert all entries to Eclipse AQUANCON record strings.
+
+        Returns
+        -------
+        list[str]
+            AQUANCON lines, one per stored entry.
+        """
         return [e.to_eclipse_format() for e in self._entries]
 
     def export(self, filename: Optional[str] = None) -> str:
+        """Serialize the AQUANCON block and optionally write it to disk.
+
+        Parameters
+        ----------
+        filename : str or None, default=None
+            Destination file path. If ``None``, only the serialized text is returned.
+
+        Returns
+        -------
+        str
+            Full AQUANCON block text. Returns an empty string when no entries exist.
+        """
         if not self._entries:
             return ""
 
@@ -85,9 +162,23 @@ class AQUANCONGenerator:
         return result
 
     def __str__(self) -> str:
+        """Return the serialized AQUANCON block.
+
+        Returns
+        -------
+        str
+            String representation equivalent to :meth:`export`.
+        """
         return self.export()
 
     def __repr__(self) -> str:
+        """Return a concise debug representation.
+
+        Returns
+        -------
+        str
+            Representation containing the number of generated entries.
+        """
         return f"AquanconGenerator(entries={len(self._entries)})"
 
     # ----------------------------
@@ -101,13 +192,39 @@ class AQUANCONGenerator:
         k_lower: int = 1,
         k_upper: int = 1,
     ) -> "AquanconGenerator":
-        """
-        Add aquifer connection to a lateral boundary.
+        """Add a lateral aquifer connection and generate AQUANCON ranges.
 
-        Notes (CornerPointGrid):
-        - Active mask is 3D (nk, nj, ni).
-        - AQUANCON is specified using (I1,I2,J1,J2,K1,K2,'FACE').
-        - We select boundary cells per (j,i) for each k, then merge to ranges.
+        Parameters
+        ----------
+        aquifer_id : int
+            Analytic aquifer identifier to assign to generated entries.
+        direction : AquiferDirection
+            Boundary scan direction used to pick first active boundary cells.
+        k_lower : int, default=1
+            Lower K index (1-indexed, inclusive).
+        k_upper : int, default=1
+            Upper K index (1-indexed, inclusive).
+
+        Returns
+        -------
+        AquanconGenerator
+            The current generator instance, allowing chained calls.
+
+        Raises
+        ------
+        ValueError
+            If K bounds are invalid or outside the grid dimensions.
+
+        Notes
+        -----
+        Active cells are reduced from ``(nk, nj, ni)`` to a ``(nj, ni)`` mask over the
+        selected K interval, then contiguous boundary cells are merged into AQUANCON
+        index ranges.
+
+        Examples
+        --------
+        >>> generator.add_aquifer(1, AquiferDirection.I_MINUS, k_lower=1, k_upper=3)
+        AquanconGenerator(entries=...)
         """
         if k_lower < 1 or k_upper < 1:
             raise ValueError("k_lower/k_upper must be 1-indexed and >= 1.")
@@ -153,16 +270,21 @@ class AQUANCONGenerator:
         k0: int,
         k1: int,
     ) -> np.ndarray:
-        """
-        Compute boundary mask in j,i indexing.
+        """Compute a 2D boundary mask for a K interval.
 
-        We first reduce 3D active (nk,nj,ni) to 2D active_ji by OR-ing over k in [k0..k1].
-        Then we select "first active" along the scan direction.
+        Parameters
+        ----------
+        direction : AquiferDirection
+            Scan direction used to select the first active cell on each row/column.
+        k0 : int
+            Lower K index (0-indexed, inclusive).
+        k1 : int
+            Upper K index (0-indexed, inclusive).
 
         Returns
         -------
-        mask_ji : np.ndarray
-            shape (nj, ni), indexed as mask_ji[j, i]
+        numpy.ndarray
+            Boolean mask with shape ``(nj, ni)`` indexed as ``mask_ji[j, i]``.
         """
         # inclusive k range
         active_2d = self.grid.active[k0 : k1 + 1].any(axis=0)  # (nj, ni)
@@ -211,10 +333,19 @@ class AQUANCONGenerator:
         mask_ji: np.ndarray,
         direction: AquiferDirection,
     ) -> List[Tuple[int, int, int, int]]:
-        """
-        Extract rectangular ranges from a boundary mask (j,i indexing).
+        """Convert a boundary mask to contiguous AQUANCON index ranges.
 
-        Returns tuples (i_min, i_max, j_min, j_max) in 0-index.
+        Parameters
+        ----------
+        mask_ji : numpy.ndarray
+            Boolean boundary mask indexed as ``[j, i]``.
+        direction : AquiferDirection
+            Boundary orientation used to determine grouping axis.
+
+        Returns
+        -------
+        list[tuple[int, int, int, int]]
+            List of ``(i_min, i_max, j_min, j_max)`` tuples in 0-indexed coordinates.
         """
         j_indices, i_indices = np.where(mask_ji)
         if len(i_indices) == 0:
@@ -279,11 +410,39 @@ class AQUANCONGenerator:
         k_upper: int = 1,
         figsize: Tuple[float, float] = (12, 10),
     ) -> plt.Figure:
-        """
-        Visualize boundary mask in the i-j plane (j,i indexing).
+        """Plot active, inactive, and selected boundary cells in the IJ plane.
 
-        This uses pillar_top XY geometry (CornerPointGrid.pillars) for plotting.
-        Corners are taken from pillars.pillar_top[j, i, 0:2].
+        Parameters
+        ----------
+        direction : AquiferDirection
+            Boundary scan direction used to define boundary cells.
+        k_lower : int, default=1
+            Lower K index (1-indexed, inclusive).
+        k_upper : int, default=1
+            Upper K index (1-indexed, inclusive).
+        figsize : tuple[float, float], default=(12, 10)
+            Figure size in inches.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            Created matplotlib figure containing the boundary visualization.
+
+        Raises
+        ------
+        ValueError
+            If K bounds are invalid for the grid.
+
+        Notes
+        -----
+        Cell outlines are approximated as axis-aligned rectangles from
+        ``pillars.pillar_top`` coordinates.
+
+        Examples
+        --------
+        >>> fig = generator.visualize_boundary_mask(AquiferDirection.J_PLUS, 1, 2)
+        >>> fig is not None
+        True
         """
         if k_lower < 1 or k_upper < 1 or k_lower > k_upper or k_upper > self.grid.nk:
             raise ValueError("Invalid k_lower/k_upper (must be 1-indexed within grid.nk).")

@@ -37,4 +37,8 @@ class SceneTheme3D:
     # camera_up: tuple[float, float, float] = (1, 1, -1)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
 
+    title_fontsize: int = 12
+    title_color: Color = "black"
+    title_position: str = "upper_edge"
+
     camera: Camera3D = Camera3D()

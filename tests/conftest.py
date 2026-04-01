@@ -55,13 +55,13 @@ def simple_cornerpoint_grid(rectilinear_vertices):
 @pytest.fixture
 def horizon_plane_top():
     xy, z = make_plane_samples()
-    return Horizon(name="Top", xy=xy, z=z, interpolator=IDWInterpolator(power=2.0))
+    return Horizon(name="Top", xy=xy, depth=z, interpolator=IDWInterpolator(power=2.0))
 
 
 @pytest.fixture
 def horizon_plane_base():
     xy, z = make_plane_samples()
-    return Horizon(name="Base", xy=xy, z=z + 30.0, interpolator=IDWInterpolator(power=2.0))
+    return Horizon(name="Base", xy=xy, depth=z + 30.0, interpolator=IDWInterpolator(power=2.0))
 
 
 @pytest.fixture
@@ -69,13 +69,13 @@ def continuous_zones(horizon_plane_top, horizon_plane_base):
     mid = Horizon(
         name="Mid",
         xy=horizon_plane_top.xy,
-        z=horizon_plane_top.z + 15.0,
+        depth=horizon_plane_top.depth + 15.0,
         interpolator=IDWInterpolator(power=2.0),
     )
     deep = Horizon(
         name="Deep",
         xy=horizon_plane_top.xy,
-        z=horizon_plane_top.z + 45.0,
+        depth=horizon_plane_top.depth + 45.0,
         interpolator=IDWInterpolator(power=2.0),
     )
     return [
@@ -89,19 +89,19 @@ def gap_zones(horizon_plane_top):
     h2 = Horizon(
         name="H2",
         xy=horizon_plane_top.xy,
-        z=horizon_plane_top.z + 20.0,
+        depth=horizon_plane_top.depth + 20.0,
         interpolator=IDWInterpolator(power=2.0),
     )
     h3 = Horizon(
         name="H3",
         xy=horizon_plane_top.xy,
-        z=horizon_plane_top.z + 40.0,
+        depth=horizon_plane_top.depth + 40.0,
         interpolator=IDWInterpolator(power=2.0),
     )
     h4 = Horizon(
         name="H4",
         xy=horizon_plane_top.xy,
-        z=horizon_plane_top.z + 65.0,
+        depth=horizon_plane_top.depth + 65.0,
         interpolator=IDWInterpolator(power=2.0),
     )
     return [

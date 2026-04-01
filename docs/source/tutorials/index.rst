@@ -4,7 +4,7 @@ Tutorials
 The tutorials present Petres through practical workflows, beginning with direct grid creation and progressing toward geological model construction from horizons, zones, and pillar-based frameworks.
 
 
-#. :doc:`basic-grid-creation`
+#. :doc:`rectilinear-and-regular-grids`
 #. :doc:`horizon-modeling`
 #. :doc:`zone-modeling`
 #. :doc:`pillar-gridding`
@@ -16,7 +16,7 @@ The tutorials present Petres through practical workflows, beginning with direct 
    :maxdepth: 1
    :hidden:
 
-   basic-grid-creation
+   rectilinear-and-regular-grids
    horizon-modeling
    zone-modeling
    pillar-gridding

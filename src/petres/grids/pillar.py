@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, Self
+from typing import Optional, Tuple, Self
 import numpy as np
 
 
@@ -13,38 +13,61 @@ from .sampling._validation import _validate_vertex_array
 
 @dataclass
 class PillarGrid:
-    """
-    Structured pillar-based grid defining lateral (i-j) topology.
+    """Represent a structured pillar-based grid with lateral i-j topology.
 
-    The grid is defined by straight coordinate lines (pillars) connecting 
-    a top point to a bottom point. Pillars are indexed in i-j index space.
+    Parameters
+    ----------
+    pillar_top : numpy.ndarray
+        Top endpoints of each pillar with shape ``(nj+1, ni+1, 3)``.
+    pillar_bottom : numpy.ndarray
+        Bottom endpoints of each pillar with shape ``(nj+1, ni+1, 3)``.
 
-    Attributes:
-        pillar_top (np.ndarray): Top endpoints of pillars, shape (nj+1, ni+1, 3)
-        pillar_bottom (np.ndarray): Bottom endpoints of pillars, shape (nj+1, ni+1, 3)
-    
-    Properties:
-        ni, nj: Number of cells in i, j directions
-        niv, njv: Number of pillar vertices in i, j directions
-        cell_shape: Shape tuple (nj, ni) for cell arrays
-        vertex_shape: Shape tuple (nj+1, ni+1) for pillar arrays
-    
-    Example:
-        >>> # Create a 2×2 pillar grid
-        >>> top = np.array([[[0,0,0], [1,0,0], [2,0,0]],
-        ...                 [[0,1,0], [1,1,0], [2,1,0]],
-        ...                 [[0,2,0], [1,2,0], [2,2,0]]])
-        >>> bottom = top.copy()
-        >>> bottom[:,:,2] = 100  # Set depth to 100
-        >>> grid = PillarGrid(top, bottom)
-        >>> print(grid.cell_shape)  # (2, 2)
+    Notes
+    -----
+    Each pillar is interpreted as a straight segment between corresponding
+    top and bottom points. The i-j topology is inferred from array dimensions.
     """
 
     pillar_top: np.ndarray     # Shape (nj+1, ni+1, 3)
     pillar_bottom: np.ndarray  # Shape (nj+1, ni+1, 3)
 
-    def __post_init__(self):
-        """Validate pillar arrays."""
+    def __init__(self, pillar_top: np.ndarray, pillar_bottom: np.ndarray) -> None:
+        """Initialize a pillar grid from top and bottom pillar endpoints.
+
+        Parameters
+        ----------
+        pillar_top : numpy.ndarray
+            Top endpoints of pillars with shape ``(nj+1, ni+1, 3)``.
+        pillar_bottom : numpy.ndarray
+            Bottom endpoints of pillars with shape ``(nj+1, ni+1, 3)``.
+
+        Returns
+        -------
+        None
+            This constructor stores arrays and triggers post-initialization
+            validation.
+        """
+        self.pillar_top = pillar_top
+        self.pillar_bottom = pillar_bottom
+        self.__post_init__()
+
+    def __post_init__(self) -> None:
+        """Validate pillar array dimensionality and consistency.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If top and bottom arrays have different shapes, or if their shape is
+            not compatible with ``(nj+1, ni+1, 3)``.
+        """
         if self.pillar_top.shape != self.pillar_bottom.shape:
             raise ValueError(
                 "pillar_top and pillar_bottom must have the same shape, "
@@ -63,36 +86,79 @@ class PillarGrid:
 
     @property
     def niv(self) -> int:
-        """Number of pillar vertices in i-direction."""
+        """Return the number of pillar vertices in the i direction.
+
+        Returns
+        -------
+        int
+            Number of pillar vertices along i.
+        """
         return self.pillar_top.shape[1]
 
     @property
     def njv(self) -> int:
-        """Number of pillar vertices in j-direction."""
+        """Return the number of pillar vertices in the j direction.
+
+        Returns
+        -------
+        int
+            Number of pillar vertices along j.
+        """
         return self.pillar_top.shape[0]
 
     @property
     def ni(self) -> int:
-        """Number of cells in i-direction."""
+        """Return the number of cells in the i direction.
+
+        Returns
+        -------
+        int
+            Number of cells along i.
+        """
         return self.niv - 1
 
     @property
     def nj(self) -> int:
-        """Number of cells in j-direction."""
+        """Return the number of cells in the j direction.
+
+        Returns
+        -------
+        int
+            Number of cells along j.
+        """
         return self.njv - 1
 
     @property
     def cell_shape(self) -> Tuple[int, int]:
-        """Shape of cell arrays (nj, ni)."""
+        """Return the cell-array shape.
+
+        Returns
+        -------
+        tuple[int, int]
+            Cell shape as ``(nj, ni)``.
+        """
         return (self.nj, self.ni)
 
     @property
     def vertex_shape(self) -> Tuple[int, int]:
-        """Shape of pillar vertex arrays (nj+1, ni+1)."""
+        """Return the pillar-vertex array shape.
+
+        Returns
+        -------
+        tuple[int, int]
+            Vertex shape as ``(nj+1, ni+1)``.
+        """
         return (self.njv, self.niv)
 
     def to_eclipse_coord(self) -> np.ndarray:
-        """Return pillars in Eclipse COORD format (nj+1, ni+1, 6)."""
+        """Convert pillar endpoints to Eclipse COORD layout.
+
+        Returns
+        -------
+        numpy.ndarray
+            Array with shape ``(nj+1, ni+1, 6)`` where the last dimension is
+            ``(x_top, y_top, z_top, x_bottom, y_bottom, z_bottom)``.
+        """
         return np.concatenate(
             (self.pillar_top, self.pillar_bottom),
             axis=2
@@ -104,9 +170,27 @@ class PillarGrid:
 
         Parameters
         ----------
-        coord : ndarray of shape (nj+1, ni+1, 6)
+        coord : numpy.ndarray
             COORD array storing pillar top and bottom points as
-            (x_top, y_top, z_top, x_bottom, y_bottom, z_bottom).
+            ``(x_top, y_top, z_top, x_bottom, y_bottom, z_bottom)`` with shape
+            ``(nj+1, ni+1, 6)``.
+
+        Returns
+        -------
+        PillarGrid
+            New pillar grid initialized from COORD data.
+
+        Raises
+        ------
+        ValueError
+            If ``coord`` is not a 3D array with trailing dimension length 6.
+
+        Examples
+        --------
+        >>> coord = np.zeros((3, 4, 6), dtype=float)
+        >>> grid = PillarGrid.from_eclipse_coord(coord)
+        >>> grid.vertex_shape
+        (3, 4)
         """
         coord = np.asarray(coord)
 
@@ -131,22 +215,35 @@ class PillarGrid:
         z_top: float,
         z_bottom: float,
     ) -> "PillarGrid":
-        """
-        Create a vertical-pillar grid from explicit vertex coordinate vectors.
+        """Create vertical pillars from rectilinear x and y vertex vectors.
 
         Parameters
         ----------
-        x, y
-            1D vertex coordinates. Shapes must be (ni+1,) and (nj+1,).
-            (i direction varies along x, j direction varies along y).
-        z_top, z_bottom
-            Constant pillar endpoint z-values defining the pillar "envelope".
-            These are NOT horizons. They just bracket the eventual ZCORN.
+        x : numpy.ndarray
+            One-dimensional x-vertex coordinates with shape ``(ni+1,)``.
+        y : numpy.ndarray
+            One-dimensional y-vertex coordinates with shape ``(nj+1,)``.
+        z_top : float
+            Constant top z-value used for all pillar tops.
+        z_bottom : float
+            Constant bottom z-value used for all pillar bottoms. Must be larger
+            than ``z_top``.
 
         Returns
         -------
         PillarGrid
-            Vertical pillars with top/bottom endpoints at constant z.
+            Vertical pillar grid whose top and bottom endpoints are defined by
+            the provided constant z-values.
+
+        Raises
+        ------
+        ValueError
+            If vertex arrays are invalid or if ``z_bottom <= z_top``.
+
+        Notes
+        -----
+        This constructor creates a vertical pillar envelope. It does not define
+        layer geometry or per-corner depth values.
         """
      
         x = _validate_vertex_array(x, "x")
@@ -170,15 +267,57 @@ class PillarGrid:
     def from_regular(
         cls,
         *,
-        xlim: tuple[float, float] | None = None,
-        ylim: tuple[float, float] | None = None,
-        ni: int | None = None,
-        nj: int | None = None,
-        dx: float | None = None,
-        dy: float | None = None,
+        xlim: Optional[tuple[float, float]] = None,
+        ylim: Optional[tuple[float, float]] = None,
+        ni: Optional[int] = None,
+        nj: Optional[int] = None,
+        dx: Optional[float] = None,
+        dy: Optional[float] = None,
         z_top: float = 0.0,
         z_bottom: float = 1.0,
     ) -> Self:
+        """Construct a vertical pillar grid from bounding box and resolution.
+
+        Parameters
+        ----------
+        xlim : tuple[float, float] or None, default None
+            Inclusive x-limits for grid generation.
+        ylim : tuple[float, float] or None, default None
+            Inclusive y-limits for grid generation.
+        ni : int or None, default None
+            Number of cells along i when explicit counts are used.
+        nj : int or None, default None
+            Number of cells along j when explicit counts are used.
+        dx : float or None, default None
+            Cell size along x when spacing-based resolution is used.
+        dy : float or None, default None
+            Cell size along y when spacing-based resolution is used.
+        z_top, z_bottom : float, default 0.0, 1.0
+            Constant pillar end depths.
+
+        Returns
+        -------
+        PillarGrid
+            Grid with vertical pillars spanning the limits.
+
+        Raises
+        ------
+        ValueError
+            If the provided limit/resolution combination is inconsistent.
+
+        Notes
+        -----
+        Vertex vectors are resolved by ``_resolve_xy_vertices`` and then passed
+        to :meth:`from_rectilinear`.
+
+        Examples
+        --------
+        >>> grid = PillarGrid.from_regular(
+        ...     xlim=(0.0, 1000.0), ylim=(0.0, 500.0), ni=10, nj=5
+        ... )
+        >>> grid.cell_shape
+        (5, 10)
+        """
         xv, yv = _resolve_xy_vertices(
             xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy
         )

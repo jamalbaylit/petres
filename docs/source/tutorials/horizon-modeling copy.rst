@@ -3,32 +3,27 @@
 Horizon Modeling
 ================
 
-This tutorial introduces horizon modeling in Petres and demonstrates how to define and visualize horizons.
+This tutorial covers horizon modeling in Petres, including how to define,
+reconstruct, and visualize continuous subsurface surfaces.
 
-A horizon represents a continuous subsurface surface defined as
-:math:`z = f(x, y)`, where depth or elevation varies spatially across
-the model domain. In Petres, horizons are created from sampled
-:math:`(x, y, z)` data and reconstructed using an interpolation method.
 
 Overview
 --------
 
-A :class:`~petres.models.Horizon` is defined by:
+A horizon is a continuous subsurface surface defined as
+:math:`z = f(x, y)`, where the value represents depth or elevation
+across the model domain.
 
-- ``name``: Horizon name
-- ``xy``: Spatial coordinates of the input points
-- ``z``: Depth or elevation values at those points
-- ``interpolator``: Interpolation method used to reconstruct the surface
-
-Once defined, the horizon behaves as a continuous surface and can be
-sampled or visualized over any desired grid.
+In Petres, horizons are constructed from sampled :math:`(x, y, z)` data
+using the :class:`~petres.models.Horizon` class and reconstructed via
+interpolation. Once defined, the surface can be evaluated at any
+location and visualized over arbitrary grids.
 
 .. important::
 
    A horizon is a **continuous surface**, not a grid.
    It is evaluated on demand using an interpolator and does not
-   contain any inherent discretization.
-
+   contain inherent discretization.
 
 Creating a Horizon
 ------------------
@@ -38,18 +33,20 @@ Inverse Distance Weighting (IDW) interpolation.
 
 .. code-block:: python
 
-   import numpy as np
-
    from petres.interpolators import IDWInterpolator
    from petres.models import Horizon
 
    horizon1 = Horizon(
       name="H1",
       xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-      z=[0, 1, 0, 1],
+      depth=[0, 1, 0, 1],
       interpolator=IDWInterpolator(),
    )
 
+Here, ``name`` defines the name of horizon, 
+``xy`` specifies the spatial coordinates of the sample points,
+``depth`` provides their corresponding depth (or elevation) values,
+and interpolator controls how the continuous surface is reconstructed from these data.
 
 .. note::
 
@@ -57,48 +54,27 @@ Inverse Distance Weighting (IDW) interpolation.
    See :doc:`/tutorials/interpolators` for more details and additional options.
 
 
-Creating Additional Horizons
-----------------------------
-
-In practical workflows, multiple horizons are typically defined to
-represent different structural or stratigraphic surfaces.
-
-.. code-block:: python
-
-   horizon2 = Horizon(
-      name="H2",
-      xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-      z=[2, 2, 3, 3],
-      interpolator=IDWInterpolator(),
-   )
-
-   horizon3 = Horizon(
-       name="H3",
-       xy=[[0, 0], [100, 0], [100, 100], [0, 100]],
-       z=[5, 7, 8, 4],
-       interpolator=IDWInterpolator(),
-   )
-
-
 Visualizing a Horizon
 ---------------------
 
-A horizon is continuous, so it must be sampled on a discrete set of
-points for visualization.
+A horizon is mathematically a continuous surface. However, it is not
+possible to represent or visualize a truly continuous function on a
+computer, since numerical data must be stored at a finite number of points.
+Therefore, the surface is sampled on a discrete set of points for
+visualization.
 
-Petres supports multiple ways to define the sampling grid.
-
+Petres provides multiple ways to define this sampling grid.
 
 Direct Coordinate Sampling
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can provide ``x`` and ``y`` coordinates directly:
+You can provide ``x`` and ``y`` coordinates defining the spatial sampling grid of the horizon surface:
 
 .. code-block:: python
 
    horizon1.show(
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
    )
 
 
@@ -108,10 +84,10 @@ Sampling with Limits and Resolution
 .. code-block:: python
 
    horizon1.show(
-       xlim=(0, 100),
-       ylim=(0, 100),
-       ni=50,
-       nj=50,
+      xlim=(0, 100),
+      ylim=(0, 100),
+      ni=50,
+      nj=50,
    )
 
 
@@ -121,10 +97,10 @@ Sampling with Grid Spacing
 .. code-block:: python
 
    horizon1.show(
-       xlim=(0, 100),
-       ylim=(0, 100),
-       dx=2,
-       dy=2,
+      xlim=(0, 100),
+      ylim=(0, 100),
+      dx=2,
+      dy=2,
    )
 
 
@@ -197,24 +173,8 @@ Manual Color Assignment
    They form the structural backbone of the model.
 
 
-Expected Output
----------------
-
-- An interactive 3D visualization window
-- One or more interpolated surfaces
-- Geometry consistent with input data and interpolation method
-
-
-Summary
--------
-
-- Horizons represent continuous surfaces :math:`z = f(x, y)`
-- They are defined from scattered data and interpolated
-- They are reusable across multiple modeling workflows
-
-
 Next Steps
 ----------
 
 - :ref:`zone-modeling`
-- :ref:`grid-from-zones-tutorial`
+- :ref:`grid-modeling-from-horizons-and-zones`
