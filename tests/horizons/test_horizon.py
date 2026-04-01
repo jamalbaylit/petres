@@ -18,21 +18,21 @@ def test_horizon_sample_and_to_grid_shapes(horizon_plane_top):
 
 def test_horizon_rejects_invalid_xy_shape():
     with pytest.raises(ValueError, match="xy must be shape"):
-        Horizon(name="H", xy=np.array([1.0, 2.0]), z=np.array([1.0]), interpolator=IDWInterpolator())
+        Horizon(name="H", xy=np.array([1.0, 2.0]), depth=np.array([1.0]), interpolator=IDWInterpolator())
 
 
 def test_horizon_rejects_mismatched_z_size():
     xy = np.array([[0.0, 0.0], [1.0, 1.0]])
     z = np.array([1.0])
-    with pytest.raises(ValueError, match="z must be shape"):
-        Horizon(name="H", xy=xy, z=z, interpolator=IDWInterpolator())
+    with pytest.raises(ValueError, match="depth must be shape"):
+        Horizon(name="H", xy=xy, depth=z, interpolator=IDWInterpolator())
 
 
 def test_horizon_rejects_invalid_interpolator_type():
     xy = np.array([[0.0, 0.0], [1.0, 1.0]])
     z = np.array([1.0, 2.0])
     with pytest.raises(TypeError, match="BaseInterpolator"):
-        Horizon(name="H", xy=xy, z=z, interpolator=object())
+        Horizon(name="H", xy=xy, depth=z, interpolator=object())
 
 
 def test_horizon_from_wells_extracts_tops():

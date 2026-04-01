@@ -1,82 +1,92 @@
 from __future__ import annotations
 
 from typing import Any
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
+
+import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.patches import Polygon as MplPolygon
-import numpy as np
 
 from .....models.boundary import BoundaryPolygon
+
+
+def _polygon_vertices_no_duplicate(vertices: np.ndarray) -> np.ndarray:
+    """Return vertices without a duplicated closing point."""
+    vertices = np.asarray(vertices, dtype=float)
+
+    if vertices.ndim != 2 or vertices.shape[1] != 2:
+        raise ValueError(
+            f"`boundary.vertices` must have shape (n, 2), got {vertices.shape}."
+        )
+
+    if len(vertices) >= 2 and np.allclose(vertices[0], vertices[-1]):
+        return vertices[:-1]
+
+    return vertices
+
 
 
 def _add_boundary_polygon(
     ax: Axes,
     boundary: BoundaryPolygon,
     *,
-    facecolor: str | tuple = 'lightblue',
-    edgecolor: str | tuple = 'black',
-    linewidth: float = 2.0,
-    alpha: float = 0.3,
+    facecolor: str | tuple = "#7ec8e3",
+    edgecolor: str | tuple = "#1f2937",
+    linewidth: float = 1.8,
+    alpha: float = 0.30,
     show_fill: bool = True,
     show_vertices: bool = False,
+    vertex_color: str | tuple | None = None,
+    vertex_size: float = 24.0,
+    show_label: bool = True,
+    label: str | None = None,
+    label_fontsize: float = 10.0,
+    label_box: bool = True,
+    pad_ratio: float = 0.03,
     **kwargs: Any,
 ) -> MplPolygon:
-    """
-    Add a boundary polygon to the 2D plot.
+    """Add a boundary polygon patch to the axes."""
+    vertices = _polygon_vertices_no_duplicate(boundary.vertices)
 
-    Parameters
-    ----------
-    ax : Axes
-        Matplotlib axes to draw on.
-    boundary : BoundaryPolygon
-        Boundary polygon to visualize.
-    facecolor : str or tuple
-        Fill color for the polygon (default: 'lightblue').
-    edgecolor : str or tuple
-        Edge/border color (default: 'black').
-    linewidth : float
-        Width of the boundary line (default: 2.0).
-    alpha : float
-        Transparency of the fill (0-1, default: 0.3).
-    show_fill : bool
-        Whether to fill the polygon (default: True).
-    show_vertices : bool
-        Whether to show vertex markers (default: False).
-    **kwargs
-        Additional kwargs passed to matplotlib Polygon.
-    
-    Returns
-    -------
-    polygon : Polygon
-        The matplotlib Polygon patch object.
-    """
-    vertices = boundary.vertices
-    
-    # Create matplotlib polygon patch
-    poly_kwargs = {
-        'facecolor': facecolor if show_fill else 'none',
-        'edgecolor': edgecolor,
-        'linewidth': linewidth,
-        'alpha': alpha if show_fill else 1.0,
-        **kwargs
-    }
-    
-    polygon = MplPolygon(vertices, closed=True, **poly_kwargs)
+    polygon = MplPolygon(
+        vertices,
+        closed=True,
+        facecolor=facecolor if show_fill else "none",
+        edgecolor=edgecolor,
+        linewidth=linewidth,
+        alpha=alpha if show_fill else 1.0,
+        joinstyle="round",
+        capstyle="round",
+        antialiased=True,
+        **kwargs,
+    )
     ax.add_patch(polygon)
-    
-    # Optionally show vertices
+
     if show_vertices:
-        ax.plot(vertices[:, 0], vertices[:, 1], 'o', 
-               color=edgecolor, markersize=5, zorder=10)
-    
-    # Add label if boundary has a name
-    if boundary.name:
-        # Place label at centroid
-        centroid_x = np.mean(vertices[:-1, 0])  # Exclude last point (duplicate of first)
-        centroid_y = np.mean(vertices[:-1, 1])
-        ax.text(centroid_x, centroid_y, boundary.name,
-               ha='center', va='center', fontsize=10,
-               bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-    
+        ax.scatter(
+            vertices[:, 0],
+            vertices[:, 1],
+            s=vertex_size,
+            c=[edgecolor if vertex_color is None else vertex_color],
+            zorder=3,
+        )
+
+    polygon_label = label if label is not None else getattr(boundary, "name", None)
+    if show_label and polygon_label:
+        centroid = vertices.mean(axis=0)
+        text_kwargs = {
+            "ha": "center",
+            "va": "center",
+            "fontsize": label_fontsize,
+            "zorder": 4,
+        }
+        if label_box:
+            text_kwargs["bbox"] = {
+                "boxstyle": "round,pad=0.25",
+                "facecolor": "white",
+                "edgecolor": "none",
+                "alpha": 0.80,
+            }
+
+        ax.text(centroid[0], centroid[1], polygon_label, **text_kwargs)
+
     return polygon

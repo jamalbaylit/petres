@@ -7,23 +7,23 @@ from ..base import BaseInterpolator
 
 
 class InverseDistanceWeightingInterpolator(BaseInterpolator):
-    """
-    Inverse Distance Weighting (IDW) interpolator.
+    """Inverse Distance Weighting (IDW) interpolator.
 
     Parameters
     ----------
-    power:
+    power : float, default 2.0
         Weight exponent p. Larger values make the interpolation more local.
-        Common values: 1.0–3.0 (default: 2.0).
-    eps:
-        Small value to avoid division-by-zero / stabilize near-zero distances.
-    neighbors:
-        If provided, uses only the k nearest sample points for each query point.
-        This makes prediction faster for large datasets and keeps it local.
-        If None, uses all samples.
-    mode:
-        - "average": normalized weighted average (standard IDW)
-        - "sum": unnormalized sum of weighted values (rarely desired; mostly for debugging)
+        Common values: 1.0–3.0.
+    eps : float, default 1e-12
+        Small value to avoid division-by-zero and stabilize near-zero distances.
+    neighbors : int or None, optional
+        If provided, use only the k nearest samples per query; otherwise use
+        all samples.
+    mode : {'average', 'sum'}, default 'average'
+        Weighting mode. ``'average'`` computes normalized weighted averages;
+        ``'sum'`` returns the weighted sum (rarely used).
+    dtype : numpy.dtype or str, default numpy.float64
+        Storage dtype for cached arrays and outputs.
     """
 
     def __init__(
@@ -33,7 +33,51 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         neighbors: int | None = None,
         mode: Literal["average", "sum"] = "average",
         dtype: np.dtype | str = np.float64,
-    ):
+    ) -> None:
+        """Initialize an inverse-distance weighting interpolator.
+
+        Parameters
+        ----------
+        power : float, default=2.0
+            Weight exponent used in $w = 1 / d^p$. Larger values emphasize
+            nearby samples more strongly.
+        eps : float, default=1e-12
+            Positive numerical guard added to distances before exponentiation.
+            It stabilizes weight computation near zero distances.
+        neighbors : int or None, default=None
+            Number of nearest neighbors to use per prediction point. If
+            ``None``, all fitted samples are used.
+        mode : {'average', 'sum'}, default='average'
+            Aggregation mode for weighted values.
+            ``'average'`` returns normalized weighted averages;
+            ``'sum'`` returns unnormalized weighted sums.
+        dtype : numpy.dtype or str, default=numpy.float64
+            Target NumPy dtype used for cached arrays and prediction outputs.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If ``power <= 0``, ``eps <= 0``, ``neighbors`` is not positive
+            when provided, or ``mode`` is not one of ``'average'`` or
+            ``'sum'``.
+
+        Notes
+        -----
+        When an exact coordinate match is found during prediction, the
+        interpolator returns the matching sample value directly (or the mean of
+        duplicate exact matches), independent of ``mode``.
+
+        Examples
+        --------
+        >>> interp = InverseDistanceWeightingInterpolator(power=2.0, neighbors=8)
+        >>> interp.fit([[0.0, 0.0], [1.0, 1.0]], [10.0, 20.0])
+        >>> interp.predict([[0.5, 0.5]]).shape
+        (1,)
+        """
         super().__init__()
 
         if power <= 0:
@@ -56,6 +100,26 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         self._y: np.ndarray | None = None  # (n,)
 
     def _fit_impl(self, coordinates: np.ndarray, values: np.ndarray) -> None:
+        """Store validated training coordinates and values.
+
+        Parameters
+        ----------
+        coordinates : numpy.ndarray
+            Training coordinates with shape ``(n_samples, dim)``.
+        values : numpy.ndarray
+            Training values with shape ``(n_samples,)``.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If array shapes are invalid, sample counts differ, arrays are
+            empty, non-finite values are present, or ``neighbors`` exceeds the
+            number of fitted samples.
+        """
         X = np.asarray(coordinates, dtype=self.dtype)
         y = np.asarray(values, dtype=self.dtype)
 
@@ -85,6 +149,27 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         self._is_fitted = True
 
     def _predict_impl(self, coordinates: np.ndarray) -> np.ndarray:
+        """Predict values for query coordinates using IDW weighting.
+
+        Parameters
+        ----------
+        coordinates : numpy.ndarray
+            Query coordinates with shape ``(n_points, dim)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Predicted values with shape ``(n_points,)`` and dtype configured by
+            ``dtype``.
+
+        Raises
+        ------
+        ValueError
+            If ``coordinates`` is not 2D, has a dimensionality mismatch with
+            fitted data, or contains non-finite values.
+        RuntimeError
+            If prediction is requested before fitting.
+        """
         self._check_fitted()
         assert self._X is not None and self._y is not None
 

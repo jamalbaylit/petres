@@ -1,32 +1,63 @@
 from __future__ import annotations
 
+from typing import Any, Sequence, Literal
 from dataclasses import dataclass, field
 from shapely.geometry import Polygon
 from shapely import points, contains
 from numpy.typing import ArrayLike
-from typing import Any, Sequence
 import numpy as np
 
 
 @dataclass(frozen=True)
 class BoundaryPolygon:
     """
-    A 2D boundary (AOI / field outline) represented as a closed polygon in XY.
+    Represent a 2D area-of-interest boundary as a closed polygon in XY space.
+
+    The class stores validated polygon vertices and a cached Shapely polygon
+    object used for geometric operations such as point-in-polygon queries.
 
     Parameters
     ----------
-    vertices
-        Closed ring vertices as ndarray of shape (N, 2). The last point equals the first.
-    name
-        Optional label.
+    vertices : numpy.typing.ArrayLike
+        Polygon vertices with shape ``(N, 2)``. The ring is automatically closed
+        if the first and last points are not equal within tolerance.
+    name : str or None, default=None
+        Optional boundary label.
+
+    Raises
+    ------
+    ValueError
+        Raised during initialization when vertices cannot form a valid finite
+        polygon.
+
+    Notes
+    -----
+    Initialization validates vertex shape, enforces finite coordinates, closes
+    the ring, and constructs an internal Shapely ``Polygon``.
     """
 
-    vertices: np.ndarray
+    vertices: ArrayLike
     name: str | None = None
 
     _polygon: Polygon = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        """Validate vertices, close the ring, and build the internal polygon.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If fewer than three unique points are provided or the polygon is
+            invalid (self-intersections, degenerate ring).
+        """
         xy = self._validate_vertices(self.vertices)
         xy = self._close_ring(xy)
 
@@ -43,6 +74,17 @@ class BoundaryPolygon:
 
     @property
     def bounds(self) -> tuple[float, float, float, float]:
+        """Return the axis-aligned bounding box of the boundary polygon.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        tuple of float
+            Bounding box in the form ``(xmin, ymin, xmax, ymax)``.
+        """
         xy = self.vertices
         xmin = float(np.min(xy[:, 0]))
         ymin = float(np.min(xy[:, 1]))
@@ -50,9 +92,23 @@ class BoundaryPolygon:
         ymax = float(np.max(xy[:, 1]))
         return xmin, ymin, xmax, ymax
 
-    def contains(self, xy: np.ndarray) -> np.ndarray:
-        """
-        Vectorized point-in-polygon using Shapely 2.x (GEOS backend).
+    def contains(self, xy: ArrayLike) -> np.ndarray:
+        """Vectorized point-in-polygon test using Shapely 2.x.
+
+        Parameters
+        ----------
+        xy : numpy.typing.ArrayLike
+            Candidate points of shape ``(N, 2)``.
+
+        Returns
+        -------
+        ndarray of bool
+            Boolean mask indicating whether each point lies inside the polygon.
+
+        Raises
+        ------
+        ValueError
+            If ``xy`` is not a 2D array with two columns.
         """
         pts = np.asarray(xy, dtype=float)
         if pts.ndim != 2 or pts.shape[1] != 2:
@@ -69,10 +125,30 @@ class BoundaryPolygon:
     @classmethod
     def from_vertices(
         cls,
-        vertices: Any,
+        vertices: ArrayLike,
         *,
         name: str | None = None,
     ) -> "BoundaryPolygon":
+        """
+        Create a boundary polygon from raw vertices.
+
+        Parameters
+        ----------
+        vertices : numpy.typing.ArrayLike
+            Sequence of (x, y) coordinate pairs.
+        name : str or None, optional
+            Optional label for the polygon.
+
+        Returns
+        -------
+        BoundaryPolygon
+            Constructed boundary instance.
+
+        Examples
+        --------
+        >>> verts = [(0, 0), (100, 0), (100, 50), (0, 50)]
+        >>> boundary = BoundaryPolygon.from_vertices(verts, name="Field A")
+        """
         return cls(vertices, name=name)
 
     @classmethod
@@ -83,6 +159,32 @@ class BoundaryPolygon:
         *,
         name: str | None = None,
     ) -> "BoundaryPolygon":
+        """
+        Create a boundary polygon from separate x and y sequences.
+
+        Parameters
+        ----------
+        x : Sequence[float]
+            X-coordinates.
+        y : Sequence[float]
+            Y-coordinates; must match shape of `x`.
+        name : str or None, optional
+            Optional label for the polygon.
+
+        Returns
+        -------
+        BoundaryPolygon
+            Constructed boundary instance.
+
+        Raises
+        ------
+        ValueError
+            If `x` and `y` shapes differ.
+
+        Examples
+        --------
+        >>> boundary = BoundaryPolygon.from_xy([0, 100, 100, 0], [0, 0, 50, 50], name="Box")
+        """
         x = np.asarray(x, dtype=float)
         y = np.asarray(y, dtype=float)
         if x.shape != y.shape:
@@ -100,6 +202,32 @@ class BoundaryPolygon:
         *,
         name: str | None = None,
     ) -> "BoundaryPolygon":
+        """
+        Create an axis-aligned rectangular boundary from bounding box limits.
+
+        Parameters
+        ----------
+        xmin, ymin : float
+            Lower-left corner.
+        xmax, ymax : float
+            Upper-right corner; must satisfy xmax > xmin and ymax > ymin.
+        name : str or None, optional
+            Optional label for the polygon.
+
+        Returns
+        -------
+        BoundaryPolygon
+            Rectangular boundary instance.
+
+        Raises
+        ------
+        ValueError
+            If the bounds are invalid.
+
+        Examples
+        --------
+        >>> boundary = BoundaryPolygon.from_bbox(0.0, 0.0, 200.0, 150.0, name="AOI")
+        """
         if not (xmin < xmax and ymin < ymax):
             raise ValueError("Invalid bbox: require xmin < xmax and ymin < ymax.")
         vertices = np.array(
@@ -179,62 +307,64 @@ class BoundaryPolygon:
     def show(
         self,
         *,
-        x: np.ndarray | None = None,
-        y: np.ndarray | None = None,
-        xlim: tuple[float, float] | None = None,
-        ylim: tuple[float, float] | None = None,
-        ni: int | None = None,
-        nj: int | None = None,
-        dx: float | None = None,
-        dy: float | None = None,
-        color: Any | None = None,
-    ):
-        from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
-        viewer.add_boundary_polygon(
-            self, 
-            x=x, y=y, 
-            xlim=xlim, ylim=ylim,
-            ni=ni, nj=nj,
-            dx=dx, dy=dy,
-            color=color
-        )
-        viewer.show()
-    
-    def show2d(
-        self,
-        *,
-        facecolor: str | tuple = 'lightblue',
-        edgecolor: str | tuple = 'black',
-        linewidth: float = 2.0,
-        alpha: float = 0.3,
+        facecolor: str | tuple[Any, ...] = "#7ec8e3",
+        edgecolor: str | tuple[Any, ...] = "#1f2937",
+        linewidth: float = 1.8,
+        alpha: float = 0.30,
         show_fill: bool = True,
         show_vertices: bool = False,
-        **kwargs,
-    ):
+        vertex_size: float = 24.0,
+        aspect: Literal["auto", "equal"] = "auto",
+        title: str | None = None,
+        **kwargs: Any,
+    ) -> "Matplotlib2DViewer":
         """
-        Show boundary polygon in 2D matplotlib view.
-        
+        Quick visualization of the boundary polygon using Matplotlib.
+
         Parameters
         ----------
-        facecolor : str or tuple
-            Fill color for the polygon (default: 'lightblue').
-        edgecolor : str or tuple
-            Edge/border color (default: 'black').
-        linewidth : float
-            Width of the boundary line (default: 2.0).
-        alpha : float
-            Transparency of the fill (0-1, default: 0.3).
-        show_fill : bool
-            Whether to fill the polygon (default: True).
-        show_vertices : bool
-            Whether to show vertex markers (default: False).
-        **kwargs
-            Additional kwargs passed to the viewer.
-        """
-        from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
+        facecolor : str or tuple, default="#7ec8e3"
+            Fill color of the polygon.
+        edgecolor : str or tuple, default="#1f2937"
+            Edge (border) color of the polygon.
+        linewidth : float, default=1.8
+            Width of the polygon boundary line.
+        alpha : float, default=0.30
+            Transparency of the fill (0-1).
+        show_fill : bool, default=True
+            Whether to fill the polygon.
+        show_vertices : bool, default=False
+            Whether to show vertex markers.
+        vertex_size : float, default=24.0
+            Size of vertex markers.
+        aspect : {"auto", "equal"}, default="auto"
+            Axes aspect ratio used by the viewer theme.
+        title : str or None, default=None
+            Title of the plot. If ``None``, no title is shown.
+        **kwargs : Any
+            Additional keyword arguments passed to
+            ``Matplotlib2DViewer.add_boundary_polygon``.
 
-        viewer = Matplotlib2DViewer()
+        Returns
+        -------
+        Matplotlib2DViewer
+            Viewer instance with the polygon added and shown.
+
+        Examples
+        --------
+        >>> boundary = BoundaryPolygon.from_bbox(0.0, 0.0, 100.0, 80.0)
+        >>> viewer = boundary.show(title="Boundary")
+        >>> type(viewer).__name__
+        'Matplotlib2DViewer'
+        """
+
+        from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
+        from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
+
+        viewer = Matplotlib2DViewer(
+            theme=Matplotlib2DViewerTheme(aspect=aspect)
+        )
+
         viewer.add_boundary_polygon(
             self,
             facecolor=facecolor,
@@ -243,6 +373,9 @@ class BoundaryPolygon:
             alpha=alpha,
             show_fill=show_fill,
             show_vertices=show_vertices,
-            **kwargs
+            vertex_size=vertex_size,
+            **kwargs,
         )
-        viewer.show()
+
+        viewer.show(title=title)
+        return viewer

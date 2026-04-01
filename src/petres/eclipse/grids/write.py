@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Generic, Optional, Dict, List
+from typing import Mapping, Sequence
 from datetime import datetime
 from typing import TextIO
 import numpy as np
@@ -19,30 +19,20 @@ from .validation import (
 
 class GRDECLWriter:
     """
-    Export corner-point grid to GRDECL format (Schlumberger Petrel / Eclipse).
+    Write Eclipse/Petrel corner-point data to GRDECL files.
 
-    Parameters
-    ----------
-    COORD : np.ndarray
-        Shape: (ny + 1, nx + 1, 6)
-        Corner-point coordinates array.
-    ZCORN : np.ndarray
-        Shape: (2 * nz, 2 * ny, 2 * nx)
-    ACTNUM : np.ndarray
-        Shape: (nz, ny, nx)
-    properties : dict[str, np.ndarray], optional
-        Cell-based properties.
+    The class provides methods for exporting full grids and individual
+    properties, including optional run-length encoding for compact output.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         """
-        Initialize exporter with grid arrays.
-        
-        Parameters:
-        - COORD: (Ny, Nx, 2, 3) array of pillar coordinates
-        - ZCORN: (Nz, Ny-1, Nx-1, 2, 2, 2) array of corner depths
-        - ACTNUM: (Nz, Ny-1, Nx-1) array of active cells
-        - properties: Optional dictionary of property arrays {name: array}
+        Initialize a GRDECL writer.
+
+        Notes
+        -----
+        The writer is stateless. Grid arrays are supplied to method calls
+        rather than stored on the instance.
         """
 
     def write_property(
@@ -53,15 +43,24 @@ class GRDECLWriter:
         keyword: str
     ) -> None:
         """
-        Export a single grid property to GRDECL format.
-        
-        Parameters:
-        - path: Output file path
-        - values: Array of property values to export
-        - keyword: Eclipse keyword for the property (e.g., 'PORO', 'PERMX')
+        Write a single property array as a GRDECL keyword block.
+
+        Parameters
+        ----------
+        path : str | pathlib.Path
+            Destination GRDECL file path.
+        values : numpy.ndarray
+            Property values to write.
+        keyword : str
+            Eclipse keyword to associate with ``values`` (for example,
+            ``"PORO"`` or ``"PERMX"``).
+
+        Returns
+        -------
+        None
         """
-        with open(path, 'w') as f:
-            f = GRDECLWriter._write_array(f, keyword, values, rle=True)
+        with open(path, "w") as f:
+            GRDECLWriter._write_array(f, keyword, values, rle=True)
 
     def write(
         self,
@@ -70,26 +69,47 @@ class GRDECLWriter:
         coord: np.ndarray, 
         zcorn: np.ndarray, 
         actnum: np.ndarray | None = None,
-        property_values: Optional[Dict[str, np.ndarray]] = None,
-        property_keywords: Optional[List[str]] = None,
+        property_values: Mapping[str, np.ndarray] | None = None,
+        property_keywords: Sequence[str] | None = None,
         rle: bool = True,
         units: str = "FEET",
         mapunits: str = "FEET",
-    ):
+    ) -> None:
         """
-        Export grid to GRDECL file.
-        
-        Parameters:
-        - path: Output file path
-        - grid_name: Name of the grid
-        - project_name: Name of the project
-        - user_name: User name for header
-        - units: Grid units (FEET or METRES)
-        - mapunits: Map units (FEET or METRES)
-        - coordsys: Coordinate system specification (handedness, dimension)
-        - mapaxes: Map axes specification [x0, y0, x1, y1, x2, y2] (None = auto)
-        - include_pinch: Include PINCH keyword
-        - format_style: 'columns' (6 per line) or 'single' (1 per line)
+        Write a complete corner-point grid to a GRDECL file.
+
+        Parameters
+        ----------
+        path : str | pathlib.Path
+            Destination GRDECL file path.
+        coord : numpy.ndarray
+            Pillar coordinate array for the ``COORD`` keyword.
+        zcorn : numpy.ndarray
+            Corner depth array for the ``ZCORN`` keyword with shape
+            ``(2 * nk, 2 * nj, 2 * ni)``.
+        actnum : numpy.ndarray | None, default=None
+            Optional active-cell mask for the ``ACTNUM`` keyword.
+        property_values : Mapping[str, numpy.ndarray] | None, default=None
+            Optional mapping of property keyword to property array.
+        property_keywords : Sequence[str] | None, default=None
+            Optional ordered subset of keys from ``property_values``.
+            When omitted, all keys from ``property_values`` are written.
+        rle : bool, default=True
+            If ``True``, use run-length encoding for array export.
+        units : str, default="FEET"
+            Reserved unit label for grid coordinates.
+        mapunits : str, default="FEET"
+            Reserved map unit label.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        KeyError
+            If ``property_keywords`` contains a keyword not present in
+            ``property_values``.
         """
         
         # zcorn is shaped (2*nk, 2*nj, 2*ni); convert back to cell counts
@@ -129,19 +149,40 @@ class GRDECLWriter:
             
             # Properties
             if property_values:
-                for idx, prop_name in enumerate(property_keywords):
-                    prop_array = property_values[idx]
+                keywords = property_keywords if property_keywords is not None else property_values.keys()
+                for prop_name in keywords:
+                    if prop_name not in property_values:
+                        raise KeyError(f"Property keyword '{prop_name}' is missing from property_values.")
+                    prop_array = property_values[prop_name]
                     f = GRDECLWriter._write_array(f, prop_name, prop_array, rle=rle)
 
 
     def _write_header(
         self, 
-        f,
+        f: TextIO,
         ni: int,
         nj: int,
         nk: int
-    ):
-        """Write file header with metadata."""
+    ) -> TextIO:
+        """
+        Write a metadata header block.
+
+        Parameters
+        ----------
+        f : typing.TextIO
+            Writable text stream.
+        ni : int
+            Number of grid cells in the I direction.
+        nj : int
+            Number of grid cells in the J direction.
+        nk : int
+            Number of grid cells in the K direction.
+
+        Returns
+        -------
+        typing.TextIO
+            The same stream after writing the header.
+        """
         now = datetime.now()
         date_str = now.strftime("%A, %B %d %Y %H:%M:%S")
         f.write(f"-- Format      : Generic Eclipse style (ASCII) grid geometry and properties (*.GRDECL)\n")
@@ -151,8 +192,20 @@ class GRDECLWriter:
         f.write("\n"*2)
         return f
 
-    def _auto_mapaxes(self):
-        """Automatically calculate MAPAXES from grid extent."""
+    def _auto_mapaxes(self) -> list[float]:
+        """
+        Compute default MAPAXES coordinates from ``self.COORD``.
+
+        Parameters
+        ----------
+        self : GRDECLWriter
+            Writer instance expected to expose ``COORD``.
+
+        Returns
+        -------
+        list[float]
+            Six-value list representing MAPAXES points.
+        """
         x_coords = self.COORD[:, :, 0, 0]
         y_coords = self.COORD[:, :, 0, 1]
         
@@ -176,7 +229,35 @@ class GRDECLWriter:
         decimals: int | None = None,
         nan_fill: float | int | None = None,
         rle: bool = False
-    ):  
+    ) -> TextIO:
+        """
+        Write an array as a GRDECL keyword block.
+
+        Parameters
+        ----------
+        f : typing.TextIO
+            Writable text stream.
+        keyword : str
+            GRDECL keyword name.
+        array : numpy.ndarray
+            Array values to write.
+        ncol : int, default=20
+            Number of values or tokens per output line.
+        type : numpy.dtype, default=numpy.float32
+            Target dtype applied before writing.
+        decimals : int | None, default=None
+            Number of decimal places used for float formatting. If ``None``,
+            a compact general format is used.
+        nan_fill : float | int | None, default=None
+            Replacement value for NaN entries. If ``None``, NaNs raise an error.
+        rle : bool, default=False
+            If ``True``, write using run-length encoding.
+
+        Returns
+        -------
+        typing.TextIO
+            The same stream after writing.
+        """  
         
         if np.isinf(array).any():
             raise ValueError(f" Array '{keyword}' contains infinite values.")
@@ -193,7 +274,19 @@ class GRDECLWriter:
 
     @staticmethod
     def _normalize_keyword(keyword: str) -> str:
-        """Normalize property name to valid Eclipse keyword format."""
+        """
+        Normalize a keyword to Eclipse-compatible uppercase form.
+
+        Parameters
+        ----------
+        keyword : str
+            Raw keyword text.
+
+        Returns
+        -------
+        str
+            Normalized keyword.
+        """
         if not isinstance(keyword, str):
             raise TypeError(f"Keyword must be a string, got {type(keyword)}.")
         return keyword.strip().upper()
@@ -206,7 +299,30 @@ class GRDECLWriter:
         ncol: int = 20, 
         type: np.dtype = np.float32, 
         decimals: int | None = None
-    ) -> None:
+    ) -> TextIO:
+        """
+        Write an array in plain (non-RLE) GRDECL form.
+
+        Parameters
+        ----------
+        f : typing.TextIO
+            Writable text stream.
+        keyword : str
+            GRDECL keyword name.
+        array : numpy.ndarray
+            Array values to write.
+        ncol : int, default=20
+            Number of values per output row.
+        type : numpy.dtype, default=numpy.float32
+            Target dtype before writing.
+        decimals : int | None, default=None
+            Decimal precision for float formatting.
+
+        Returns
+        -------
+        typing.TextIO
+            The same stream after writing.
+        """
         flat = np.asarray(array, dtype=type).ravel(order="C")
         keyword = GRDECLWriter._normalize_keyword(keyword)
 
@@ -225,7 +341,30 @@ class GRDECLWriter:
         ncol: int = 12,
         type: np.dtype = np.float32,
         decimals: int | None = None,
-    ):
+    ) -> TextIO:
+        """
+        Write an array using run-length encoded GRDECL tokens.
+
+        Parameters
+        ----------
+        f : typing.TextIO
+            Writable text stream.
+        keyword : str
+            GRDECL keyword name.
+        array : numpy.ndarray
+            Array values to encode and write.
+        ncol : int, default=12
+            Maximum number of tokens per output line.
+        type : numpy.dtype, default=numpy.float32
+            Target dtype before encoding.
+        decimals : int | None, default=None
+            Decimal precision used when normalizing float values for equality.
+
+        Returns
+        -------
+        typing.TextIO
+            The same stream after writing.
+        """
         flat = np.asarray(array, dtype=type).ravel(order="C")
 
         # For float data, normalize before exact-equality RLE
@@ -241,7 +380,24 @@ class GRDECLWriter:
             
     @staticmethod
     def _rle_writer(f: TextIO, lengths: np.ndarray, values: np.ndarray, ncol: int = 12) -> None:
-        """Helper to write RLE data with line wrapping."""
+        """
+        Write precomputed RLE token pairs with line wrapping.
+
+        Parameters
+        ----------
+        f : typing.TextIO
+            Writable text stream.
+        lengths : numpy.ndarray
+            Run lengths associated with ``values``.
+        values : numpy.ndarray
+            Run values associated with ``lengths``.
+        ncol : int, default=12
+            Maximum number of output tokens per line.
+
+        Returns
+        -------
+        None
+        """
         line = []
         for n, v in zip(lengths, values):
             tok = f"{int(n)}*{v}" if n > 1 else f"{v}"
@@ -251,22 +407,23 @@ class GRDECLWriter:
                 line = []
         if line:
             f.write(" ".join(line) + "\n")
-        return f
+        return None
 
     @staticmethod
     def _rle(flat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
-        Vectorized run-length encoding using exact equality.
+        Compute run-length encoding using exact equality.
 
-        This is ideal for integer and boolean data. For float data, values should
-        usually be normalized beforehand (for example by rounding) so that exact
-        equality is meaningful.
+        Parameters
+        ----------
+        flat : numpy.ndarray
+            Input array flattened to one dimension.
 
         Returns
         -------
-        lengths : np.ndarray
+        lengths : numpy.ndarray
             Run lengths.
-        values : np.ndarray
+        values : numpy.ndarray
             Run values.
         """
         flat = np.asarray(flat).ravel()
@@ -289,6 +446,21 @@ class GRDECLWriter:
 
     @staticmethod
     def _get_fmt(array: np.ndarray, decimals: int | None) -> str:
+        """
+        Build the numeric format string for array export.
+
+        Parameters
+        ----------
+        array : numpy.ndarray
+            Array whose dtype determines integer or float formatting.
+        decimals : int | None
+            Decimal precision for float formatting.
+
+        Returns
+        -------
+        str
+            Format string compatible with ``numpy.savetxt``.
+        """
         is_integer = np.issubdtype(array.dtype, np.integer)
         fmt = "%d" if is_integer else f"%.{decimals}f" if decimals is not None else "%g"
         return fmt

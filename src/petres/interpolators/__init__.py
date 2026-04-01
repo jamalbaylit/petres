@@ -1,26 +1,14 @@
 """Interpolation methods for petroleum and reservoir modeling.
 
-Provides various interpolation techniques for mapping sparse domain data
-(e.g., well logs, sample points) to grids and surfaces.
+Provides spatial interpolation techniques (IDW, RBF, kriging) for mapping sparse
+data (e.g., wells, sample points) to grids and surfaces.
 
-Interpolators:
-    InverseDistanceWeightingInterpolator (alias: IDWInterpolator)
-        Shepard's IDW method for local weighted averaging
-    
-    LinearInterpolator
-        Triangulation-based and regular grid linear interpolation
-    
-    RadialBasisFunctionInterpolator (alias: RBFInterpolator)
-        Smooth RBF interpolation with various kernel functions
-    
-    NearestNeighborInterpolator (alias: NNInterpolator)
-        Simple nearest neighbor interpolation
-
-Example:
-    >>> from petres.interpolators import IDWInterpolator
-    >>> idw = IDWInterpolator(power=2.0, max_neighbors=12)
-    >>> idw.fit(well_points, porosity_values)
-    >>> grid_porosity = idw.interpolate(grid_points)
+Examples
+--------
+>>> from petres.interpolators import IDWInterpolator
+>>> idw = IDWInterpolator(power=2.0, neighbors=12)
+>>> idw.fit(well_points, porosity_values)
+>>> grid_porosity = idw.predict(grid_points)
 """
 
 from .spatial.inverse_distance import InverseDistanceWeightingInterpolator

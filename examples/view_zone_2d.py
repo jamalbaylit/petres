@@ -6,11 +6,11 @@ import numpy as np
 # Create two horizons
 xy1 = np.array([[0, 0], [100, 0], [100, 100], [0, 100], [50, 50]])
 z1 = np.array([100, 110, 120, 105, 108])
-horizon1 = Horizon(name="Top", interpolator=IDWInterpolator(), xy=xy1, z=z1)
+horizon1 = Horizon(name="Top", interpolator=IDWInterpolator(), xy=xy1, depth=z1)
 
 xy2 = np.array([[0, 0], [100, 0], [100, 100], [0, 100], [50, 50]])
 z2 = np.array([150, 160, 170, 155, 158])
-horizon2 = Horizon(name="Base", interpolator=IDWInterpolator(), xy=xy2, z=z2)
+horizon2 = Horizon(name="Base", interpolator=IDWInterpolator(), xy=xy2, depth=z2)
 
 # Create a zone from the horizons
 zone = Zone(name="Reservoir", top=horizon1, base=horizon2)
