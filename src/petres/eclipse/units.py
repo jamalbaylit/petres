@@ -84,11 +84,6 @@ class UnitConverter:
         -------
         str
             Physical dimension key that contains both units.
-
-        Raises
-        ------
-        ValueError
-            Raised when the units do not belong to the same known dimension.
         """
         for dimension, units in cls._UNITS.items():
             if from_unit in units and to_unit in units:
