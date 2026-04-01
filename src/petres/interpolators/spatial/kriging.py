@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any, Callable, Iterable, Literal, Optional, Sequence
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, Literal
 
 import numpy as np
 
@@ -39,6 +40,32 @@ class BasePyKrigeInterpolator(BaseInterpolator):
     contract. It handles dependency checks, common model configuration, and
     shared point-execution logic for both ordinary and universal kriging.
 
+    Parameters
+    ----------
+    variogram_model : {"linear", "power", "gaussian", "spherical", "exponential", "hole-effect", "custom"}, default="linear"
+        Variogram model name forwarded to the PyKrige backend model.
+    variogram_parameters : dict[str, Any] or Sequence[float] or None, default=None
+        Explicit variogram parameters. If ``None``, PyKrige estimates the
+        parameters from input data.
+    variogram_function : callable or None, default=None
+        Custom variogram function used when ``variogram_model="custom"``.
+    nlags : int, default=6
+        Number of lag bins used for variogram estimation.
+    weight : bool, default=False
+        Whether semivariances are weighted during variogram fitting.
+    verbose : bool, default=False
+        Whether backend model construction and solve steps emit logs.
+    enable_plotting : bool, default=False
+        Whether PyKrige variogram fitting plots are enabled.
+    exact_values : bool, default=True
+        Whether interpolation reproduces training values exactly.
+    pseudo_inv : bool, default=False
+        Whether to use a pseudo-inverse while solving the kriging system.
+    pseudo_inv_type : {"pinv", "pinvh"}, default="pinv"
+        Pseudo-inverse algorithm used when ``pseudo_inv=True``.
+    backend : {"vectorized", "loop", "C"}, default="vectorized"
+        PyKrige execution backend for prediction calls.
+
     Notes
     -----
     Only point prediction mode is supported. Grid-style execution is
@@ -50,8 +77,8 @@ class BasePyKrigeInterpolator(BaseInterpolator):
     def __init__(
         self,
         variogram_model: VariogramModel = "linear",
-        variogram_parameters: Optional[dict[str, Any] | Sequence[float]] = None,
-        variogram_function: Optional[Callable[..., Any]] = None,
+        variogram_parameters: dict[str, Any] | Sequence[float] | None = None,
+        variogram_function: Callable[..., Any] | None = None,
         nlags: int = 6,
         weight: bool = False,
         verbose: bool = False,
@@ -62,32 +89,6 @@ class BasePyKrigeInterpolator(BaseInterpolator):
         backend: Backend = "vectorized",
     ) -> None:
         """Initialize shared kriging options.
-
-        Parameters
-        ----------
-        variogram_model : {"linear", "power", "gaussian", "spherical", "exponential", "hole-effect", "custom"}, default="linear"
-            Variogram model name forwarded to the PyKrige backend model.
-        variogram_parameters : dict[str, Any] or Sequence[float] or None, default=None
-            Explicit variogram parameters. If ``None``, PyKrige estimates the
-            parameters from input data.
-        variogram_function : callable or None, default=None
-            Custom variogram function used when ``variogram_model="custom"``.
-        nlags : int, default=6
-            Number of lag bins used for variogram estimation.
-        weight : bool, default=False
-            Whether semivariances are weighted during variogram fitting.
-        verbose : bool, default=False
-            Whether backend model construction and solve steps emit logs.
-        enable_plotting : bool, default=False
-            Whether PyKrige variogram fitting plots are enabled.
-        exact_values : bool, default=True
-            Whether interpolation reproduces training values exactly.
-        pseudo_inv : bool, default=False
-            Whether to use a pseudo-inverse while solving the kriging system.
-        pseudo_inv_type : {"pinv", "pinvh"}, default="pinv"
-            Pseudo-inverse algorithm used when ``pseudo_inv=True``.
-        backend : {"vectorized", "loop", "C"}, default="vectorized"
-            PyKrige execution backend for prediction calls.
 
         Raises
         ------
@@ -121,8 +122,8 @@ class BasePyKrigeInterpolator(BaseInterpolator):
         self.backend = backend
 
         self._model: Any = None
-        self._fit_coordinates: Optional[np.ndarray] = None
-        self._fit_values: Optional[np.ndarray] = None
+        self._fit_coordinates: np.ndarray | None = None
+        self._fit_values: np.ndarray | None = None
 
     def _fit_impl(self, coordinates: np.ndarray, values: np.ndarray) -> None:
         """Fit the wrapped PyKrige model.
@@ -133,11 +134,6 @@ class BasePyKrigeInterpolator(BaseInterpolator):
             Training coordinates with shape ``(n_samples, n_dims)``.
         values : numpy.ndarray
             Training target values with shape ``(n_samples,)``.
-
-        Returns
-        -------
-        None
-            This method stores the fitted backend model on the instance.
         """
         self._ensure_pykrige_installed()
 
@@ -349,11 +345,6 @@ class BasePyKrigeInterpolator(BaseInterpolator):
     def _ensure_pykrige_installed() -> None:
         """Validate that PyKrige optional dependencies are available.
 
-        Returns
-        -------
-        None
-            Completes silently when required classes are importable.
-
         Raises
         ------
         ImportError
@@ -376,13 +367,45 @@ class OrdinaryKrigingInterpolator(BasePyKrigeInterpolator):
 
     This wrapper selects ``pykrige.ok.OrdinaryKriging`` for 2D inputs and
     ``pykrige.ok3d.OrdinaryKriging3D`` for 3D inputs.
+
+    Parameters
+    ----------
+    variogram_model : {"linear", "power", "gaussian", "spherical", "exponential", "hole-effect", "custom"}, default="linear"
+        Variogram model name forwarded to the selected PyKrige class.
+    variogram_parameters : dict[str, Any] or Sequence[float] or None, default=None
+        Variogram parameters. If ``None``, PyKrige infers them.
+    variogram_function : callable or None, default=None
+        Custom variogram function used only for ``variogram_model="custom"``.
+    nlags : int, default=6
+        Number of lag bins for variogram fitting.
+    weight : bool, default=False
+        Whether semivariances are weighted in variogram fitting.
+    verbose : bool, default=False
+        Whether PyKrige emits logs.
+    enable_plotting : bool, default=False
+        Whether PyKrige plots variogram fits.
+    exact_values : bool, default=True
+        Whether interpolation reproduces training values exactly.
+    pseudo_inv : bool, default=False
+        Whether to use pseudo-inverse for solving the kriging system.
+    pseudo_inv_type : {"pinv", "pinvh"}, default="pinv"
+        Pseudo-inverse implementation name.
+    backend : {"vectorized", "loop", "C"}, default="vectorized"
+        Execution backend used by PyKrige ``execute``.
+    anisotropy_scaling : float or tuple[float, float], default=1.0
+        2D uses a single scalar. 3D accepts one scalar or ``(scaling_y, scaling_z)``.
+    anisotropy_angle : float or tuple[float, float, float], default=0.0
+        2D uses a single scalar. 3D accepts one scalar or
+        ``(angle_x, angle_y, angle_z)``.
+    coordinates_type : {"euclidean", "geographic"}, default="euclidean"
+        Coordinate interpretation for 2D ordinary kriging.
     """
 
     def __init__(
         self,
         variogram_model: VariogramModel = "linear",
-        variogram_parameters: Optional[dict[str, Any] | Sequence[float]] = None,
-        variogram_function: Optional[Callable[..., Any]] = None,
+        variogram_parameters: dict[str, Any] | Sequence[float] | None = None,
+        variogram_function: Callable[..., Any] | None = None,
         nlags: int = 6,
         weight: bool = False,
         verbose: bool = False,
@@ -396,43 +419,6 @@ class OrdinaryKrigingInterpolator(BasePyKrigeInterpolator):
         coordinates_type: Literal["euclidean", "geographic"] = "euclidean",
     ) -> None:
         """Initialize an ordinary kriging interpolator.
-
-        Parameters
-        ----------
-        variogram_model : {"linear", "power", "gaussian", "spherical", "exponential", "hole-effect", "custom"}, default="linear"
-            Variogram model name forwarded to the selected PyKrige class.
-        variogram_parameters : dict[str, Any] or Sequence[float] or None, default=None
-            Variogram parameters. If ``None``, PyKrige infers them.
-        variogram_function : callable or None, default=None
-            Custom variogram function used only for ``variogram_model="custom"``.
-        nlags : int, default=6
-            Number of lag bins for variogram fitting.
-        weight : bool, default=False
-            Whether semivariances are weighted in variogram fitting.
-        verbose : bool, default=False
-            Whether PyKrige emits logs.
-        enable_plotting : bool, default=False
-            Whether PyKrige plots variogram fits.
-        exact_values : bool, default=True
-            Whether interpolation reproduces training values exactly.
-        pseudo_inv : bool, default=False
-            Whether to use pseudo-inverse for solving the kriging system.
-        pseudo_inv_type : {"pinv", "pinvh"}, default="pinv"
-            Pseudo-inverse implementation name.
-        backend : {"vectorized", "loop", "C"}, default="vectorized"
-            Execution backend used by PyKrige ``execute``.
-        anisotropy_scaling : float or tuple[float, float], default=1.0
-            2D uses a single scalar. 3D accepts one scalar or ``(scaling_y, scaling_z)``.
-        anisotropy_angle : float or tuple[float, float, float], default=0.0
-            2D uses a single scalar. 3D accepts one scalar or
-            ``(angle_x, angle_y, angle_z)``.
-        coordinates_type : {"euclidean", "geographic"}, default="euclidean"
-            Coordinate interpretation for 2D ordinary kriging.
-
-        Returns
-        -------
-        None
-            Stores configuration for use at fit time.
 
         Raises
         ------
@@ -547,13 +533,57 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
     PyKrige's UniversalKriging/UniversalKriging3D implementations. For
     ``specified`` drift, supply drift arrays to ``predict``/``predict_with_variance``
     via ``specified_drift_arrays``.
+
+    Parameters
+    ----------
+    variogram_model : {"linear", "power", "gaussian", "spherical", "exponential", "hole-effect", "custom"}, default="linear"
+        Variogram model name forwarded to the selected PyKrige class.
+    variogram_parameters : dict[str, Any] or Sequence[float] or None, default=None
+        Variogram parameters. If ``None``, PyKrige infers them.
+    variogram_function : callable or None, default=None
+        Custom variogram function used only for ``variogram_model="custom"``.
+    nlags : int, default=6
+        Number of lag bins for variogram fitting.
+    weight : bool, default=False
+        Whether semivariances are weighted in variogram fitting.
+    verbose : bool, default=False
+        Whether PyKrige emits logs.
+    enable_plotting : bool, default=False
+        Whether PyKrige plots variogram fits.
+    exact_values : bool, default=True
+        Whether interpolation reproduces training values exactly.
+    pseudo_inv : bool, default=False
+        Whether to use pseudo-inverse for solving the kriging system.
+    pseudo_inv_type : {"pinv", "pinvh"}, default="pinv"
+        Pseudo-inverse implementation name.
+    backend : {"vectorized", "loop", "C"}, default="vectorized"
+        Execution backend used by PyKrige ``execute``. ``"C"`` is rejected.
+    anisotropy_scaling : float or tuple[float, float], default=1.0
+        2D uses a single scalar. 3D accepts one scalar or ``(scaling_y, scaling_z)``.
+    anisotropy_angle : float or tuple[float, float, float], default=0.0
+        2D uses a single scalar. 3D accepts one scalar or
+        ``(angle_x, angle_y, angle_z)``.
+    drift_terms : Iterable[str] or None, default=None
+        Drift terms enabled in universal kriging.
+    point_drift : Any or None, default=None
+        Point-log drift data for 2D universal kriging.
+    external_drift : numpy.ndarray or None, default=None
+        External drift raster for 2D universal kriging.
+    external_drift_x : numpy.ndarray or None, default=None
+        X-axis coordinates for ``external_drift``.
+    external_drift_y : numpy.ndarray or None, default=None
+        Y-axis coordinates for ``external_drift``.
+    specified_drift : Sequence[numpy.ndarray] or None, default=None
+        Per-sample drift arrays used when ``"specified"`` drift is active.
+    functional_drift : Sequence[callable] or None, default=None
+        Callable drift functions used when ``"functional"`` drift is active.
     """
 
     def __init__(
         self,
         variogram_model: VariogramModel = "linear",
-        variogram_parameters: Optional[dict[str, Any] | Sequence[float]] = None,
-        variogram_function: Optional[Callable[..., Any]] = None,
+        variogram_parameters: dict[str, Any] | Sequence[float] | None = None,
+        variogram_function: Callable[..., Any] | None = None,
         nlags: int = 6,
         weight: bool = False,
         verbose: bool = False,
@@ -564,64 +594,15 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
         backend: Backend = "vectorized",
         anisotropy_scaling: float | tuple[float, float] = 1.0,
         anisotropy_angle: float | tuple[float, float, float] = 0.0,
-        drift_terms: Optional[Iterable[str]] = None,
-        point_drift: Optional[Any] = None,
-        external_drift: Optional[np.ndarray] = None,
-        external_drift_x: Optional[np.ndarray] = None,
-        external_drift_y: Optional[np.ndarray] = None,
-        specified_drift: Optional[Sequence[np.ndarray]] = None,
-        functional_drift: Optional[Sequence[Callable[..., Any]]] = None,
+        drift_terms: Iterable[str] | None = None,
+        point_drift: Any | None = None,
+        external_drift: np.ndarray | None = None,
+        external_drift_x: np.ndarray | None = None,
+        external_drift_y: np.ndarray | None = None,
+        specified_drift: Sequence[np.ndarray] | None = None,
+        functional_drift: Sequence[Callable[..., Any]] | None = None,
     ) -> None:
         """Initialize a universal kriging interpolator.
-
-        Parameters
-        ----------
-        variogram_model : {"linear", "power", "gaussian", "spherical", "exponential", "hole-effect", "custom"}, default="linear"
-            Variogram model name forwarded to the selected PyKrige class.
-        variogram_parameters : dict[str, Any] or Sequence[float] or None, default=None
-            Variogram parameters. If ``None``, PyKrige infers them.
-        variogram_function : callable or None, default=None
-            Custom variogram function used only for ``variogram_model="custom"``.
-        nlags : int, default=6
-            Number of lag bins for variogram fitting.
-        weight : bool, default=False
-            Whether semivariances are weighted in variogram fitting.
-        verbose : bool, default=False
-            Whether PyKrige emits logs.
-        enable_plotting : bool, default=False
-            Whether PyKrige plots variogram fits.
-        exact_values : bool, default=True
-            Whether interpolation reproduces training values exactly.
-        pseudo_inv : bool, default=False
-            Whether to use pseudo-inverse for solving the kriging system.
-        pseudo_inv_type : {"pinv", "pinvh"}, default="pinv"
-            Pseudo-inverse implementation name.
-        backend : {"vectorized", "loop", "C"}, default="vectorized"
-            Execution backend used by PyKrige ``execute``. ``"C"`` is rejected.
-        anisotropy_scaling : float or tuple[float, float], default=1.0
-            2D uses a single scalar. 3D accepts one scalar or ``(scaling_y, scaling_z)``.
-        anisotropy_angle : float or tuple[float, float, float], default=0.0
-            2D uses a single scalar. 3D accepts one scalar or
-            ``(angle_x, angle_y, angle_z)``.
-        drift_terms : Iterable[str] or None, default=None
-            Drift terms enabled in universal kriging.
-        point_drift : Any or None, default=None
-            Point-log drift data for 2D universal kriging.
-        external_drift : numpy.ndarray or None, default=None
-            External drift raster for 2D universal kriging.
-        external_drift_x : numpy.ndarray or None, default=None
-            X-axis coordinates for ``external_drift``.
-        external_drift_y : numpy.ndarray or None, default=None
-            Y-axis coordinates for ``external_drift``.
-        specified_drift : Sequence[numpy.ndarray] or None, default=None
-            Per-sample drift arrays used when ``"specified"`` drift is active.
-        functional_drift : Sequence[callable] or None, default=None
-            Callable drift functions used when ``"functional"`` drift is active.
-
-        Returns
-        -------
-        None
-            Stores configuration and drift-related data.
 
         Raises
         ------
@@ -668,11 +649,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
             Training coordinates with shape ``(n_samples, n_dims)``.
         values : numpy.ndarray
             Training values with shape ``(n_samples,)``.
-
-        Returns
-        -------
-        None
-            This method stores the fitted backend model on the instance.
         """
         self._ensure_pykrige_installed()
         self._validate_universal_kriging_args(coordinates, values)
@@ -862,11 +838,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
             Training coordinates with shape ``(n_samples, n_dims)``.
         values : numpy.ndarray
             Training values with shape ``(n_samples,)``.
-
-        Returns
-        -------
-        None
-            Raises on invalid drift configuration or incompatible inputs.
         """
         dim = int(coordinates.shape[1])
         n_samples = int(coordinates.shape[0])
@@ -884,11 +855,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
         ----------
         dim : int
             Interpolation dimensionality (2 or 3).
-
-        Returns
-        -------
-        None
-            Raises when drift-term names are invalid.
         """
         if self.drift_terms is None:
             return
@@ -920,11 +886,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
         ----------
         dim : int
             Interpolation dimensionality (2 or 3).
-
-        Returns
-        -------
-        None
-            Raises when point-drift data is malformed or incompatible.
         """
         if self.point_drift is None:
             return
@@ -974,11 +935,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
         ----------
         dim : int
             Interpolation dimensionality (2 or 3).
-
-        Returns
-        -------
-        None
-            Raises when external drift arrays are inconsistent or invalid.
         """
         has_any_external = any(
             item is not None
@@ -1046,11 +1002,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
         ----------
         n_samples : int
             Number of training samples used for fitting.
-
-        Returns
-        -------
-        None
-            Raises when specified drift arrays have invalid shape or values.
         """
         if self.specified_drift is None:
             return
@@ -1088,11 +1039,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
         ----------
         dim : int
             Interpolation dimensionality (2 or 3).
-
-        Returns
-        -------
-        None
-            Raises when drift functions are not callable or return invalid values.
         """
         if self.functional_drift is None:
             return
