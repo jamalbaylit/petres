@@ -1,2 +1,3 @@
-# def validate_dates():
+from __future__ import annotations
 
+# def validate_dates():
