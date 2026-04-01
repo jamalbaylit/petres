@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any
+
 import numpy as np
 from numpy.typing import DTypeLike, NDArray
-import re
 
 from .validation import (
     validate_specgrid, 
@@ -49,26 +50,23 @@ class GRDECLData:
 class GRDECLReader:
     """Read Eclipse GRDECL grid keywords into validated NumPy arrays.
 
+    Parameters
+    ----------
+    take_last : bool, default=True
+        Whether to use the last occurrence of a keyword when the same
+        keyword appears multiple times in a deck.
+
     Notes
     -----
     The reader extracts and validates the ``SPECGRID``, ``COORD``, and
     ``ZCORN`` keywords and optionally parses ``ACTNUM``.
+
+    Eclipse decks may redefine keywords later in the file. Setting
+    ``take_last=True`` matches that overriding behavior.
     """
 
     def __init__(self, *, take_last: bool = True):
-        """Initialize the GRDECL reader.
-
-        Parameters
-        ----------
-        take_last : bool, default=True
-            Whether to use the last occurrence of a keyword when the same
-            keyword appears multiple times in a deck.
-
-        Notes
-        -----
-        Eclipse decks may redefine keywords later in the file. Setting
-        ``take_last=True`` matches that overriding behavior.
-        """
+        """Initialize the GRDECL reader."""
         # In decks, later keywords can override earlier ones.
         self.take_last = take_last
 
@@ -151,15 +149,11 @@ class GRDECLReader:
         Parameters
         ----------
         text : str
-            Deck text to search.
         keyword : str
-            Keyword to locate.
 
         Returns
         -------
         str or None
-            Substring after the selected keyword line, or ``None`` if not
-            found.
         """
         pattern = rf"^[ \t]*{re.escape(keyword)}\b.*$"
         matches = list(re.finditer(pattern, text, flags=re.MULTILINE))
@@ -175,12 +169,10 @@ class GRDECLReader:
         Parameters
         ----------
         text_after_keyword : str
-            Text following a keyword declaration line.
 
         Returns
         -------
         str
-            Content before the first ``/`` terminator.
 
         Raises
         ------
@@ -199,12 +191,10 @@ class GRDECLReader:
         Parameters
         ----------
         s : str
-            Token string that may include repeat patterns like ``10*0.25``.
 
         Returns
         -------
         str
-            Expanded token string with repeats replaced by explicit values.
         """
         # Expand Eclipse repetition like: 10*0.25
         pattern = re.compile(r"(\d+)\*([^\s]+)")
@@ -220,14 +210,11 @@ class GRDECLReader:
         Parameters
         ----------
         text : str
-            Deck text to parse.
         keyword : str
-            Keyword to extract.
 
         Returns
         -------
         str
-            Whitespace-normalized keyword content before expansion.
 
         Raises
         ------
@@ -252,16 +239,12 @@ class GRDECLReader:
         Parameters
         ----------
         text : str
-            Deck text to parse.
         keyword : str
-            Keyword to parse.
         dtype : numpy.typing.DTypeLike, default=float
-            Target dtype for the returned array.
 
         Returns
         -------
         numpy.ndarray
-            Parsed 1D array of tokens converted to the requested dtype.
         """
         content = self._get_keyword_content(text, keyword)
         content = self._expand_ecl_pattern(content)
@@ -275,14 +258,11 @@ class GRDECLReader:
         Parameters
         ----------
         text : str
-            Deck text to search.
         keyword : str
-            Keyword to check.
 
         Returns
         -------
         bool
-            ``True`` when the keyword is present, otherwise ``False``.
         """
         # Fast-ish presence check with boundary
         return re.search(rf"^[ \t]*{re.escape(keyword)}\b", text, flags=re.MULTILINE) is not None
