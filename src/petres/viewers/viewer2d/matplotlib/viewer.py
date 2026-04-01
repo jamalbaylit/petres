@@ -18,19 +18,24 @@ from ....models.horizon import Horizon
 from ....models.zone import Zone
 
 
-ColorLike = (
-    str
-    | tuple[float, float, float]
-    | tuple[float, float, float, float]
-)
-
-
 class Matplotlib2DViewer(Base2DViewer):
     """Render 2D reservoir objects with Matplotlib.
 
     This viewer manages a Matplotlib figure/axes pair, applies a reusable visual
     theme, and provides convenience methods to plot horizons, zones, and boundary
     polygons on a common 2D canvas.
+
+    Parameters
+    ----------
+    fig : Figure or None, default=None
+        Figure instance to use. If provided without ``ax``, a new subplot is
+        created on this figure.
+    ax : Axes or None, default=None
+        Axes instance to use. If provided without ``fig``, the corresponding
+        ``ax.figure`` is used automatically.
+    theme : Matplotlib2DViewerTheme or None, default=None
+        Theme configuration controlling layout and styling. When ``None``, the
+        default ``Matplotlib2DViewerTheme`` is used.
     """
 
     def __init__(
@@ -40,22 +45,6 @@ class Matplotlib2DViewer(Base2DViewer):
         theme: Matplotlib2DViewerTheme | None = None,
     ) -> None:
         """Initialize a Matplotlib 2D viewer.
-
-        Parameters
-        ----------
-        fig : Figure or None, default=None
-            Figure instance to use. If provided without ``ax``, a new subplot is
-            created on this figure.
-        ax : Axes or None, default=None
-            Axes instance to use. If provided without ``fig``, the corresponding
-            ``ax.figure`` is used automatically.
-        theme : Matplotlib2DViewerTheme or None, default=None
-            Theme configuration controlling layout and styling. When ``None``, the
-            default ``Matplotlib2DViewerTheme`` is used.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -91,24 +80,11 @@ class Matplotlib2DViewer(Base2DViewer):
         theme : Matplotlib2DViewerTheme
             Theme object containing visual settings such as figure size, axis
             labels, and grid behavior.
-
-        Returns
-        -------
-        None
         """
         self.theme = theme
 
     def apply_theme(self) -> None:
-        """Apply the active theme values to the current axes.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-        """
+        """Apply the active theme values to the current axes."""
         ax = self.ax
         theme = self.theme
 
@@ -142,10 +118,6 @@ class Matplotlib2DViewer(Base2DViewer):
         ----------
         title : str or None, default=None
             Optional title text shown above the axes.
-
-        Returns
-        -------
-        None
         """
         self.ax.relim()
         self.ax.autoscale_view()
@@ -324,13 +296,13 @@ class Matplotlib2DViewer(Base2DViewer):
         self,
         boundary: BoundaryPolygon,
         *,
-        facecolor: ColorLike = "#7ec8e3",
-        edgecolor: ColorLike = "#1f2937",
+        facecolor: str | tuple[float, float, float] | tuple[float, float, float, float] = "#7ec8e3",
+        edgecolor: str | tuple[float, float, float] | tuple[float, float, float, float] = "#1f2937",
         linewidth: float = 1.8,
         alpha: float = 0.30,
         show_fill: bool = True,
         show_vertices: bool = False,
-        vertex_color: ColorLike | None = None,
+        vertex_color: str | tuple[float, float, float] | tuple[float, float, float, float] | None = None,
         vertex_size: float = 24.0,
         show_label: bool = True,
         label: str | None = None,
@@ -339,8 +311,7 @@ class Matplotlib2DViewer(Base2DViewer):
         pad_ratio: float | None = None,
         **kwargs: Any,
     ) -> Self:
-        """
-        Add a boundary polygon overlay to the 2D axes.
+        """Add a boundary polygon overlay to the 2D axes.
 
         Parameters
         ----------
