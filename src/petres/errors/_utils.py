@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 """Utility helpers for formatting error messages."""
 
 from collections.abc import Iterable
+from typing import Any
 
-def _iterable_to_str(value) -> str:
+
+def _iterable_to_str(value: Iterable[Any] | str | None) -> str:
     """Convert an iterable to a readable, comma-separated string.
 
     Parameters
     ----------
-    value : Any
+    value : Iterable[Any], str, or None
         Iterable to stringify; strings are returned unchanged.
 
     Returns
