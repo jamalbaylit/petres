@@ -1,7 +1,10 @@
-from pathlib import Path
-from typing import Mapping, Sequence
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
 from datetime import datetime
+from pathlib import Path
 from typing import TextIO
+
 import numpy as np
 
 from ...errors.eclipse import GRDECLMissingValueError
@@ -23,17 +26,15 @@ class GRDECLWriter:
 
     The class provides methods for exporting full grids and individual
     properties, including optional run-length encoding for compact output.
-    """
-    
-    def __init__(self) -> None:
-        """
-        Initialize a GRDECL writer.
 
-        Notes
-        -----
-        The writer is stateless. Grid arrays are supplied to method calls
-        rather than stored on the instance.
-        """
+    Notes
+    -----
+    The writer is stateless. Grid arrays are supplied to method calls
+    rather than stored on the instance.
+    """
+
+    def __init__(self) -> None:
+        """Initialize a stateless GRDECL writer."""
 
     def write_property(
         self,
@@ -54,10 +55,6 @@ class GRDECLWriter:
         keyword : str
             Eclipse keyword to associate with ``values`` (for example,
             ``"PORO"`` or ``"PERMX"``).
-
-        Returns
-        -------
-        None
         """
         with open(path, "w") as f:
             GRDECLWriter._write_array(f, keyword, values, rle=True)
@@ -100,10 +97,6 @@ class GRDECLWriter:
             Reserved unit label for grid coordinates.
         mapunits : str, default="FEET"
             Reserved map unit label.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -169,19 +162,14 @@ class GRDECLWriter:
 
         Parameters
         ----------
-        f : typing.TextIO
+        f : TextIO
             Writable text stream.
-        ni : int
-            Number of grid cells in the I direction.
-        nj : int
-            Number of grid cells in the J direction.
-        nk : int
-            Number of grid cells in the K direction.
+        ni, nj, nk : int
+            Grid cell counts in the I, J, and K directions.
 
         Returns
         -------
-        typing.TextIO
-            The same stream after writing the header.
+        TextIO
         """
         now = datetime.now()
         date_str = now.strftime("%A, %B %d %Y %H:%M:%S")
@@ -196,15 +184,10 @@ class GRDECLWriter:
         """
         Compute default MAPAXES coordinates from ``self.COORD``.
 
-        Parameters
-        ----------
-        self : GRDECLWriter
-            Writer instance expected to expose ``COORD``.
-
         Returns
         -------
         list[float]
-            Six-value list representing MAPAXES points.
+            Six-value list representing MAPAXES origin and axis points.
         """
         x_coords = self.COORD[:, :, 0, 0]
         y_coords = self.COORD[:, :, 0, 1]
@@ -235,28 +218,26 @@ class GRDECLWriter:
 
         Parameters
         ----------
-        f : typing.TextIO
+        f : TextIO
             Writable text stream.
         keyword : str
             GRDECL keyword name.
-        array : numpy.ndarray
+        array : np.ndarray
             Array values to write.
         ncol : int, default=20
-            Number of values or tokens per output line.
-        type : numpy.dtype, default=numpy.float32
+            Values or tokens per output line.
+        type : np.dtype, default=np.float32
             Target dtype applied before writing.
         decimals : int | None, default=None
-            Number of decimal places used for float formatting. If ``None``,
-            a compact general format is used.
+            Decimal places for float formatting; ``None`` uses compact form.
         nan_fill : float | int | None, default=None
-            Replacement value for NaN entries. If ``None``, NaNs raise an error.
+            Replacement for NaN entries; ``None`` raises on NaN.
         rle : bool, default=False
-            If ``True``, write using run-length encoding.
+            Use run-length encoding when ``True``.
 
         Returns
         -------
-        typing.TextIO
-            The same stream after writing.
+        TextIO
         """  
         
         if np.isinf(array).any():
@@ -285,7 +266,6 @@ class GRDECLWriter:
         Returns
         -------
         str
-            Normalized keyword.
         """
         if not isinstance(keyword, str):
             raise TypeError(f"Keyword must be a string, got {type(keyword)}.")
@@ -305,23 +285,22 @@ class GRDECLWriter:
 
         Parameters
         ----------
-        f : typing.TextIO
+        f : TextIO
             Writable text stream.
         keyword : str
             GRDECL keyword name.
-        array : numpy.ndarray
+        array : np.ndarray
             Array values to write.
         ncol : int, default=20
-            Number of values per output row.
-        type : numpy.dtype, default=numpy.float32
+            Values per output row.
+        type : np.dtype, default=np.float32
             Target dtype before writing.
         decimals : int | None, default=None
             Decimal precision for float formatting.
 
         Returns
         -------
-        typing.TextIO
-            The same stream after writing.
+        TextIO
         """
         flat = np.asarray(array, dtype=type).ravel(order="C")
         keyword = GRDECLWriter._normalize_keyword(keyword)
@@ -347,23 +326,22 @@ class GRDECLWriter:
 
         Parameters
         ----------
-        f : typing.TextIO
+        f : TextIO
             Writable text stream.
         keyword : str
             GRDECL keyword name.
-        array : numpy.ndarray
+        array : np.ndarray
             Array values to encode and write.
         ncol : int, default=12
-            Maximum number of tokens per output line.
-        type : numpy.dtype, default=numpy.float32
+            Maximum tokens per output line.
+        type : np.dtype, default=np.float32
             Target dtype before encoding.
         decimals : int | None, default=None
-            Decimal precision used when normalizing float values for equality.
+            Decimal precision used when normalizing floats for equality.
 
         Returns
         -------
-        typing.TextIO
-            The same stream after writing.
+        TextIO
         """
         flat = np.asarray(array, dtype=type).ravel(order="C")
 
@@ -385,18 +363,14 @@ class GRDECLWriter:
 
         Parameters
         ----------
-        f : typing.TextIO
+        f : TextIO
             Writable text stream.
-        lengths : numpy.ndarray
+        lengths : np.ndarray
             Run lengths associated with ``values``.
-        values : numpy.ndarray
+        values : np.ndarray
             Run values associated with ``lengths``.
         ncol : int, default=12
-            Maximum number of output tokens per line.
-
-        Returns
-        -------
-        None
+            Maximum output tokens per line.
         """
         line = []
         for n, v in zip(lengths, values):
@@ -416,15 +390,15 @@ class GRDECLWriter:
 
         Parameters
         ----------
-        flat : numpy.ndarray
+        flat : np.ndarray
             Input array flattened to one dimension.
 
         Returns
         -------
-        lengths : numpy.ndarray
-            Run lengths.
-        values : numpy.ndarray
-            Run values.
+        lengths : np.ndarray
+            Run lengths for each consecutive value group.
+        values : np.ndarray
+            Unique consecutive values from the input array.
         """
         flat = np.asarray(flat).ravel()
         n = flat.size
@@ -451,7 +425,7 @@ class GRDECLWriter:
 
         Parameters
         ----------
-        array : numpy.ndarray
+        array : np.ndarray
             Array whose dtype determines integer or float formatting.
         decimals : int | None
             Decimal precision for float formatting.
@@ -461,7 +435,6 @@ class GRDECLWriter:
         str
             Format string compatible with ``numpy.savetxt``.
         """
-        is_integer = np.issubdtype(array.dtype, np.integer)
         fmt = "%d" if is_integer else f"%.{decimals}f" if decimals is not None else "%g"
         return fmt
     
