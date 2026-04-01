@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Sequence
+
 import numpy as np
 
 
@@ -201,14 +201,33 @@ def _build_zcorn_from_zones(
     """
     Build Eclipse-style ZCORN and ACTNUM from stratigraphic zones.
 
-    Also returns cell-wise zone membership:
-    - zone_index[k, j, i] = zone id
-    - 0 means gap / undefined / unassigned
+    Also returns cell-wise zone membership where ``zone_index[k, j, i]``
+    holds the zone id (0 for gaps / unassigned cells).
+
+    Parameters
+    ----------
+    pillars : PillarGrid
+        Lateral pillar geometry defining the grid topology.
+    zones : Sequence[Zone]
+        Zones in stratigraphic order (top to bottom). Each zone must have
+        strictly increasing ``levels`` starting at 0.0 and ending at 1.0.
 
     Returns
     -------
     tuple[np.ndarray, np.ndarray | None, np.ndarray, dict[int, str]]
-        zcorn, actnum, zone_index, zone_names
+        zcorn of shape ``(2*nk, 2*nj, 2*ni)``, actnum of shape
+        ``(nk, nj, ni)`` or ``None`` when all cells are active,
+        zone_index of shape ``(nk, nj, ni)``, and zone_names mapping
+        zone id to zone name.
+
+    Raises
+    ------
+    ValueError
+        If *zones* is empty, if any zone's base is above its top, if
+        ``levels`` is malformed, or if fewer than two interfaces are
+        produced.
+    RuntimeError
+        If an internal consistency check on the layer count fails.
     """
     assert isinstance(zones, Iterable), f"Expected iterable for zones. Got {type(zones)}."
     assert len(zones) > 0, "At least one zone is required."
