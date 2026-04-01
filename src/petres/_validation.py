@@ -1,6 +1,9 @@
 """Small validation helpers shared across the package."""
 
+from __future__ import annotations
+
 import numpy as np
+
 
 def _validate_finite_float(value: float, name: str) -> float:
     """Coerce a numeric input to ``float`` and ensure it is finite.
@@ -8,7 +11,7 @@ def _validate_finite_float(value: float, name: str) -> float:
     Parameters
     ----------
     value : float
-        Candidate numeric value.
+        Candidate numeric value. Must be convertible to ``float``.
     name : str
         Parameter name used in error messages.
 
@@ -31,20 +34,21 @@ def _validate_finite_float(value: float, name: str) -> float:
         raise ValueError(f"'{name}' must be finite.")
     return v
 
+
 def _validate_nonempty_string(value: str, name: str) -> str:
-    """Ensure a string is non-empty and trimmed.
+    """Ensure a string is non-empty and free of surrounding whitespace.
 
     Parameters
     ----------
     value : str
-        Candidate string value.
+        Candidate string. Must not be empty or have leading/trailing whitespace.
     name : str
         Parameter name used in error messages.
 
     Returns
     -------
     str
-        The validated string.
+        The validated string, unchanged.
 
     Raises
     ------
