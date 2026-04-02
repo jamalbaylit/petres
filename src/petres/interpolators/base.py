@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
+
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
@@ -14,10 +15,6 @@ class BaseInterpolator(ABC):
     coordinate/value pairs. Concrete subclasses only need to implement
     :meth:`_fit_impl` and :meth:`_predict_impl`.
 
-    Parameters
-    ----------
-    None
-
     Notes
     -----
     The ``allowed_dims`` class attribute can be overridden by subclasses to
@@ -25,26 +22,13 @@ class BaseInterpolator(ABC):
     interpolation or ``(2, 3)`` for both 2D and 3D support.
     """
 
-    allowed_dims: Optional[Iterable[int]] = None  # override in subclasses, e.g. (2,) or (2, 3)
+    allowed_dims: Iterable[int] | None = None  # override in subclasses, e.g. (2,) or (2, 3)
 
     def __init__(self) -> None:
-        """Initialize fitted state and dimensionality constraints.
-
-        The initializer sets the interpolator as not fitted, clears the fitted
-        dimensionality marker, and normalizes ``allowed_dims`` into an internal
-        tuple of integers when provided by a subclass.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-        """
+        """Initialize fitted state and dimensionality constraints."""
         self._is_fitted = False
-        self.dim_: Optional[int] = None
-        self._allowed_dims: Optional[tuple[int, ...]]
+        self.dim_: int | None = None
+        self._allowed_dims: tuple[int, ...] | None
 
         if self.allowed_dims is not None:
             self._allowed_dims = tuple(int(d) for d in self.allowed_dims)
@@ -79,10 +63,6 @@ class BaseInterpolator(ABC):
         values : ArrayLike
             Sample values with shape ``(n_samples,)`` corresponding to
             ``coordinates``.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -150,10 +130,6 @@ class BaseInterpolator(ABC):
             Validated coordinates with shape ``(n_samples, dim)``.
         values : numpy.ndarray
             Validated values with shape ``(n_samples,)``.
-
-        Returns
-        -------
-        None
         """
         ...
 
@@ -174,16 +150,7 @@ class BaseInterpolator(ABC):
         ...
 
     def _check_fitted(self) -> None:
-        """Validate that the interpolator has been fitted.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-        """
+        """Raise RuntimeError if the interpolator has not been fitted."""
         if not self._is_fitted:
             raise RuntimeError("Interpolator must be fitted before prediction.")
 
