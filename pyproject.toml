@@ -85,6 +85,7 @@ llm = [
     "aiohttp>=3.9.9",
     "pygithub>=2.9.0",
     "python-decouple>=3.8",
+    "tqdm>=4.67.3",
 ]
 
 
