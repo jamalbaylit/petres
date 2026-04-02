@@ -2,19 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any
+
 import numpy as np
 from numpy.typing import DTypeLike, NDArray
-import re
 
 from .validation import (
-    validate_specgrid, 
-    validate_coord_array_shape, 
-    validate_coord_array_size, 
-    validate_zcorn_array_shape, 
-    validate_zcorn_array_size,
     validate_actnum_array_shape,
     validate_actnum_array_size,
+    validate_coord_array_shape,
+    validate_coord_array_size,
+    validate_zcorn_array_size,
+    validate_zcorn_array_shape,
+    validate_specgrid,
 )
 
 @dataclass(frozen=True)
@@ -49,28 +50,26 @@ class GRDECLData:
 class GRDECLReader:
     """Read Eclipse GRDECL grid keywords into validated NumPy arrays.
 
+    Parameters
+    ----------
+    take_last : bool, default=True
+        Use the last occurrence of a keyword when the same keyword appears
+        multiple times in a deck.
+
     Notes
     -----
     The reader extracts and validates the ``SPECGRID``, ``COORD``, and
     ``ZCORN`` keywords and optionally parses ``ACTNUM``.
     """
 
-    def __init__(self, *, take_last: bool = True):
+    def __init__(self, *, take_last: bool = True) -> None:
         """Initialize the GRDECL reader.
 
-        Parameters
-        ----------
-        take_last : bool, default=True
-            Whether to use the last occurrence of a keyword when the same
-            keyword appears multiple times in a deck.
-
-        Notes
-        -----
         Eclipse decks may redefine keywords later in the file. Setting
         ``take_last=True`` matches that overriding behavior.
         """
         # In decks, later keywords can override earlier ones.
-        self.take_last = take_last
+        self.take_last: bool = take_last
 
     @staticmethod
     def clean_comments(text: str) -> str:
