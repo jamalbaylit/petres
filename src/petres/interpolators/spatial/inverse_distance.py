@@ -1,6 +1,9 @@
 from __future__ import annotations
-from typing import Literal
+
+from typing import Any, Literal
+
 import numpy as np
+from numpy.typing import DTypeLike, NDArray
 
 from ..base import BaseInterpolator
 
@@ -32,31 +35,9 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         eps: float = 1e-12,
         neighbors: int | None = None,
         mode: Literal["average", "sum"] = "average",
-        dtype: np.dtype | str = np.float64,
+        dtype: DTypeLike = np.float64,
     ) -> None:
-        """Initialize an inverse-distance weighting interpolator.
-
-        Parameters
-        ----------
-        power : float, default=2.0
-            Weight exponent used in $w = 1 / d^p$. Larger values emphasize
-            nearby samples more strongly.
-        eps : float, default=1e-12
-            Positive numerical guard added to distances before exponentiation.
-            It stabilizes weight computation near zero distances.
-        neighbors : int or None, default=None
-            Number of nearest neighbors to use per prediction point. If
-            ``None``, all fitted samples are used.
-        mode : {'average', 'sum'}, default='average'
-            Aggregation mode for weighted values.
-            ``'average'`` returns normalized weighted averages;
-            ``'sum'`` returns unnormalized weighted sums.
-        dtype : numpy.dtype or str, default=numpy.float64
-            Target NumPy dtype used for cached arrays and prediction outputs.
-
-        Returns
-        -------
-        None
+        """Initialize the interpolator with validated IDW configuration.
 
         Raises
         ------
@@ -99,19 +80,19 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         self._X: np.ndarray | None = None  # (n, dim)
         self._y: np.ndarray | None = None  # (n,)
 
-    def _fit_impl(self, coordinates: np.ndarray, values: np.ndarray) -> None:
+    def _fit_impl(
+        self,
+        coordinates: NDArray[np.floating[Any]],
+        values: NDArray[np.floating[Any]],
+    ) -> None:
         """Store validated training coordinates and values.
 
         Parameters
         ----------
         coordinates : numpy.ndarray
-            Training coordinates with shape ``(n_samples, dim)``.
+            Shape ``(n_samples, dim)``.
         values : numpy.ndarray
-            Training values with shape ``(n_samples,)``.
-
-        Returns
-        -------
-        None
+            Shape ``(n_samples,)``.
 
         Raises
         ------
@@ -148,19 +129,18 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         self._y = y
         self._is_fitted = True
 
-    def _predict_impl(self, coordinates: np.ndarray) -> np.ndarray:
+    def _predict_impl(self, coordinates: NDArray[np.floating[Any]]) -> NDArray[np.floating[Any]]:
         """Predict values for query coordinates using IDW weighting.
 
         Parameters
         ----------
         coordinates : numpy.ndarray
-            Query coordinates with shape ``(n_points, dim)``.
+            Shape ``(n_points, dim)``.
 
         Returns
         -------
         numpy.ndarray
-            Predicted values with shape ``(n_points,)`` and dtype configured by
-            ``dtype``.
+            Predicted values with shape ``(n_points,)``.
 
         Raises
         ------

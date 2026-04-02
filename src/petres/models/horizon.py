@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Optional, Literal
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from typing import Any, Literal
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 
 from ..interpolators.base import BaseInterpolator
@@ -36,8 +39,8 @@ class Horizon:
     """
     name: str
     interpolator: BaseInterpolator
-    xy: np.ndarray = field(repr=False)
-    depth: np.ndarray = field(repr=False)
+    xy: ArrayLike = field(repr=False)
+    depth: ArrayLike = field(repr=False)
     store_picks: bool = True  
 
     def __post_init__(self) -> None:
@@ -76,10 +79,10 @@ class Horizon:
         cls,
         *,
         name: str,
-        wells: Iterable["VerticalWell"],
+        wells: Iterable[VerticalWell],
         interpolator: BaseInterpolator,
         store_picks: bool = True,
-    ) -> "Horizon":
+    ) -> Horizon:
         """Construct a horizon from well tops.
 
         Parameters
@@ -186,14 +189,13 @@ class Horizon:
         else:
             return Zone(name=name, top=other, base=self)
 
-    def sample(self, xy: np.ndarray) -> np.ndarray:
-        """
-        Evaluate the horizon depth at arbitrary XY locations.
+    def sample(self, xy: ArrayLike) -> np.ndarray:
+        """Evaluate the horizon depth at arbitrary XY locations.
 
         Parameters
         ----------
-        xy : ndarray
-            Points of shape (n, 2) containing x and y coordinates.
+        xy : array-like of shape (n, 2)
+            Points containing x and y coordinates.
 
         Returns
         -------
@@ -216,15 +218,14 @@ class Horizon:
             raise ValueError(f"Horizon '{self.name}': sample expects xy shape (n,2). Got {xy.shape}")
         return self.interpolator.predict(xy)
 
-    def to_grid(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        """
-        Resample the horizon onto a rectilinear grid.
+    def to_grid(self, x: ArrayLike, y: ArrayLike) -> np.ndarray:
+        """Resample the horizon onto a rectilinear grid.
 
         Parameters
         ----------
-        x : ndarray
+        x : array-like
             1D x-vertices.
-        y : ndarray
+        y : array-like
             1D y-vertices.
 
         Returns
@@ -245,8 +246,7 @@ class Horizon:
         return self.sample(pts).reshape(y.size, x.size)
     
     def intersect(self, well: VerticalWell) -> float:
-        """
-        Compute the depth where the horizon intersects a vertical well.
+        """Compute the depth where the horizon intersects a vertical well.
 
         Parameters
         ----------
@@ -269,8 +269,8 @@ class Horizon:
     def show(
         self,
         *,
-        x: np.ndarray | None = None,
-        y: np.ndarray | None = None,
+        x: ArrayLike | None = None,
+        y: ArrayLike | None = None,
         xlim: tuple[float, float] | None = None,
         ylim: tuple[float, float] | None = None,
         ni: int | None = None,
@@ -279,17 +279,16 @@ class Horizon:
         dy: float | None = None,
         view: Literal["3d", "2d"] = "3d",
     ) -> None:
-        """
-        Render the horizon in either 3D or 2D.
+        """Render the horizon in either 3D or 2D.
 
         Dispatches to `show3d` or `show2d` based on `view`, passing through any
         grid specification arguments.
 
         Parameters
         ----------
-        x : ndarray or None, optional
+        x : array-like or None, optional
             1D x-vertices. Mutually exclusive with `xlim`.
-        y : ndarray or None, optional
+        y : array-like or None, optional
             1D y-vertices. Mutually exclusive with `ylim`.
         xlim : tuple[float, float] or None, optional
             Inclusive x-limits used to generate vertices when `x` is not given.
@@ -306,9 +305,10 @@ class Horizon:
         view : {'3d', '2d'}, default '3d'
             Target visualization backend. Use '3d' for PyVista, '2d' for Matplotlib.
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        ValueError
+            If `view` is not one of {'3d', '2d'}.
 
         Examples
         --------
@@ -326,28 +326,27 @@ class Horizon:
     def show3d(
         self,
         *,
-        x: np.ndarray | None = None,
-        y: np.ndarray | None = None,
+        x: ArrayLike | None = None,
+        y: ArrayLike | None = None,
         xlim: tuple[float, float] | None = None,
         ylim: tuple[float, float] | None = None,
         ni: int | None = None,
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-        color: Any | None = 'tan',
+        color: Any | None = "tan",
         scalars: bool = True,
-        cmap: Optional[str] = 'turbo',
-        title: Optional[str] = 'auto',
+        cmap: str | None = "turbo",
+        title: str | None = "auto",
     ) -> None:
-        """
-        Render the horizon in an interactive 3D PyVista scene.
+        """Render the horizon in an interactive 3D PyVista scene.
 
         Samples the interpolated surface on the provided grid and adds it to a
         `PyVista3DViewer`, coloring by depth.
 
         Parameters
         ----------
-        x, y : ndarray or None, optional
+        x, y : array-like or None, optional
             1D vertex arrays. Mutually exclusive with `xlim`/`ylim`.
         xlim, ylim : tuple[float, float] or None, optional
             Bounds used to generate vertices when `x` or `y` are not supplied.
@@ -364,10 +363,6 @@ class Horizon:
             Colormap name applied when `scalars` is True.
         title : str or None, default 'auto'
             Figure title; when 'auto' uses the horizon name.
-
-        Returns
-        -------
-        None
 
         Examples
         --------
@@ -390,8 +385,8 @@ class Horizon:
     def show2d(
         self,
         *,
-        x: np.ndarray | None = None,
-        y: np.ndarray | None = None,
+        x: ArrayLike | None = None,
+        y: ArrayLike | None = None,
         xlim: tuple[float, float] | None = None,
         ylim: tuple[float, float] | None = None,
         ni: int | None = None,
@@ -404,15 +399,14 @@ class Horizon:
         aspect: Literal["auto", "equal"] = "auto",
         **kwargs: Any,
     ) -> None:
-        """
-        Render the horizon as a 2D Matplotlib map.
+        """Render the horizon as a 2D Matplotlib map.
 
         Interpolates the surface on a regular grid and displays it with optional
         contours.
 
         Parameters
         ----------
-        x, y : ndarray or None, optional
+        x, y : array-like or None, optional
             1D vertex arrays. Mutually exclusive with `xlim`/`ylim`.
         xlim, ylim : tuple[float, float] or None, optional
             Bounds used to generate vertices when `x` or `y` are not supplied.
@@ -430,10 +424,6 @@ class Horizon:
             Axes aspect ratio.
         **kwargs
             Additional keyword arguments forwarded to the Matplotlib surface helper.
-
-        Returns
-        -------
-        None
 
         Examples
         --------

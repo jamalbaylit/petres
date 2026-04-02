@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Interpolation methods for petroleum and reservoir modeling.
 
 Provides spatial interpolation techniques (IDW, RBF, kriging) for mapping sparse
@@ -20,7 +22,7 @@ IDWInterpolator = InverseDistanceWeightingInterpolator
 RBFInterpolator = RadialBasisFunctionInterpolator
 OKInterpolator = OrdinaryKrigingInterpolator
 UKInterpolator = UniversalKrigingInterpolator
-__all__ = [
+__all__: list[str] = [
     'IDWInterpolator',
     'RBFInterpolator',
     'OKInterpolator',

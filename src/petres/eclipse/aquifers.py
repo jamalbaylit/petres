@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-from matplotlib.patches import Rectangle
 from dataclasses import dataclass
-import matplotlib.pyplot as plt
 from enum import Enum
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Patch, Rectangle
+import matplotlib.pyplot as plt
 import numpy as np
-
 
 from petres.grids.cornerpoint import CornerPointGrid
 
@@ -74,6 +73,11 @@ class AquanconEntry:
 class AQUANCONGenerator:
     """Build Eclipse AQUANCON keyword entries from a corner-point grid.
 
+    Parameters
+    ----------
+    grid : CornerPointGrid
+        Grid used to derive boundary-connected active cells.
+
     Notes
     -----
     This generator assumes CornerPointGrid conventions where:
@@ -81,12 +85,7 @@ class AQUANCONGenerator:
     """
 
     def __init__(self, grid: CornerPointGrid) -> None:
-        """Initialize a generator for one grid.
-
-        Parameters
-        ----------
-        grid : CornerPointGrid
-            Grid used to derive boundary-connected active cells.
+        """Initialize the generator for one grid.
 
         Raises
         ------
@@ -94,7 +93,7 @@ class AQUANCONGenerator:
             If ``grid.active.shape`` does not match ``(grid.nk, grid.nj, grid.ni)``.
         """
         self.grid = grid
-        self._entries: List[AquanconEntry] = []
+        self._entries: list[AquanconEntry] = []
 
         # enforce CornerPointGrid conventions
         assert self.grid.active.shape == (self.grid.nk, self.grid.nj, self.grid.ni), (
@@ -114,7 +113,7 @@ class AQUANCONGenerator:
         return self
 
     @property
-    def entries(self) -> List[AquanconEntry]:
+    def entries(self) -> list[AquanconEntry]:
         """Return a copy of generated AQUANCON entries.
 
         Returns
@@ -124,7 +123,7 @@ class AQUANCONGenerator:
         """
         return self._entries.copy()
 
-    def to_eclipse_format(self) -> List[str]:
+    def to_eclipse_format(self) -> list[str]:
         """Convert all entries to Eclipse AQUANCON record strings.
 
         Returns
@@ -134,7 +133,7 @@ class AQUANCONGenerator:
         """
         return [e.to_eclipse_format() for e in self._entries]
 
-    def export(self, filename: Optional[str] = None) -> str:
+    def export(self, filename: str | None = None) -> str:
         """Serialize the AQUANCON block and optionally write it to disk.
 
         Parameters
@@ -162,7 +161,7 @@ class AQUANCONGenerator:
         return result
 
     def __str__(self) -> str:
-        """Return the serialized AQUANCON block.
+        """Serialize the AQUANCON block.
 
         Returns
         -------
@@ -172,7 +171,7 @@ class AQUANCONGenerator:
         return self.export()
 
     def __repr__(self) -> str:
-        """Return a concise debug representation.
+        """Summarize the generator state.
 
         Returns
         -------
@@ -191,7 +190,7 @@ class AQUANCONGenerator:
         direction: AquiferDirection,
         k_lower: int = 1,
         k_upper: int = 1,
-    ) -> "AquanconGenerator":
+    ) -> AQUANCONGenerator:
         """Add a lateral aquifer connection and generate AQUANCON ranges.
 
         Parameters
@@ -332,7 +331,7 @@ class AQUANCONGenerator:
         self,
         mask_ji: np.ndarray,
         direction: AquiferDirection,
-    ) -> List[Tuple[int, int, int, int]]:
+    ) -> list[tuple[int, int, int, int]]:
         """Convert a boundary mask to contiguous AQUANCON index ranges.
 
         Parameters
@@ -351,7 +350,7 @@ class AQUANCONGenerator:
         if len(i_indices) == 0:
             return []
 
-        ranges: List[Tuple[int, int, int, int]] = []
+        ranges: list[tuple[int, int, int, int]] = []
 
         if direction in (AquiferDirection.I_MINUS, AquiferDirection.I_PLUS):
             # boundary is on constant i; group by i and merge consecutive j
@@ -408,7 +407,7 @@ class AQUANCONGenerator:
         direction: AquiferDirection,
         k_lower: int = 1,
         k_upper: int = 1,
-        figsize: Tuple[float, float] = (12, 10),
+        figsize: tuple[float, float] = (12, 10),
     ) -> plt.Figure:
         """Plot active, inactive, and selected boundary cells in the IJ plane.
 
@@ -489,9 +488,6 @@ class AQUANCONGenerator:
                     rectangles_active.append(rect)
                 else:
                     rectangles_inactive.append(rect)
-
-        from matplotlib.collections import PatchCollection
-        from matplotlib.patches import Patch
 
         if rectangles_inactive:
             ax.add_collection(
