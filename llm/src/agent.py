@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Optional
 from datetime import datetime, timezone
 from pathlib import Path
+from tqdm import tqdm
 import time
 import glob
 
@@ -64,75 +65,67 @@ class CopilotAutoRefactor:
         self, 
         file_regex: str, 
         source_dir: str, 
+        batch_size: int = 5,
     ):
         target_files = self._find_target_files(file_regex, source_dir)
         if not target_files:
             print("No target files found. Exiting.")
             return
-        self.workflow(target_files)
+        file_gen = self._file_batcher(target_files, batch_size=1)  # Process files one by one
 
+        total_batches = (len(target_files) + batch_size - 1) // batch_size
+
+        for batch in tqdm(file_gen, total=total_batches, desc="Processing files"):
+            self.workflow(batch)
+
+    def _file_batcher(self, target_files: List[str], batch_size: int) -> List[List[str]]:
+        for i in range(0, len(target_files), batch_size):
+            yield target_files[i:i + batch_size]
 
     def workflow(self, target_files: List[str]):
         print(f"🚀 Starting workflow for {len(target_files)} target files...")
-        # issues = self.create_issues_concurrently(target_files)
-        # print('=' * 50)
-        # print(f"✅ Created {len(issues)} issues. Issue numbers: {issues}")
-        # prs = self._wait_for_pr(issues)
-        # if prs is None:
-        #     print("❌ Workflow failed due to missing PRs.")
-        #     return
+        issues = self.create_issues_concurrently(target_files)
+        print(f"✅ Created {len(issues)} issues. Issue numbers: {issues}")
+        completed = 0
+        start = time.time()    
+        while time.time() - start < self.max_wait_seconds:
+            prs = self.github.filter_prs(
+                owner='Copilot',
+                from_branch_pattern="copilot/*",
+                to_branch=self.working_branch_name,
+                state="open",
+            )
+            print(f"⏳ Waiting for all Copilot PRs... Found {completed}/{len(issues)} PRs so far.")
+            for pr in prs:
+                if self.auto_review:
+                    pr = self.github.convert_draft_to_ready(pr)
+                    print(f"✅ Reviewed PR #{pr.number} with APPROVE.")
+                if self.auto_merge:
+                    pr.merge(
+                        commit_title=f"Auto-merged by {self.agent_name}.",
+                        merge_method="merge",
+                        delete_branch=True,
+                    )
+                    print(f"✅ Merged PR #{pr.number}.")
 
-        for file in target_files:
+            completed += len(prs)
+            if completed >= len(issues):
+                print(f"✅ All PRs have been processed (reviewed/merged).")
+                break
+            time.sleep(self.poll_interval)
 
-
-            completed = 0
-                    
-            # if self.auto_review or self.auto_merge:
-
-
-
-            start = time.time()    
-            completed = 0
-            while time.time() - start < self.max_wait_seconds:
-                issues = [self._create_issue(file, purpose=self.instruction_name)]
-                prs = self.github.filter_prs(
-                    owner='Copilot',
-                    from_branch_pattern="copilot/*",
-                    to_branch=self.working_branch_name,
-                    state="open",
-                )
-                print(f"⏳ Waiting for all Copilot PRs... Found {completed}/{len(issues)} PRs so far.")
-                completed += len(prs)
-                for pr in prs:
-                    if self.auto_review:
-                        pr = self.github.convert_draft_to_ready(pr)
-                        print(f"✅ Reviewed PR #{pr.number} with APPROVE.")
-                    if self.auto_merge:
-                        pr.merge(
-                            commit_title=f"Auto-merged by {self.agent_name}.",
-                            merge_method="squash",
-                            delete_branch=True,
-                        )
-                        print(f"✅ Merged PR #{pr.number}.")
-
-                if completed >= len(issues):
-                    print(f"✅ All PRs have been processed (reviewed/merged).")
-                    break
-                time.sleep(self.poll_interval)
-
-
+        if completed < len(issues):
             print(
                 f"❌ Timed out after {self.max_wait_seconds}s. "
                 f"Expected {len(issues)} PRs but completed {completed}."
             )
 
-
-            # delete issues after PR is merged
-            print('=' * 50)
-            for issue in issues:
-                issue = self.github.get_issue(issue)
-                issue.edit(state="closed")
-                print(f"✅ Closed issue #{issue.number} after merging PR #{pr.number}.")
+        # delete issues after PR is merged
+        # print('=' * 50)
+        # for issue in issues:
+        #     issue = self.github.get_issue(issue)
+        #     issue.edit(state="closed")
+        #     print(f"✅ Closed issue #{issue.number} after merging PR #{pr.number}.")
     # ---------------------------
     # ISSUE CREATION
     # ---------------------------
@@ -265,7 +258,7 @@ Apply instructions from `{self.instruction_path}` to `{target_file}`.
         if not Path(source_dir).is_dir():
             raise ValueError("`source_dir` must be a directory.")
 
-        return set(glob.glob(f"{source_dir}/**/{file_regex}", recursive=True))
+        return list(set(glob.glob(f"{source_dir}/**/{file_regex}", recursive=True)))
 
 
     
