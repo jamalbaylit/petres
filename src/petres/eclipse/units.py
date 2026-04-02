@@ -4,8 +4,7 @@ from typing import ClassVar
 
 
 class UnitConverter:
-    """
-    Provide unit conversion across supported physical dimensions.
+    """Provide unit conversion across supported physical dimensions.
 
     Units are grouped by physical dimension (e.g., pressure, flowrate).
     Each dimension has a base unit. All conversions are performed
@@ -33,8 +32,7 @@ class UnitConverter:
 
     @classmethod
     def convert(cls, value: float, from_unit: str, to_unit: str) -> float:
-        """
-        Convert a value between two units of the same physical dimension.
+        """Convert a value between two units of the same physical dimension.
 
         Parameters
         ----------
@@ -76,19 +74,19 @@ class UnitConverter:
         Parameters
         ----------
         from_unit : str
-            Unit symbol for the source value.
+            Source unit symbol.
         to_unit : str
-            Unit symbol for the target value.
+            Target unit symbol.
 
         Returns
         -------
         str
-            Physical dimension key that contains both units.
+            Dimension key containing both units.
 
         Raises
         ------
         ValueError
-            Raised when the units do not belong to the same known dimension.
+            If units belong to different or unknown dimensions.
         """
         for dimension, units in cls._UNITS.items():
             if from_unit in units and to_unit in units:
