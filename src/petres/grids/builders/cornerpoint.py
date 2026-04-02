@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Sequence
+
 import numpy as np
 
 
@@ -201,14 +201,38 @@ def _build_zcorn_from_zones(
     """
     Build Eclipse-style ZCORN and ACTNUM from stratigraphic zones.
 
-    Also returns cell-wise zone membership:
-    - zone_index[k, j, i] = zone id
-    - 0 means gap / undefined / unassigned
+    Also returns cell-wise zone membership where ``zone_index[k, j, i]``
+    equals the zone id (0 for gap / undefined / unassigned).
+
+    Parameters
+    ----------
+    pillars : PillarGrid
+        Lateral pillar geometry defining the grid topology.
+    zones : Sequence[Zone]
+        Zones in stratigraphic order (top to bottom). Must contain at least
+        one entry.
 
     Returns
     -------
-    tuple[np.ndarray, np.ndarray | None, np.ndarray, dict[int, str]]
-        zcorn, actnum, zone_index, zone_names
+    zcorn : np.ndarray, shape (2*nk, 2*nj, 2*ni)
+        Eclipse-style corner-point depth array.
+    actnum : np.ndarray or None, shape (nk, nj, ni)
+        Boolean activity array; ``None`` if all layers are active.
+    zone_index : np.ndarray, shape (nk, nj, ni), dtype int32
+        Cell-wise zone id; 0 denotes a gap layer.
+    zone_names : dict[int, str]
+        Mapping from zone id to zone name.
+
+    Raises
+    ------
+    AssertionError
+        If ``zones`` is empty, contains non-``Zone`` items, or ``pillars``
+        is not a ``PillarGrid`` instance.
+    ValueError
+        If a zone's base surface is above its top surface, zone levels are
+        invalid, or there are not enough interfaces to form layers.
+    RuntimeError
+        If internal layer-count consistency checks fail.
     """
     assert isinstance(zones, Iterable), f"Expected iterable for zones. Got {type(zones)}."
     assert len(zones) > 0, "At least one zone is required."
