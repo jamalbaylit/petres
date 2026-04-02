@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+
 import numpy as np
 from numpy.typing import ArrayLike
 
@@ -41,38 +44,7 @@ class Rectilinear2DGrid:
     _yy_center: np.ndarray | None = field(init=False, repr=False, default=None)
 
     def __init__(self, x_vertex: ArrayLike, y_vertex: ArrayLike, active: ArrayLike) -> None:
-        """Initialize a 2D rectilinear grid from vertex coordinates and activity mask.
-
-        Parameters
-        ----------
-        x_vertex : ArrayLike
-            One-dimensional x-direction vertex coordinates with length ``ni + 1``.
-        y_vertex : ArrayLike
-            One-dimensional y-direction vertex coordinates with length ``nj + 1``.
-        active : ArrayLike
-            Cell activity mask expected to match shape ``(nj, ni)`` after conversion
-            to a boolean NumPy array.
-
-        Returns
-        -------
-        None
-
-        Notes
-        -----
-        Input arrays are normalized in :meth:`__post_init__`, where the
-        activity-mask shape is also validated.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> grid = Rectilinear2DGrid(
-        ...     x_vertex=np.array([0.0, 1.0, 2.0]),
-        ...     y_vertex=np.array([0.0, 1.0]),
-        ...     active=np.array([[True, True]])
-        ... )
-        >>> grid.cell_shape
-        (1, 2)
-        """
+        """Initialize a 2D rectilinear grid from vertex coordinates and activity mask."""
         self.x_vertex = np.asarray(x_vertex)
         self.y_vertex = np.asarray(y_vertex)
         self.active = np.asarray(active, dtype=bool)
@@ -88,10 +60,6 @@ class Rectilinear2DGrid:
 
     def __post_init__(self) -> None:
         """Validate normalized arrays and enforce the activity-mask shape.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
