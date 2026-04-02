@@ -1,4 +1,8 @@
-CELL_KEYWORDS = {
+"""Eclipse grid cell keyword definitions for property and region lookups."""
+
+from __future__ import annotations
+
+CELL_KEYWORDS: dict[str, str] = {
     # --- Rock Properties ---
     "PORO": "Porosity of each grid cell (fraction, 0–1).",
     "PERMX": "Permeability in X direction (mD).",
