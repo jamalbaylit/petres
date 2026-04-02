@@ -1,4 +1,12 @@
-CELL_KEYWORDS = {
+from __future__ import annotations
+
+from typing import Final
+
+
+"""Keyword descriptions for Eclipse grid cell properties."""
+
+
+CELL_KEYWORDS: Final[dict[str, str]] = {
     # --- Rock Properties ---
     "PORO": "Porosity of each grid cell (fraction, 0–1).",
     "PERMX": "Permeability in X direction (mD).",

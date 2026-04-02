@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from typing import Any
 from typing import Literal
 import numpy as np
+from numpy.typing import DTypeLike, NDArray
 from scipy.interpolate import RBFInterpolator
 
 from ..base import BaseInterpolator
 
 
 class RadialBasisFunctionInterpolator(BaseInterpolator):
-    """Interpolate scalar values with SciPy's radial basis functions.
+    """Interpolate scalar values with SciPy radial basis functions.
 
     This interpolator wraps :class:`scipy.interpolate.RBFInterpolator` and
     validates input shapes and hyperparameters before fitting.
@@ -25,7 +27,7 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
         If provided, use only the k nearest samples per query; must be > 0.
     degree : int or None, optional
         Degree of appended polynomial term. ``None`` uses SciPy defaults.
-    dtype : numpy.dtype or str, default numpy.float64
+    dtype : numpy.typing.DTypeLike, default numpy.float64
         Storage dtype for cached arrays and outputs.
 
     Notes
@@ -49,45 +51,15 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
         smoothing: float = 0.0,
         neighbors: int | None = None,
         degree: int | None = None,
-        dtype: np.dtype | str = np.float64,
+        dtype: DTypeLike = np.float64,
     ) -> None:
-        """Initialize RBF interpolation hyperparameters.
-
-        Parameters
-        ----------
-        kernel : {'linear', 'thin_plate_spline', 'cubic', 'quintic', 'multiquadric', 'inverse_multiquadric', 'inverse_quadratic', 'gaussian'}, default 'thin_plate_spline'
-            Radial kernel passed to ``scipy.interpolate.RBFInterpolator``.
-        epsilon : float or None, optional, default None
-            Shape parameter for kernels that require it. When provided, it
-            must be strictly positive.
-        smoothing : float, default 0.0
-            Non-negative smoothing factor. ``0.0`` corresponds to exact
-            interpolation at training samples.
-        neighbors : int or None, optional, default None
-            Number of nearest neighbors to use per prediction. When provided,
-            it must be a strictly positive integer.
-        degree : int or None, optional, default None
-            Degree of the appended polynomial term. ``None`` delegates to
-            SciPy defaults.
-        dtype : numpy.dtype or str, default numpy.float64
-            Numeric dtype used to store arrays and convert outputs.
-
-        Returns
-        -------
-        None
+        """Initialize interpolation hyperparameters.
 
         Raises
         ------
         ValueError
             If ``epsilon`` is not positive, ``smoothing`` is negative,
             ``neighbors`` is non-positive, or ``degree`` is negative.
-
-        Examples
-        --------
-        >>> interp = RadialBasisFunctionInterpolator(
-        ...     kernel="thin_plate_spline",
-        ...     smoothing=1e-6,
-        ... )
         """
         super().__init__()
 
@@ -109,19 +81,15 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
 
         self._rbf: RBFInterpolator | None = None
 
-    def _fit_impl(self, coordinates: np.ndarray, values: np.ndarray) -> None:
-        """Fit the underlying RBF interpolator.
+    def _fit_impl(self, coordinates: NDArray[np.float64], values: NDArray[np.float64]) -> None:
+        """Fit the underlying RBF interpolator from validated arrays.
 
         Parameters
         ----------
-        coordinates : numpy.ndarray
+        coordinates : numpy.typing.NDArray[numpy.float64]
             Training coordinates with shape ``(n_samples, dim)``.
-        values : numpy.ndarray
+        values : numpy.typing.NDArray[numpy.float64]
             Scalar training targets with shape ``(n_samples,)``.
-
-        Returns
-        -------
-        None
         """
         X = np.asarray(coordinates, dtype=self.dtype)
         y = np.asarray(values, dtype=self.dtype)
@@ -158,17 +126,17 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
 
         self._is_fitted = True
 
-    def _predict_impl(self, coordinates: np.ndarray) -> np.ndarray:
+    def _predict_impl(self, coordinates: NDArray[np.float64]) -> NDArray[np.float64]:
         """Predict interpolated values at query coordinates.
 
         Parameters
         ----------
-        coordinates : numpy.ndarray
+        coordinates : numpy.typing.NDArray[numpy.float64]
             Query coordinates with shape ``(n_points, dim)``.
 
         Returns
         -------
-        numpy.ndarray
+        numpy.typing.NDArray[numpy.float64]
             Interpolated values with shape ``(n_points,)`` and configured
             ``dtype``.
         """

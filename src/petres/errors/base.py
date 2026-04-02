@@ -1,41 +1,34 @@
+from __future__ import annotations
+
+from typing import Any
+
 """Custom error hierarchy for the petres package."""
 
 
 class PetresError(Exception):
-    """Represent a base exception with optional context-driven formatting.
+    """Represent package-level exceptions with optional message formatting.
 
-    This exception provides a consistent error base for the package and supports
-    formatting either a provided message template or the class-level
-    ``default_message`` using keyword context values.
+    Use this exception as the common base for package-specific failures. Message
+    templates are formatted with keyword context values.
+
+    Parameters
+    ----------
+    message : str | None, default=None
+        Message template. If ``None``, use ``default_message``.
+    **context : Any
+        Keyword values used to format the selected template.
+
+    Raises
+    ------
+    ValueError
+        Raised when formatting requires a missing key from ``context``.
     """
 
     default_message: str = "An unknown Petres error occurred."
 
-    def __init__(self, message: str | None = None, **context: object) -> None:
-        """Initialize the exception with optional template formatting context.
-
-        If ``message`` is not provided, the class-level ``default_message`` is
-        formatted with ``context``. When ``message`` is provided, it is used as
-        a template and formatted with ``context`` only if context values exist.
-
-        Parameters
-        ----------
-        message : str or None, default=None
-            Error message template. If ``None``, ``default_message`` is used.
-        **context : object
-            Keyword values used to format the selected message template.
-
-        Returns
-        -------
-        None
-            This method initializes the exception instance.
-
-        Raises
-        ------
-        ValueError
-            Raised when formatting requires a missing key from ``context``.
-        """
-        self.context: dict[str, object] = context
+    def __init__(self, message: str | None = None, **context: Any) -> None:
+        """Initialize the error and format the active message template."""
+        self.context: dict[str, Any] = context
 
         if message is None:
             try:
@@ -53,11 +46,7 @@ class PetresError(Exception):
         super().__init__(message)
 
     def __repr__(self) -> str:
-        """Return a developer-focused representation of the error.
-
-        Parameters
-        ----------
-        None
+        """Return a developer-facing representation with class name and context.
 
         Returns
         -------
@@ -69,18 +58,18 @@ class PetresError(Exception):
 
 # ====================================
 class VisualizationError(PetresError):
-    """Represent errors raised by visualization-related operations.
+    """Represent visualization-related errors.
 
-    This specialization is used when rendering or display workflows encounter
-    recoverable domain-specific failures.
+    Use this specialization when rendering or display workflows encounter
+    recoverable domain failures.
     """
 
     default_message: str = "An error occurred related to visualization operations."
 
 class ExportError(PetresError):
-    """Represent errors raised while exporting data to external formats.
+    """Represent data-export-related errors.
 
-    This specialization captures failures during serialization or file export
+    Use this specialization for failures during serialization or file export
     workflows.
     """
 
