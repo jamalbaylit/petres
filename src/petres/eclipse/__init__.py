@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .wells.history import WCONHISTRecord, WCONHISTStep, WCONHISTWriter
 from .grids.read import GRDECLReader
 from .units import UnitConverter
