@@ -5,7 +5,7 @@ from typing import ClassVar
 
 class UnitConverter:
     """
-    Provide unit conversion across supported physical dimensions.
+    Convert values across supported physical dimensions.
 
     Units are grouped by physical dimension (e.g., pressure, flowrate).
     Each dimension has a base unit. All conversions are performed
@@ -34,16 +34,16 @@ class UnitConverter:
     @classmethod
     def convert(cls, value: float, from_unit: str, to_unit: str) -> float:
         """
-        Convert a value between two units of the same physical dimension.
+        Convert a value between units in the same physical dimension.
 
         Parameters
         ----------
         value : float
             Numeric value to convert.
         from_unit : str
-            Unit of the input value.
+            Unit symbol of the input value (case-insensitive).
         to_unit : str
-            Desired output unit.
+            Unit symbol for the converted value (case-insensitive).
 
         Returns
         -------
@@ -53,7 +53,8 @@ class UnitConverter:
         Raises
         ------
         ValueError
-            If units are unknown or belong to different dimensions.
+            If either unit is unknown, or if the units belong to different
+            physical dimensions.
         """
 
         from_unit = from_unit.lower()
@@ -71,19 +72,19 @@ class UnitConverter:
 
     @classmethod
     def _find_dimension(cls, from_unit: str, to_unit: str) -> str:
-        """Resolve the physical dimension shared by two unit symbols.
+        """Find the shared physical dimension for two unit symbols.
 
         Parameters
         ----------
         from_unit : str
-            Unit symbol for the source value.
+            Source unit symbol.
         to_unit : str
-            Unit symbol for the target value.
+            Target unit symbol.
 
         Returns
         -------
         str
-            Physical dimension key that contains both units.
+            Dimension key containing both symbols.
 
         Raises
         ------
@@ -100,7 +101,7 @@ class UnitConverter:
 
     @classmethod
     def available_units(cls) -> dict[str, list[str]]:
-        """Return all supported unit symbols grouped by physical dimension.
+        """List all supported unit symbols grouped by physical dimension.
 
         Returns
         -------

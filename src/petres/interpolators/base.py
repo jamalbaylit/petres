@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
+
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 
 class BaseInterpolator(ABC):
-    """Define a validated template for spatial interpolation workflows.
+    """Provide a validated template for spatial interpolation workflows.
 
     This abstract base class centralizes input validation, fitted-state
     management, and dimensionality checks for interpolators that operate on
@@ -16,35 +17,24 @@ class BaseInterpolator(ABC):
 
     Parameters
     ----------
-    None
+    allowed_dims : Iterable[int] | None
+        Optional class-level dimensionality constraints. Subclasses can
+        override this attribute, for example ``(2,)`` for 2D-only support or
+        ``(2, 3)`` for both 2D and 3D support.
 
     Notes
     -----
-    The ``allowed_dims`` class attribute can be overridden by subclasses to
-    restrict supported coordinate dimensionalities, for example ``(2,)`` for 2D
-    interpolation or ``(2, 3)`` for both 2D and 3D support.
+    When ``allowed_dims`` is ``None``, any coordinate dimensionality is
+    accepted.
     """
 
-    allowed_dims: Optional[Iterable[int]] = None  # override in subclasses, e.g. (2,) or (2, 3)
+    allowed_dims: Iterable[int] | None = None  # override in subclasses, e.g. (2,) or (2, 3)
 
     def __init__(self) -> None:
-        """Initialize fitted state and dimensionality constraints.
-
-        The initializer sets the interpolator as not fitted, clears the fitted
-        dimensionality marker, and normalizes ``allowed_dims`` into an internal
-        tuple of integers when provided by a subclass.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-        """
+        """Initialize fitted state and normalize dimensionality constraints."""
         self._is_fitted = False
-        self.dim_: Optional[int] = None
-        self._allowed_dims: Optional[tuple[int, ...]]
+        self.dim_: int | None = None
+        self._allowed_dims: tuple[int, ...] | None
 
         if self.allowed_dims is not None:
             self._allowed_dims = tuple(int(d) for d in self.allowed_dims)
@@ -52,12 +42,12 @@ class BaseInterpolator(ABC):
             self._allowed_dims = None
             
     def is_allowed_dim(self, dim: int) -> bool:
-        """Check whether a dimensionality is accepted by the interpolator.
+        """Check whether a dimensionality is accepted.
 
         Parameters
         ----------
         dim : int
-            Coordinate dimensionality to validate.
+            Coordinate dimensionality to validate. Must be an integer.
 
         Returns
         -------
@@ -79,10 +69,6 @@ class BaseInterpolator(ABC):
         values : ArrayLike
             Sample values with shape ``(n_samples,)`` corresponding to
             ``coordinates``.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -142,7 +128,7 @@ class BaseInterpolator(ABC):
         coordinates: NDArray[np.float64],
         values: NDArray[np.float64],
     ) -> None:
-        """Fit implementation hook for subclass-specific training logic.
+        """Fit implementation hook.
 
         Parameters
         ----------
@@ -150,10 +136,6 @@ class BaseInterpolator(ABC):
             Validated coordinates with shape ``(n_samples, dim)``.
         values : numpy.ndarray
             Validated values with shape ``(n_samples,)``.
-
-        Returns
-        -------
-        None
         """
         ...
 
@@ -176,13 +158,10 @@ class BaseInterpolator(ABC):
     def _check_fitted(self) -> None:
         """Validate that the interpolator has been fitted.
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
+        Raises
+        ------
+        RuntimeError
+            If the interpolator has not been fitted.
         """
         if not self._is_fitted:
             raise RuntimeError("Interpolator must be fitted before prediction.")
@@ -206,6 +185,12 @@ class BaseInterpolator(ABC):
         tuple[numpy.ndarray, numpy.ndarray]
             Converted and validated ``(coordinates, values)`` arrays with
             floating-point dtype.
+
+        Raises
+        ------
+        ValueError
+            If shapes are invalid, sample counts mismatch, inputs are empty, or
+            values are non-finite.
         """
         coordinates = np.asarray(coordinates, dtype=float)
         values = np.asarray(values, dtype=float)
@@ -250,6 +235,14 @@ class BaseInterpolator(ABC):
         -------
         numpy.ndarray
             Converted coordinates validated for prediction.
+
+        Raises
+        ------
+        ValueError
+            If coordinate shape is invalid, dimensionality does not match the
+            fitted model, or values are non-finite.
+        RuntimeError
+            If fitted dimensionality metadata is unavailable.
         """
         coordinates = np.asarray(coordinates, dtype=float)
 

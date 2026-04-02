@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Sequence, Literal
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from shapely.geometry import Polygon
-from shapely import points, contains
-from numpy.typing import ArrayLike
+from typing import Any, Literal
+
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
+from shapely import contains, points
+from shapely.geometry import Polygon
 
 
 @dataclass(frozen=True)
@@ -43,14 +45,6 @@ class BoundaryPolygon:
 
     def __post_init__(self) -> None:
         """Validate vertices, close the ring, and build the internal polygon.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -92,8 +86,11 @@ class BoundaryPolygon:
         ymax = float(np.max(xy[:, 1]))
         return xmin, ymin, xmax, ymax
 
-    def contains(self, xy: ArrayLike) -> np.ndarray:
-        """Vectorized point-in-polygon test using Shapely 2.x.
+    def contains(self, xy: ArrayLike) -> NDArray[np.bool_]:
+        """Evaluate whether points are strictly inside the polygon.
+
+        Uses Shapely's ``contains`` predicate, so points on the polygon boundary
+        are evaluated as ``False``.
 
         Parameters
         ----------
@@ -242,9 +239,8 @@ class BoundaryPolygon:
         )
         return cls(vertices=vertices, name=name)
 
-    def _validate_vertices(self, vertices: ArrayLike) -> np.ndarray:
-        """
-        Validate and normalize 2D polygon vertices.
+    def _validate_vertices(self, vertices: ArrayLike) -> NDArray[np.float64]:
+        """Validate and normalize polygon vertices.
 
         Parameters
         ----------
@@ -253,13 +249,8 @@ class BoundaryPolygon:
 
         Returns
         -------
-        ndarray of shape (N, 2)
+        numpy.ndarray
             Validated float64 array of vertices.
-
-        Raises
-        ------
-        ValueError
-            If shape is invalid or contains non-finite values.
         """
         try:
             arr = np.asarray(vertices, dtype=np.float64)
@@ -284,20 +275,19 @@ class BoundaryPolygon:
         return np.ascontiguousarray(arr)
     
 
-    def _close_ring(self, xy: np.ndarray, *, tol: float = 1e-12) -> np.ndarray:
-        """
-        Ensure polygon ring is closed.
+    def _close_ring(self, xy: NDArray[np.float64], *, tol: float = 1e-12) -> NDArray[np.float64]:
+        """Ensure the polygon ring is closed.
 
         Parameters
         ----------
-        xy : ndarray of shape (N, 2)
+        xy : numpy.ndarray
             Vertex coordinates.
         tol : float, optional
             Numerical tolerance for closure check.
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
             Closed ring (first point repeated at end if needed).
         """
         if np.allclose(xy[0], xy[-1], atol=tol):

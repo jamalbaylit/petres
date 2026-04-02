@@ -9,7 +9,6 @@ from matplotlib.figure import Figure
 
 from .layers.boundary import _add_boundary_polygon
 from .layers.surface import _add_surface
-from .layers.zone import _add_zone
 from .theme import Matplotlib2DViewerTheme
 from .._core.base import Base2DViewer
 from ....grids.sampling._vertices import _resolve_xy_vertices
@@ -31,6 +30,24 @@ class Matplotlib2DViewer(Base2DViewer):
     This viewer manages a Matplotlib figure/axes pair, applies a reusable visual
     theme, and provides convenience methods to plot horizons, zones, and boundary
     polygons on a common 2D canvas.
+
+    Parameters
+    ----------
+    fig : Figure or None, default=None
+        Figure instance to use. If provided without ``ax``, a new subplot is
+        created on this figure.
+    ax : Axes or None, default=None
+        Axes instance to use. If provided without ``fig``, the corresponding
+        ``ax.figure`` is used automatically.
+    theme : Matplotlib2DViewerTheme or None, default=None
+        Theme configuration controlling layout and styling. When ``None``, the
+        default ``Matplotlib2DViewerTheme`` is used.
+
+    Raises
+    ------
+    ValueError
+        If both ``fig`` and ``ax`` are provided but ``ax`` does not belong to
+        ``fig``.
     """
 
     def __init__(
@@ -39,30 +56,7 @@ class Matplotlib2DViewer(Base2DViewer):
         ax: Axes | None = None,
         theme: Matplotlib2DViewerTheme | None = None,
     ) -> None:
-        """Initialize a Matplotlib 2D viewer.
-
-        Parameters
-        ----------
-        fig : Figure or None, default=None
-            Figure instance to use. If provided without ``ax``, a new subplot is
-            created on this figure.
-        ax : Axes or None, default=None
-            Axes instance to use. If provided without ``fig``, the corresponding
-            ``ax.figure`` is used automatically.
-        theme : Matplotlib2DViewerTheme or None, default=None
-            Theme configuration controlling layout and styling. When ``None``, the
-            default ``Matplotlib2DViewerTheme`` is used.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If both ``fig`` and ``ax`` are provided but ``ax`` does not belong to
-            ``fig``.
-        """
+        """Initialize a Matplotlib 2D viewer."""
         self.set_theme(theme or Matplotlib2DViewerTheme())
 
         if fig is not None and ax is not None:
@@ -91,23 +85,11 @@ class Matplotlib2DViewer(Base2DViewer):
         theme : Matplotlib2DViewerTheme
             Theme object containing visual settings such as figure size, axis
             labels, and grid behavior.
-
-        Returns
-        -------
-        None
         """
         self.theme = theme
 
     def apply_theme(self) -> None:
         """Apply the active theme values to the current axes.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
         """
         ax = self.ax
         theme = self.theme
@@ -142,10 +124,6 @@ class Matplotlib2DViewer(Base2DViewer):
         ----------
         title : str or None, default=None
             Optional title text shown above the axes.
-
-        Returns
-        -------
-        None
         """
         self.ax.relim()
         self.ax.autoscale_view()

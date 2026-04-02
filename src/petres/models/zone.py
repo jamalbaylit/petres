@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Sequence, Literal
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any, Literal
 import numpy as np
 
 
@@ -29,7 +30,7 @@ class Zone:
 
     @property
     def n_layers(self) -> int:
-        """Number of layers in this zone."""
+        """Return the number of layers defined by `levels`."""
         return len(self.levels) - 1
     
     def thickness(self, xy: np.ndarray) -> np.ndarray:
@@ -86,9 +87,10 @@ class Zone:
         view : {'3d', '2d'}, default '3d'
             Target visualization backend.
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        ValueError
+            If `view` is not one of {'3d', '2d'}.
 
         Examples
         --------
@@ -141,10 +143,6 @@ class Zone:
             Whether to render internal layers derived from `levels`.
         show_edges : bool, default True
             Whether to draw mesh edges.
-
-        Returns
-        -------
-        None
 
         Examples
         --------
@@ -210,10 +208,6 @@ class Zone:
             Plot title; when 'auto' uses the zone name.
         **kwargs
             Additional keyword arguments forwarded to the Matplotlib surface helper.
-
-        Returns
-        -------
-        None
 
         Examples
         --------
@@ -300,19 +294,12 @@ class Zone:
         Parameters
         ----------
         levels : Sequence[float]
-            Candidate interface depths in normalized [0, 1]. Must start at 0
-            and end at 1.
+            Candidate interface levels in [0, 1], starting at 0 and ending at 1.
 
         Returns
         -------
         tuple[float, ...]
-            Cleaned, strictly increasing levels with endpoints (0, 1).
-
-        Raises
-        ------
-        ValueError
-            If the sequence is too short, not finite, outside [0, 1], or not
-            strictly increasing.
+            Strictly increasing normalized levels with exact endpoints (0.0, 1.0).
         """
         lv = np.asarray(list(levels), dtype=float)
 
@@ -340,17 +327,12 @@ class Zone:
         Parameters
         ----------
         fractions : Sequence[float]
-            Positive layer fractions that will be normalized to sum to 1.
+            Positive layer fractions to normalize.
 
         Returns
         -------
         tuple[float, ...]
-            Strictly increasing levels from 0 to 1.
-
-        Raises
-        ------
-        ValueError
-            If fractions are empty, non-finite, or non-positive.
+            Strictly increasing levels from 0.0 to 1.0.
         """
         fr = np.asarray(list(fractions), dtype=float)
         if fr.ndim != 1 or fr.size == 0:
@@ -369,19 +351,12 @@ class Zone:
         Parameters
         ----------
         nk : int
-            Number of layers (>= 2).
+            Number of layers, with the constraint `nk >= 2`.
 
         Returns
         -------
         tuple[float, ...]
-            Equally spaced levels in [0, 1].
-
-        Raises
-        ------
-        TypeError
-            If ``nk`` is not an integer.
-        ValueError
-            If ``nk`` is less than 2.
+            Equally spaced normalized levels in [0, 1].
         """
         if not isinstance(nk, int):
             raise TypeError("'nk' must be an int.")
