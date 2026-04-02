@@ -1,9 +1,13 @@
-from typing import Sequence, Iterable, TextIO
-from dataclasses import dataclass
-from pathlib import Path
-from enum import Enum
-import numpy as np
+from __future__ import annotations
+
 import datetime
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import TextIO
+
+import numpy as np
 
 
 class WellStatus(str, Enum):
@@ -72,15 +76,7 @@ class WCONHISTRecord:
     BHP: float | None = None # Observed Bottom Hole Pressure
 
     def __post_init__(self) -> None:
-        """Validate a WCONHIST record after dataclass initialization.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
+        """Validate field values after initialization.
 
         Raises
         ------
@@ -115,15 +111,7 @@ class WCONHISTStep:
     records: tuple["WCONHISTRecord", ...]
 
     def __post_init__(self) -> None:
-        """Validate a schedule step after dataclass initialization.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
+        """Validate field values after initialization.
 
         Raises
         ------
@@ -173,25 +161,7 @@ class WCONHISTWriter:
         float_fmt: str = "{:.6g}",
         indent: str = " ",
     ) -> None:
-        """Initialize a writer for Eclipse-style WCONHIST schedule blocks.
-
-        Parameters
-        ----------
-        keyword : str, default="WCONHIST"
-            Eclipse keyword to write for history-control rows.
-        write_dates : bool, default=True
-            Whether to emit a ``DATES`` block before each WCONHIST block.
-        quote_well_names : bool, default=True
-            Whether to wrap well names in single quotes.
-        float_fmt : str, default="{:.6g}"
-            Format string used for numeric values.
-        indent : str, default=" "
-            Prefix written before each schedule row.
-
-        Returns
-        -------
-        None
-        """
+        """Initialize a writer for Eclipse-style WCONHIST schedule blocks."""
         self.keyword = keyword.upper()
         self.write_dates = write_dates
         self.quote_well_names = quote_well_names
@@ -207,10 +177,6 @@ class WCONHISTWriter:
             Output file path where schedule text will be written.
         steps : Sequence[WCONHISTStep]
             Collection of schedule steps. Steps are sorted by ``date`` before writing.
-
-        Returns
-        -------
-        None
         """
         assert isinstance(path, (str, Path)), "`path` must be a string or Path instance."
         with open(path, "w", encoding="utf-8") as f:
@@ -268,10 +234,6 @@ class WCONHISTWriter:
             Open text stream receiving schedule output.
         d : datetime.datetime or datetime.date
             Date-like object to serialize in Eclipse DATES format.
-
-        Returns
-        -------
-        None
         """
         # day: An integer between 1 and 31
         # months: JAN, FEB, MAR, APR, MAY, JUN, JLY, AUG, SEP, OCT, NOV or DEC
@@ -296,10 +258,6 @@ class WCONHISTWriter:
             Open text stream receiving schedule output.
         records : Iterable[WCONHISTRecord]
             History-control rows to serialize.
-
-        Returns
-        -------
-        None
         """
         f.write(f"{self.keyword}\n")
         for r in records:
