@@ -1,9 +1,9 @@
 import numpy as np
 import pyvista as pv
-
+from ....._utils._color import Color
 
 def _add_pillars(
-    plotter: pv.Plotter,
+    backend,
     pillar_top: np.ndarray,
     pillar_bottom: np.ndarray,
     shaft_color: str = "red",
@@ -11,6 +11,7 @@ def _add_pillars(
     tip_radius_factor: float = 2.5,
     tip_length_factor: float = 0.12,
     opacity: float = 1.0,
+    **kwargs
 ) -> None:
     """
     Add arrow lines (pillars) from top points to bottom points, similar to
@@ -38,6 +39,9 @@ def _add_pillars(
     opacity : float
         Opacity for both shaft and tip actors.
     """
+    plotter = backend.plotter
+    shaft_color = Color(shaft_color).as_rgb()
+
     pillar_top = np.asarray(pillar_top, dtype=np.float64)
     pillar_bottom = np.asarray(pillar_bottom, dtype=np.float64)
 

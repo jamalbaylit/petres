@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Self
 
-<<<<<<< HEAD
+import pyvista as pv
 from .layers.cornerpoint import _add_corner_point_grid
 from .layers.pillars import _add_pillars
 from .theme import PyVista3DViewerTheme, Camera3D
@@ -11,21 +11,11 @@ from ....grids.cornerpoint import CornerPointGrid
 from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.surface import _add_surface
 from petres.grids.pillars import PillarGrid
-=======
-import numpy as np
-import pyvista as pv
-
 from ...._utils._color import Color
-from ....grids.cornerpoint import CornerPointGrid
-from ....grids.sampling._vertices import _resolve_xy_vertices
->>>>>>> 6dd4196b505f52618203d97162d365d9377988f1
 from ....models.horizon import Horizon
 from .layers.zone import _add_zone
 from ....models.zone import Zone
 from .._core.base import Base3DViewer
-from .._core.theme import Camera3D, SceneTheme3D
-from .layers.cornerpoint import _add_corner_point_grid
-from .layers.surface import _add_surface
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -39,7 +29,7 @@ class PyVista3DViewer(Base3DViewer):
     ----------
     plotter : pyvista.Plotter or None, default=None
         Existing PyVista plotter to use. If ``None``, a new plotter is created.
-    theme : SceneTheme3D or None, default=None
+    theme : PyVista3DViewerTheme or None, default=None
         Visual scene configuration. If ``None``, a default theme is used.
     camera : Camera3D or None, default=None
         Camera configuration. If ``None``, an isometric default camera setup
@@ -240,12 +230,12 @@ class PyVista3DViewer(Base3DViewer):
             The current viewer instance for fluent chaining.
         """
         _add_pillars(
-            self.plotter,
+            self,
             pillars.pillar_top,
             pillars.pillar_bottom,
-            # color=color,
-            # line_width=line_width,
-            # **kwargs,
+            color=color,
+            line_width=line_width,
+            **kwargs,
         )
         return self
     
@@ -265,7 +255,7 @@ class PyVista3DViewer(Base3DViewer):
         """
         p = self.plotter
         # Base view preset
-        if cam.view == "iso":
+        if cam.view == "ico":
             p.view_isometric()
         elif cam.view == "top":
             p.view_xy(negative=False)
