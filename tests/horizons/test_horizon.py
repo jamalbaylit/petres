@@ -24,7 +24,7 @@ def test_horizon_rejects_invalid_xy_shape():
 def test_horizon_rejects_mismatched_z_size():
     xy = np.array([[0.0, 0.0], [1.0, 1.0]])
     z = np.array([1.0])
-    with pytest.raises(ValueError, match="depth must be shape"):
+    with pytest.raises(ValueError, match="matching xy"):
         Horizon(name="H", xy=xy, depth=z, interpolator=IDWInterpolator())
 
 
@@ -43,7 +43,7 @@ def test_horizon_from_wells_extracts_tops():
     h = Horizon.from_wells(name="TopA", wells=wells, interpolator=IDWInterpolator())
 
     assert h.xy.shape == (2, 2)
-    assert h.z.shape == (2,)
+    assert h.depth.shape == (2,)
 
 
 def test_horizon_from_wells_raises_when_missing_top():

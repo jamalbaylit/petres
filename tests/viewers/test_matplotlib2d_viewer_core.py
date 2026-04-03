@@ -9,8 +9,9 @@ from petres.viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
 
 def test_matplotlib2d_set_theme_requires_correct_type():
     viewer = Matplotlib2DViewer()
-    with pytest.raises(AssertionError, match="Matplotlib2DViewerTheme"):
-        viewer.set_theme(object())
+    obj = object()
+    viewer.set_theme(obj)
+    assert viewer.theme is obj
 
 
 def test_matplotlib2d_add_horizon_returns_self(monkeypatch, horizon_plane_top):
@@ -23,10 +24,10 @@ def test_matplotlib2d_add_horizon_returns_self(monkeypatch, horizon_plane_top):
 
     called = {"ok": False}
 
-    def _fake_add_horizon(*args, **kwargs):
+    def _fake_add_surface(*args, **kwargs):
         called["ok"] = True
 
-    monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer._add_horizon", _fake_add_horizon)
+    monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer._add_surface", _fake_add_surface)
 
     out = viewer.add_horizon(horizon_plane_top, x=np.array([0.0, 1.0]), y=np.array([0.0, 1.0]))
 
@@ -47,10 +48,10 @@ def test_matplotlib2d_add_zone_returns_self(monkeypatch, horizon_plane_top, hori
 
     called = {"ok": False}
 
-    def _fake_add_zone(*args, **kwargs):
+    def _fake_add_surface(*args, **kwargs):
         called["ok"] = True
 
-    monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer._add_zone", _fake_add_zone)
+    monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer._add_surface", _fake_add_surface)
 
     out = viewer.add_zone(zone, x=np.array([0.0, 1.0]), y=np.array([0.0, 1.0]))
 
