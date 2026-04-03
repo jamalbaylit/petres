@@ -12,3 +12,4 @@ Complete reference for all public classes and functions.
    grids
    interpolators
    models
+   viewers
