@@ -43,7 +43,7 @@ def rectilinear_vertices():
 @pytest.fixture
 def simple_pillar_grid(rectilinear_vertices):
     x, y, _ = rectilinear_vertices
-    return PillarGrid.from_rectilinear(x=x, y=y, z_top=1000.0, z_bottom=1100.0)
+    return PillarGrid.from_rectilinear(x=x, y=y, top=1000.0, base=1100.0)
 
 
 @pytest.fixture

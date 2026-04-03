@@ -22,4 +22,5 @@ The tutorials present Petres through practical workflows, beginning with direct 
    pillar-gridding
    grid-modeling-from-horizons-and-zones
    property-modeling
+   boundary-polygon
    exporting-grid
