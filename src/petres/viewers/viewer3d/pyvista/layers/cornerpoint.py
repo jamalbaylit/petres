@@ -1,32 +1,52 @@
-from typing import Optional
-from ....._utils._color import Color
-import pyvista as pv
+from __future__ import annotations
+
+from typing import Any
 import numpy as np
+import pyvista as pv
+
+from ....._utils._color import Color
+from .....grids import CornerPointGrid
 
 def _add_corner_point_grid(
-    backend, 
-    grid, 
-    show_inactive: bool = False, 
-    color: Optional[Color] = None,
-    scalars: Optional[np.ndarray] = None,   
-    cmap: Optional[str] = None,             
-    **kwargs
-):
+    backend: Any,
+    grid: CornerPointGrid,
+    show_inactive: bool = False,
+    color: Color | None = None,
+    scalars: np.ndarray | None = None,
+    cmap: str | None = None,
+    **kwargs: Any,
+) -> pv.UnstructuredGrid:
     """
-    Add a CornerPointGrid to the PyVista plotter using fully vectorized mesh construction.
-    
-    This function builds a PyVista UnstructuredGrid from a CornerPointGrid without any loops,
-    using numpy array operations for maximum performance. It handles:
-    - Active cell filtering
-    - Hexahedral cell construction
-    - Proper VTK connectivity
-    
-    Args:
-        backend: PyVista backend instance with plotter
-        grid: CornerPointGrid instance containing corner_z, pillars, and active arrays
-        
-    Raises:
-        ValueError: If no active cells are found or if grid dimensions are invalid
+    Add a corner-point grid layer to the active PyVista plotter.
+
+    Parameters
+    ----------
+    backend : Any
+        Viewer backend exposing a PyVista ``plotter``.
+    grid : CornerPointGrid
+        Grid containing pillar coordinates, ZCORN values, and activity flags.
+    show_inactive : bool, default=False
+        Include inactive cells when ``True``.
+    color : Color | None, default=None
+        Solid mesh color when scalar coloring is disabled.
+    scalars : numpy.ndarray | None, default=None
+        Cell scalar values. When inactive cells are filtered, values are filtered
+        with the same mask.
+    cmap : str | None, default=None
+        Colormap used for scalar rendering.
+    **kwargs : Any
+        Additional keyword arguments forwarded to ``plotter.add_mesh``.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Unstructured hexahedral mesh built from the corner-point grid.
+
+    Raises
+    ------
+    ValueError
+        If no active cells remain after filtering, or if scalar size does not
+        match the number of rendered cells.
     """
     # Extract grid dimensions
     nk, nj, ni = grid.shape
@@ -96,31 +116,20 @@ def _add_corner_point_grid(
     return mesh
 
 
-def _construct_cell_corners_vectorized(grid):
+def _construct_cell_corners_vectorized(grid: CornerPointGrid) -> np.ndarray:
     """
-    Construct all cell corner coordinates using stride-2 slice extraction.
-    
-    Extracts z-coordinates from grid.corner_z (shape 2*nk, 2*nj, 2*ni) using
-    stride-2 slicing (no index arrays), then interpolates x,y along pillars.
-    
-    Corner ordering (VTK hexahedron):
-    
-        VTK idx │ di  dj │ ZCORN k-slice  │ Pillar (j, i)
-        ────────┼────────┼────────────────┼──────────────
-          0     │  0   0 │ 0::2 (cell top)│ [:-1, :-1]
-          1     │  1   0 │ 0::2           │ [:-1,  1:]
-          2     │  1   1 │ 0::2           │ [ 1:,  1:]
-          3     │  0   1 │ 0::2           │ [ 1:, :-1]
-          4     │  0   0 │ 1::2 (cell bot)│ [:-1, :-1]
-          5     │  1   0 │ 1::2           │ [:-1,  1:]
-          6     │  1   1 │ 1::2           │ [ 1:,  1:]
-          7     │  0   1 │ 1::2           │ [ 1:, :-1]
-    
-    Args:
-        grid: CornerPointGrid instance
-        
-    Returns:
-        np.ndarray: Cell corners, shape (nk, nj, ni, 8, 3)
+    Construct cell-corner coordinates with stride-based vectorization.
+
+    Parameters
+    ----------
+    grid : CornerPointGrid
+        Grid with corner depths and pillar top/bottom coordinates.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array with shape ``(nk, nj, ni, 8, 3)`` containing VTK-ordered corner
+        coordinates for each cell.
     """
     nk, nj, ni = grid.shape
     corners = np.empty((nk, nj, ni, 8, 3), dtype=np.float64)
@@ -166,16 +175,24 @@ def _construct_cell_corners_vectorized(grid):
     return corners
 
 
-def _build_pyvista_mesh_vectorized(cell_corners, n_cells):
+def _build_pyvista_mesh_vectorized(
+    cell_corners: np.ndarray,
+    n_cells: int,
+) -> pv.UnstructuredGrid:
     """
-    Build PyVista UnstructuredGrid from cell corners using vectorized operations.
-    
-    Args:
-        cell_corners: Array of shape (n_cells, 8, 3) containing corner coordinates
-        n_cells: Number of cells
-        
-    Returns:
-        pv.UnstructuredGrid: PyVista mesh
+    Build an unstructured hexahedral mesh from flattened cell corners.
+
+    Parameters
+    ----------
+    cell_corners : numpy.ndarray
+        Corner coordinate array with shape ``(n_cells, 8, 3)``.
+    n_cells : int
+        Number of hexahedral cells represented in ``cell_corners``.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Mesh containing VTK hexahedron connectivity and point coordinates.
     """
     # ========================================================================
     # Create point array

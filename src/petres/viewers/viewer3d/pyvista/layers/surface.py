@@ -1,20 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
-from pyparsing import Optional
-import pyvista as pv
 import numpy as np
+import pyvista as pv
 
-from .....models.horizon import Horizon
 from ....._utils._color import Color
 
 
 def _add_surface(
-    backend,
+    backend: Any,
     depth: np.ndarray,
     *,
-    x: np.ndarray,
-    y: np.ndarray,
+    x: Sequence[float] | np.ndarray,
+    y: Sequence[float] | np.ndarray,
     name: str | None = None,
     color: Color | None = None,
     scalars: bool | None = True,
@@ -34,24 +33,57 @@ def _add_surface(
     **mesh_kwargs: Any,
 ) -> pv.StructuredGrid:
     """
-    Add a sampled Horizon surface as a PyVista StructuredGrid.
+    Add a horizon surface and optional contours to the active 3D plotter.
 
     Parameters
     ----------
+    backend : Any
+        Viewer backend exposing a PyVista ``plotter``.
+    depth : numpy.ndarray
+        2D depth array with shape ``(len(y), len(x))``.
+    x : collections.abc.Sequence[float] | numpy.ndarray
+        X-coordinates of the grid pillars.
+    y : collections.abc.Sequence[float] | numpy.ndarray
+        Y-coordinates of the grid pillars.
+    name : str | None, default=None
+        Mesh name used by the plotter.
+    color : Color | None, default=None
+        Solid surface color when scalar coloring is disabled.
+    scalars : bool | None, default=True
+        Whether to color the surface with depth-derived scalar values.
+    cmap : str | None, default=None
+        Colormap used when scalar coloring is enabled.
+    show_colorbar : bool, default=True
+        Whether to display the scalar bar.
+    colorbar_title : str | None, default=None
+        Optional scalar bar title.
     show_contours : bool, default=True
-        Whether to overlay contour lines on the horizon surface.
+        Whether to overlay contour lines on the surface.
     contour_levels : int, default=10
         Number of contour levels.
     show_contour_labels : bool, default=True
         Whether to place contour value labels on the contour lines.
-    contour_label_fontsize : int, default=8
+    contour_label_fontsize : int, default=10
         Font size of contour labels.
     contour_opacity : float, default=0.8
         Opacity of contour lines.
     contour_color : str, default="black"
         Color of contour lines and labels.
-    contour_linewidth : float, default=0.7
+    contour_linewidth : float, default=3
         Width of contour lines.
+    **mesh_kwargs : Any
+        Extra keyword arguments forwarded to ``plotter.add_mesh``.
+
+    Returns
+    -------
+    pyvista.StructuredGrid
+        Structured grid created from ``x``, ``y``, and ``depth``.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` or ``y`` are not 1D, if ``depth`` shape is incompatible, or if
+        ``contour_levels < 1`` when contours are enabled.
     """
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
