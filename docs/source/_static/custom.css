@@ -132,3 +132,62 @@ table.docutils th{
 /* .admonition, .topic{
     background: var(--color-sidebar-background);
 } */
+
+
+.sd-card-hover:hover{
+    /* box-shadow: 0 .1rem .25rem var(--sd-color-shadow), 0 0 .0625rem rgba(0, 0, 0, .1) !important; */
+        transform: translateY(-2px);
+}
+.sd-card {
+    /* margin: 0 !important; */
+    transition-duration: 0.3s;
+    transition-timing-function: ease;
+    transition-property: border-color, background-color, box-shadow, transform;
+}
+
+/* Replace flex with grid */
+.sd-container-fluid .sd-row {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Make each card behave nicely */
+.sd-col {
+    max-width: 100% !important;
+    flex: unset !important;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+.grid-item-header{
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.grid-item-title {
+    margin: 0;
+}
+.grid-item-icon{
+    width: 22px;
+    height: 22px;
+    margin-right: 14px;
+    color: var(--color-brand-primary);
+}
+/* .grid-item-card {
+    border-radius: 12px;
+    padding: 1rem;
+    background: #2b2b2b;
+    border: 1px solid #444;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.2em 0.6em;
+    margin: 0.2em;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    background-color: #3a3f58;
+    color: #cfd3ff;
+} */

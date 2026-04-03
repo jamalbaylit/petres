@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from petres.grids import PillarGrid
 from petres.models import Horizon, Zone
 from petres.viewers import Viewer2D, Viewer2DTheme
 
@@ -74,3 +75,49 @@ def test_boundary_show2d_delegates_to_matplotlib_viewer(monkeypatch, boundary_bo
     boundary_box.show2d()
 
     assert calls["added"] and calls["shown"]
+
+
+def test_pillar_grid_show_delegates_to_pyvista_viewer(monkeypatch, simple_pillar_grid):
+    calls = {"added": False, "shown": False, "pillars": None}
+
+    class DummyViewer:
+        def add_pillars(self, pillars, *args, **kwargs):
+            calls["added"] = True
+            calls["pillars"] = pillars
+
+        def show(self, *args, **kwargs):
+            calls["shown"] = True
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    monkeypatch.setattr(viewer_mod, "PyVista3DViewer", DummyViewer)
+
+    simple_pillar_grid.show(title="Pillars")
+
+    assert calls["added"] and calls["shown"]
+    assert calls["pillars"] is simple_pillar_grid
+
+
+def test_add_pillars_forwards_raw_arrays(monkeypatch, simple_pillar_grid):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    calls = {}
+
+    def fake_add_pillars(backend, pillar_top, pillar_bottom, **kwargs):
+        calls["backend"] = backend
+        calls["pillar_top"] = pillar_top
+        calls["pillar_bottom"] = pillar_bottom
+        calls["kwargs"] = kwargs
+
+    monkeypatch.setattr(viewer_mod, "_add_pillars", fake_add_pillars)
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.add_pillars(simple_pillar_grid, color="red", line_width=4.0)
+
+    assert calls["backend"] is viewer
+    assert calls["pillar_top"] is simple_pillar_grid.pillar_top
+    assert calls["pillar_bottom"] is simple_pillar_grid.pillar_bottom
+    assert calls["kwargs"]["color"] == "red"
+    assert calls["kwargs"]["line_width"] == 4.0

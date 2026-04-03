@@ -4,6 +4,7 @@ Rectilinear and Regular Grids
 In this tutorial, you will learn how to create :ref:`Rectilinear <rectilinear-grids>` and :ref:`Regular <regular-grids>` grids in Petres.
 
 
+.. _creating-rectilinear-grid:
 Creating a Rectilinear Grid
 ---------------------------
 
@@ -31,13 +32,16 @@ so the number of cells is ``len(x)-1``, ``len(y)-1``, and ``len(z)-1``.
    Internally, Petres converts this into a Corner-Point grid.
 
 
+
+.. _creating-regular-grid:
+
 Creating a Regular Grid
 -----------------------
 
 In Petres, a :ref:`Regular grid <regular-grids>` can be defined in two equivalent ways:
 
-1. By specifying the **number of cells**
-2. By specifying the **cell sizes**
+- By specifying the **number of cells**
+- By specifying the **cell sizes**
 
 Using Number of Cells
 ~~~~~~~~~~~~~~~~~~~~~
@@ -85,3 +89,8 @@ Alternatively, the grid can be defined by specifying the size of cells.
 Here, ``dx``, ``dy``, and ``dz`` control the cell size in each direction.
 
 
+Next Steps
+----------
+
+- :doc:`property-modeling`
+- :doc:`exporting-grid`

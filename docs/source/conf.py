@@ -45,6 +45,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    'sphinx_inline_svg',
     "sphinx_design",
     "sphinx_copybutton",
     "apigen",
@@ -208,3 +209,51 @@ latex_documents = [
 # pygments_style = "one-dark"
 # pygments_dark_style = "one-dark"
 
+
+from docutils import nodes
+from docutils.parsers.rst import Directive, directives
+import os
+
+class InlineSVG(Directive):
+    required_arguments = 1
+    option_spec = {'class': directives.unchanged}
+
+    def run(self):
+        svg_path = os.path.join(os.path.dirname(__file__), self.arguments[0])
+        with open(svg_path) as f:
+            svg_content = f.read()
+        cls = self.options.get('class', '')
+        if cls:
+            svg_content = svg_content.replace('<svg ', f'<svg class="{cls}" ', 1)
+        node = nodes.raw('', svg_content, format='html')
+        return [node]
+
+
+class InlineSVGHeader(Directive):
+    required_arguments = 1
+    option_spec = {
+        'svg': directives.unchanged,
+        'title': directives.unchanged,
+    }
+
+    def run(self):
+        svg_path = os.path.join(os.path.dirname(__file__), self.arguments[0])
+        with open(svg_path) as f:
+            svg_content = f.read()
+        svg = self.options.get('svg', '')
+        title = self.options.get('title', '')
+        if svg:
+            svg_content = svg_content.replace('<svg ', f'<svg class="{svg}" ', 1)
+        html = f'''<div class="grid-item-header">
+            {svg_content}
+            <div class="sd-card-title sd-font-weight-bold docutils grid-item-title">
+                {title}
+            </div>
+        </div>'''
+        node = nodes.raw('', html, format='html')
+        return [node]
+
+
+def setup(app):
+    app.add_directive('inline-svg', InlineSVG)
+    app.add_directive('grid-item-header', InlineSVGHeader)

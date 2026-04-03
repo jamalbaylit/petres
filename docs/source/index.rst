@@ -1,142 +1,144 @@
-Petres
-======
+Welcome to Petres
+=================
 
-**Petres** is an open-source Python library designed for **reservoir engineers**
-to build, analyze, and visualize **Eclipse-compatible corner-point grids**
-and subsurface models.
-
-It provides a **fully scriptable alternative** to commercial reservoir modeling
-software (e.g., Petrel), enabling users to generate and manipulate reservoir
-grids using only Python — without relying on graphical user interfaces.
-
-Petres is particularly suited for engineers and researchers who:
-
-- Do not have access to expensive proprietary software  
-- Prefer reproducible, code-driven workflows  
-- Require full control over grid geometry and simulation inputs  
-
-.. note::
-
-   Petres focuses on **structured grids** and **corner-point grid systems**
-   commonly used in reservoir simulation workflows.
+Petres is a lightweight, open-source Python library designed for reservoir grid modeling, 
+designed to provide a programmatic approach to constructing :ref:`Corner-Point grid <corner-point-grid>` models. 
 
 
-
-.. figure:: _static/images/cpg_example.png
-   :align: center
-   :width: 75%
-
-   Example corner-point grid representation.
+.. important::
+   
+   Petres is currently in early development. 
+   The API should be considered unstable and may change without notice.
 
 
+Features
+--------
 
-Quick Start
------------
-
-Install Petres:
-
-.. code-block:: bash
-
-   pip install petres
-
-Create a simple grid:
-
-.. code-block:: python
-
-   from petres.grid import CornerPointGrid
-
-   grid = CornerPointGrid.from_rectilinear(
-       x=[0, 100, 200],
-       y=[0, 100],
-       z=[0, -50, -100],
-   )
-
-   grid.plot()
-
-
-
-What You Can Do with Petres
----------------------------
-
-Petres provides a programmatic workflow for building reservoir models
-from the ground up:
-
-- Generate **corner-point grids** compatible with Eclipse simulators  
-- Define **pillar geometry** and explicitly control grid topology  
-- Construct grids from **rectilinear inputs or custom geometries**  
-- Create and manage **horizons and zones** using interpolation methods  
-- Assign and manipulate **cell-based properties**  
-- Export grid data in **GRDECL format** (COORD, ZCORN, ACTNUM)  
-- Visualize grids and properties in 3D  
-
-This enables fully reproducible reservoir modeling workflows entirely within Python.
-
-
-
-Core Capabilities
------------------
-
-.. grid:: 2
+.. grid:: 1 1 2 2
    :gutter: 3
 
-   .. grid-item-card:: 🧱 Grid Modeling
-      Build structured and corner-point grids with full control over geometry.
+   .. grid-item-card:: 
+      :link: tutorials/rectilinear-and-regular-grids
+      :link-type: doc
+      :class-card: grid-item-card
 
-   .. grid-item-card:: 🌍 Horizons and Zones
-      Define subsurface structure using interpolation-based surfaces.
+      .. grid-item-header:: _static/svg/grid.svg
+         :svg: grid-item-icon
+         :title: Grid Generation
 
-   .. grid-item-card:: ⚙️ Eclipse Compatibility
-      Read and write GRDECL data (COORD, ZCORN, ACTNUM).
+      Construct Corner-Point, Rectilinear, and Regular grids. 
+      Apply boundary polygons to deactivate cells outside the target region.
 
-   .. grid-item-card:: 📊 Visualization
-      Interactive 3D visualization using modern Python tools.
+ 
+   .. grid-item-card::
+      :link: tutorials/grid-modeling-from-horizons-and-zones
+      :link-type: doc
+      :class-card: grid-item-card
 
+      .. grid-item-header:: _static/svg/structure.svg
+         :svg: grid-item-icon
+         :title: Structural Modeling
 
-
-Design Philosophy
------------------
-
-Petres is built around a **code-first modeling approach**:
-
-- No GUI dependencies  
-- Full control over data and geometry  
-- Reproducible and version-controlled workflows  
-
-Rather than replacing graphical tools, Petres complements them by enabling
-automation, experimentation, and integration with modern data science pipelines.
+      Generate horizon and zone surfaces from well tops to support grid construction.
 
 
+   .. grid-item-card::
+      :link: tutorials/property-modeling
+      :link-type: doc
+      :class-card: grid-item-card
 
-Where to go next
-----------------
-
-- :doc:`Getting Started <getting_started/quickstart>`
-- :doc:`Fundamentals <fundamentals/grid-classification>`
-- :doc:`Tutorials <tutorials>`
-- :doc:`Examples <examples>`
-- :doc:`API Reference <api/index>`
-
+      .. grid-item-header:: _static/svg/property.svg
+         :svg: grid-item-icon
+         :title: Property Modeling
 
 
-Learn the Fundamentals
+      Assign petrophysical properties to grid cells using stochastic or deterministic methods, derived attributes, or interpolation from well data.
+
+
+
+   .. grid-item-card::
+      :link: tutorials/exporting-grid
+      :link-type: doc
+      :class-card: grid-item-card
+
+      .. grid-item-header:: _static/svg/export.svg
+         :svg: grid-item-icon
+         :title: Import & Export Grids
+
+      Handle Eclipse grids (SLB reservoir simulator) 
+      using the ``.GRDECL`` file format. Import, visualize,
+      and export grids seamlessly within your modeling
+      and simulation workflows.
+
+
+   .. grid-item-card:: 
+      :link: visualizing-the-grid
+      :link-type: ref
+      :class-card: grid-item-card
+
+      .. grid-item-header:: _static/svg/visualization.svg
+         :svg: grid-item-icon
+         :title: Visualization
+
+      Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizons, and spatial property distributions.
+
+
+Why Petres?
+-----------
+
+- **Open Access:** Free alternative for engineers and students without access to expensive commercial softwares.
+
+- **Scriptable Modeling:** Avoid UI complexity and work with code-driven workflows.
+
+- **Fully Customizable:** Integrate your own code alongside built-in methods.
+
+- **AI Integration:** Use the Python ecosystem to apply AI and Machine Learning techniques.
+
+
+
+Technical Architecture
 ----------------------
 
-Petres documentation includes detailed technical explanations of
-reservoir grid systems, designed both as a reference and as educational material:
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
 
-- Structured vs unstructured grids  
-- Rectilinear, regular, and Cartesian grids  
-- Corner-point grid geometry  
-- Eclipse data representation (COORD, ZCORN, ACTNUM)
+   * - Component
+     - Implementation
+   * - Grid Operations
+     - High-performance, vectorized array computations using *NumPy*.
+   * - 2D Plotting
+     - 2D plots are generated via the *Matplotlib*.
+   * - 3D Visualization
+     - Interactive 3D rendering and mesh visualization via *PyVista*.
+   * - Kriging Interpolation
+     - :ref:`Ordinary and Universal Kriging <kriging-interpolation>` implemented via *PyKrige*.
+   * - RBF Interpolation
+     - Multi-dimensional :ref:`Radial Basis Function <rbf-interpolation>` interpolation utilizing *SciPy*.
+   * - IDW Interpolation
+     - In-house implementation for :ref:`Inverse Distance Weighting <idw-interpolation>`.
+   
 
-👉 Start here: :doc:`Grid Types in Reservoir Simulation <fundamentals/grid-types>`
+
+Getting Started
+---------------
+Start modeling with Petres by following the :doc:`installation guide <getting-started/installation>` 
+and the :doc:`Quickstart tutorial <getting-started/quickstart>`.
+The source code is also available on GitHub: `Petres Repository <https://github.com/jamalbaylit/petres>`_.
+
+Contact
+-------
+For questions, suggestions, or collaboration, feel free to reach out:
+
+- **Email:** jamalbaylit@gmail.com  
+- **LinkedIn:** `Tayfun Jamalbayli <https://www.linkedin.com/in/jamalbaylit>`_
 
 
 
-.. note::
 
-   Petres is under active development. Contributions, feedback,
-   and collaboration are welcome.
+
+
+
 
 
 

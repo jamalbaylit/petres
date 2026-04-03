@@ -1,7 +1,8 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from .._core.theme import SceneTheme3D
+from .theme import Base3DViewerTheme
 from ....grids.cornerpoint import CornerPointGrid
+from ....grids.pillars import PillarGrid
 
 
 class Base3DViewer(ABC):
@@ -10,10 +11,9 @@ class Base3DViewer(ABC):
     Optional features should raise a consistent NotImplementedError via _unsupported().
     """
 
-
     # ---- core (must exist for any backend) ----
     @abstractmethod
-    def set_theme(self, theme: SceneTheme3D) -> None:
+    def set_theme(self, theme: Base3DViewerTheme) -> None:
         """Apply global scene settings (background, axes, scale, camera convention)."""
 
     @abstractmethod
@@ -26,6 +26,9 @@ class Base3DViewer(ABC):
 
     def add_corner_point_grid(self, grid: CornerPointGrid) -> None:
         self._unsupported("add_corner_point_grid")
+
+    def add_pillars(self, pillars: PillarGrid) -> None:
+        self._unsupported("add_pillars")
 
     # def add_wells(self, wells) -> None:
     #     self._unsupported("add_wells")

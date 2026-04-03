@@ -1,9 +1,6 @@
 Property Modeling
 =================
 
-Overview
---------
-
 This tutorial introduces property modeling in Petres.
 Grid properties are defined per cell and
 they represent scalar quantities such as porosity, permeability, saturation,

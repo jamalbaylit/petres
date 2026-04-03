@@ -827,9 +827,9 @@ class GridProperty:
         """
         lines = [
             "Property Summary",
-            "════════════        : {self.name}",
-            f"Descri════",
-            f"Name      ption       : {self.description}",
+            "════════════════════════════════════════════════════════════════",
+            f"Name              : {self.name}",
+            f"Description       : {self.description}",
             f"Eclipse Keyword   : {self.eclipse_keyword}",
             f"Grid Shape        : {self.shape}",
             f"Min               : {self.min}",

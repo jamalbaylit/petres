@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple, Self
+from typing import Any, Optional, Tuple, Self
 import numpy as np
 
 
@@ -212,8 +212,8 @@ class PillarGrid:
         *,
         x: np.ndarray,     # (ni+1,)
         y: np.ndarray,     # (nj+1,)
-        z_top: float,
-        z_bottom: float,
+        top: float = 0.0,
+        base: float = 1.0,
     ) -> "PillarGrid":
         """Create vertical pillars from rectilinear x and y vertex vectors.
 
@@ -223,11 +223,11 @@ class PillarGrid:
             One-dimensional x-vertex coordinates with shape ``(ni+1,)``.
         y : numpy.ndarray
             One-dimensional y-vertex coordinates with shape ``(nj+1,)``.
-        z_top : float
-            Constant top z-value used for all pillar tops.
-        z_bottom : float
-            Constant bottom z-value used for all pillar bottoms. Must be larger
-            than ``z_top``.
+        top : float
+            Constant top value used for all pillar tops.
+        base : float
+            Constant base value used for all pillar bases. Must be larger
+            than ``top``.
 
         Returns
         -------
@@ -238,7 +238,7 @@ class PillarGrid:
         Raises
         ------
         ValueError
-            If vertex arrays are invalid or if ``z_bottom <= z_top``.
+            If vertex arrays are invalid or if ``base <= top``.
 
         Notes
         -----
@@ -248,16 +248,16 @@ class PillarGrid:
      
         x = _validate_vertex_array(x, "x")
         y = _validate_vertex_array(y, "y")
-        z_top = _validate_finite_float(z_top, "z_top")
-        z_bottom = _validate_finite_float(z_bottom, "z_bottom")
+        top = _validate_finite_float(top, "top")
+        base = _validate_finite_float(base, "base")
 
-        if z_bottom <= z_top:
-            raise ValueError("'z_bottom' must be greater than 'z_top'.")
+        if base <= top:
+            raise ValueError("'base' must be greater than 'top'.")
 
         X, Y = np.meshgrid(x, y)  # (nj+1, ni+1)
 
-        Zt = np.full_like(X, float(z_top), dtype=float)
-        Zb = np.full_like(X, float(z_bottom), dtype=float)
+        Zt = np.full_like(X, float(top), dtype=float)
+        Zb = np.full_like(X, float(base), dtype=float)
 
         pillar_top = np.stack([X, Y, Zt], axis=2)      # (nj+1, ni+1, 3)
         pillar_bot = np.stack([X, Y, Zb], axis=2)
@@ -273,8 +273,8 @@ class PillarGrid:
         nj: Optional[int] = None,
         dx: Optional[float] = None,
         dy: Optional[float] = None,
-        z_top: float = 0.0,
-        z_bottom: float = 1.0,
+        top: float = 0.0,
+        base: float = 1.0,
     ) -> Self:
         """Construct a vertical pillar grid from bounding box and resolution.
 
@@ -292,7 +292,7 @@ class PillarGrid:
             Cell size along x when spacing-based resolution is used.
         dy : float or None, default None
             Cell size along y when spacing-based resolution is used.
-        z_top, z_bottom : float, default 0.0, 1.0
+        top, base : float, default 0.0, 1.0
             Constant pillar end depths.
 
         Returns
@@ -321,40 +321,43 @@ class PillarGrid:
         xv, yv = _resolve_xy_vertices(
             xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy
         )
-        return cls.from_rectilinear(x=xv, y=yv, z_top=z_top, z_bottom=z_bottom)
+        return cls.from_rectilinear(x=xv, y=yv, top=top, base=base)
+
+    def show(
+        self,
+        *,
+        title: str | None = None,
+        color: Any = "black",
+        line_width: float = 6.0,
+        **kwargs: Any,
+    ) -> None:
+        """Render the pillar grid in the 3D PyVista viewer.
+
+        Parameters
+        ----------
+        title : str or None, default=None
+            Optional figure title.
+        color : Any, default="black"
+            Color used for the pillar lines and direction arrows.
+        line_width : float, default=6.0
+            Width used for the rendered pillar lines.
+        **kwargs
+            Forwarded to the viewer's pillar layer renderer.
+
+        Returns
+        -------
+        None
+            Opens an interactive 3D rendering window.
+        """
+        from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
+
+        viewer = PyVista3DViewer()
+        viewer.add_pillars(self, color=color, line_width=line_width, **kwargs)
+        viewer.show(title=title)
 
     
     
-    # @classmethod
-    # def from_rectilinear(
-    #     cls,
-    #     x: np.ndarray,  # Shape (ni+1,)
-    #     y: np.ndarray,  # Shape (nj+1,)
-    #     z_top: float,
-    #     z_bottom: float,
-    # ) -> Self:
-    #     """Create PillarGrid from rectilinear coordinates."""
-    #     ni = len(x) - 1
-    #     nj = len(y) - 1
-
-    #     # Create coordinate arrays
-    #     x_grid, y_grid = np.meshgrid(x, y, indexing='ij')
-
-    #     # Create pillar arrays
-    #     pillar_top = np.stack([
-    #         x_grid,
-    #         y_grid,
-    #         np.full_like(x_grid, z_top)
-    #     ], axis=2)
-
-    #     pillar_bottom = np.stack([
-    #         x_grid,
-    #         y_grid,
-    #         np.full_like(x_grid, z_bottom)
-    #     ], axis=2)
-
-    #     return cls(pillar_top=pillar_top, pillar_bottom=pillar_bottom)
-
+   
         
     # # ----------------------------
     # # Pillar geometry
@@ -440,79 +443,8 @@ class PillarGrid:
         
     #     return np.degrees(np.arctan2(lateral, vertical))
 
-    # # ----------------------------
-    # # Constructors
-    # # ----------------------------
+    
 
-    # @classmethod
-    # def from_rectilinear(
-    #     cls,
-    #     x: np.ndarray,  # Shape (ni+1,)
-    #     y: np.ndarray,  # Shape (nj+1,)
-    #     z_top: float,
-    #     z_bottom: float,
-    # ) -> 'PillarGrid':
-    #     """Create vertical pillar grid from rectilinear coordinates.
-        
-    #     Args:
-    #         x: X-coordinates of pillars, shape (ni+1,)
-    #         y: Y-coordinates of pillars, shape (nj+1,)
-    #         z_top: Z-coordinate at top
-    #         z_bottom: Z-coordinate at bottom
-            
-    #     Returns:
-    #         PillarGrid with vertical pillars
-    #     """
-    #     yy, xx = np.meshgrid(y, x, indexing='ij')
-        
-    #     njv, niv = xx.shape
-    #     pillar_top = np.zeros((njv, niv, 3))
-    #     pillar_bottom = np.zeros((njv, niv, 3))
-        
-    #     pillar_top[:, :, 0] = xx
-    #     pillar_top[:, :, 1] = yy
-    #     pillar_top[:, :, 2] = z_top
-        
-    #     pillar_bottom[:, :, 0] = xx
-    #     pillar_bottom[:, :, 1] = yy
-    #     pillar_bottom[:, :, 2] = z_bottom
-        
-    #     return cls(pillar_top, pillar_bottom)
-
-    # @classmethod
-    # def from_arrays(
-    #     cls,
-    #     x: np.ndarray,  # Shape (ni+1, nj+1)
-    #     y: np.ndarray,  # Shape (ni+1, nj+1)
-    #     z_top: np.ndarray,     # Shape (ni+1, nj+1) or scalar
-    #     z_bottom: np.ndarray,  # Shape (ni+1, nj+1) or scalar
-    # ) -> 'PillarGrid':
-    #     """Create pillar grid from coordinate arrays.
-        
-    #     Args:
-    #         x: X-coordinates, shape (nj+1, ni+1)
-    #         y: Y-coordinates, shape (nj+1, ni+1)
-    #         z_top: Z at top (array or scalar)
-    #         z_bottom: Z at bottom (array or scalar)
-            
-    #     Returns:
-    #         PillarGrid instance
-    #     """
-    #     if x.shape != y.shape:
-    #         raise ValueError("x and y must have the same shape")
-        
-    #     njv, niv = x.shape
-        
-    #     # Broadcast scalars
-    #     if np.isscalar(z_top):
-    #         z_top = np.full((njv, niv), z_top)
-    #     if np.isscalar(z_bottom):
-    #         z_bottom = np.full((njv, niv), z_bottom)
-        
-    #     pillar_top = np.stack([x, y, z_top], axis=-1)
-    #     pillar_bottom = np.stack([x, y, z_bottom], axis=-1)
-        
-    #     return cls(pillar_top, pillar_bottom)
 
     # def __repr__(self) -> str:
     #     """String representation."""

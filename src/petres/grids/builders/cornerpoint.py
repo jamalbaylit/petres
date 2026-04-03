@@ -6,7 +6,7 @@ from typing import Sequence
 import numpy as np
 
 
-from ..pillar import PillarGrid
+from ..pillars import PillarGrid
 from ...models.zone import Zone
 
 

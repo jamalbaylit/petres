@@ -3,13 +3,6 @@
 Horizon Modeling
 ================
 
-This tutorial covers horizon modeling in Petres, including how to define,
-reconstruct, and visualize continuous subsurface surfaces.
-
-
-Overview
---------
-
 A horizon is a continuous subsurface surface defined as
 :math:`z = f(x, y)`, where the value represents depth or elevation
 across the model domain.
@@ -116,9 +109,7 @@ After the horizon is created, you can find the depth where it intersects **any w
    print(horizon.intersect(well2))
 
 
-
-
-
+.. _horizon-visualization:
 Visualizing a Horizon
 ---------------------
 
@@ -163,7 +154,7 @@ Sampling with Grid Spacing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Alternatively, you can specify the desired spacing between grid points along each
-axis. Petres will automatically create a grid with these spacings:
+axis:
 
 .. code-block:: python
 
@@ -176,8 +167,9 @@ axis. Petres will automatically create a grid with these spacings:
 
 .. note::
 
-   All these approaches differ only in how the sampling grid is defined. The underlying
-   horizon surface is always evaluated using the same interpolated model.
+   All these approaches differ only in how the sampling grid is defined for visualization purposes.
+   The underlying horizon surface is always evaluated using the same interpolated model,
+   regardless of how the visualization grid is specified.
 
 
 By default, :meth:`~petres.models.Horizon.show` renders the horizon surface in 3D. 
@@ -192,27 +184,9 @@ To visualize the horizon in 2D, set ``view="2d"``:
       view="2d"
    )
 
-Additionally, the ``title`` argument can be used to set a custom plot title.
-If ``title=None`` is provided, no title will be displayed. Otherwise, an automatic
-title is generated based on the horizon name:
-   
-.. code-block:: python
-
-   horizon1.show(
-      x=np.linspace(0, 100, 50),
-      y=np.linspace(0, 100, 50),
-      title="Custom Title"
-   )
-
 For more advanced control over the visualization, Petres provides separate
 :meth:`~petres.models.Horizon.show2d` and :meth:`~petres.models.Horizon.show3d` methods,
 which offer additional customization options for 2D and 3D plots, respectively. 
-
-
-
-
-
-
 
 
 Visualizing Multiple Horizons
@@ -227,40 +201,43 @@ Multiple horizons can be displayed together using
 
    viewer = Viewer3D()
    viewer.add_horizons(
-       horizons=[horizon1, horizon2, horizon3],
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
-       cmap="viridis",
+      horizons=[horizon1, horizon2, horizon3],
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
+      cmap="viridis",
    )
    viewer.show()
 
+.. note::
+
+   The same grid sampling options described previously for :meth:`~petres.models.Horizon.show` are available here.
 
 Manual Color Assignment
-^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
    viewer = Viewer3D()
 
    viewer.add_horizon(
-       horizon1,
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
-       color="red",
+      horizon1,
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
+      color="red",
    )
 
    viewer.add_horizon(
-       horizon2,
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
-       color="blue",
+      horizon2,
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
+      color="blue",
    )
 
    viewer.add_horizon(
-       horizon3,
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
-       color="green",
+      horizon3,
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
+      color="green",
    )
 
    viewer.show()
@@ -268,17 +245,11 @@ Manual Color Assignment
 
 .. important::
 
-   Horizons are reusable objects and can be used:
-
-   - to define multiple zones
-   - to construct grids
-   - to evaluate depth at arbitrary locations
-
-   They form the structural backbone of the model.
+   Horizons are reusable objects and can be used to define multiple zones (see :ref:`create-zone-from-horizons`).
 
 
 Next Steps
 ----------
 
 - :ref:`zone-modeling`
-- :ref:`grid-modeling-from-horizons-and-zones`
+- :doc:`grid-modeling-from-horizons-and-zones`

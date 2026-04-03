@@ -8,11 +8,12 @@ import numpy as np
 import warnings
 
 from .layers.cornerpoint import _add_corner_point_grid
-from .._core.theme import SceneTheme3D, Camera3D
+from .layers.pillars import _add_pillars
+from .theme import PyVista3DViewerTheme, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
 from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.surface import _add_surface
-from ....grids.pillar import PillarGrid
+from petres.grids.pillars import PillarGrid
 from ....models.horizon import Horizon
 from .._core.base import Base3DViewer
 from ...._utils._color import Color
@@ -29,14 +30,14 @@ class PyVista3DViewer(Base3DViewer):
     zones, and horizons.
     """
 
-    theme: SceneTheme3D
+    theme: PyVista3DViewerTheme
     camera: Camera3D
     plotter: pv.Plotter
 
     def __init__(
         self, 
         plotter: pv.Plotter | None = None,
-        theme: SceneTheme3D | None = None,
+        theme: PyVista3DViewerTheme | None = None,
         camera: Camera3D | None = None,
     ) -> None:
         """Initialize a 3D viewer instance.
@@ -48,7 +49,7 @@ class PyVista3DViewer(Base3DViewer):
         ----------
         plotter : pyvista.Plotter or None, default=None
             Existing PyVista plotter to use. If ``None``, a new plotter is created.
-        theme : SceneTheme3D or None, default=None
+        theme : PyVista3DViewerTheme or None, default=None
             Visual scene configuration. If ``None``, a default theme is used.
         camera : Camera3D or None, default=None
             Camera configuration. If ``None``, an isometric default camera setup
@@ -59,7 +60,7 @@ class PyVista3DViewer(Base3DViewer):
         None
             This constructor initializes viewer state in place.
         """
-        self.set_theme(theme or SceneTheme3D())
+        self.set_theme(theme or PyVista3DViewerTheme())
         self.set_camera(camera or Camera3D(
             view="iso",
             turn=-45,
@@ -90,12 +91,12 @@ class PyVista3DViewer(Base3DViewer):
         assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
         self.plotter = plotter
 
-    def set_theme(self, theme: SceneTheme3D) -> None:
+    def set_theme(self, theme: PyVista3DViewerTheme) -> None:
         """Assign the active scene theme.
 
         Parameters
         ----------
-        theme : SceneTheme3D
+        theme : PyVista3DViewerTheme
             Theme containing background, axes, and title display settings.
 
         Returns
@@ -106,9 +107,9 @@ class PyVista3DViewer(Base3DViewer):
         Raises
         ------
         AssertionError
-            If ``theme`` is not a ``SceneTheme3D`` instance.
+            If ``theme`` is not a ``PyVista3DViewerTheme`` instance.
         """
-        assert isinstance(theme, SceneTheme3D), "`theme` must be a SceneTheme3D instance or None."
+        assert isinstance(theme, PyVista3DViewerTheme), "`theme` must be a PyVista3DViewerTheme instance or None."
         self.theme = theme
 
     def set_camera(self, camera: Camera3D) -> None:
@@ -132,12 +133,12 @@ class PyVista3DViewer(Base3DViewer):
         assert isinstance(camera, Camera3D), "`camera` must be a Camera3D instance or None."
         self.camera = camera
 
-    def apply_theme(self, theme: SceneTheme3D) -> None:
+    def apply_theme(self, theme: PyVista3DViewerTheme) -> None:
         """Apply scene styling options to the active plotter.
 
         Parameters
         ----------
-        theme : SceneTheme3D
+        theme : PyVista3DViewerTheme
             Theme values controlling background color and axes visibility.
 
         Returns
@@ -242,6 +243,42 @@ class PyVista3DViewer(Base3DViewer):
                 self._add_corner_point_grid(grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color,**kwargs)
             case _:
                 raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
+        return self
+
+    def add_pillars(
+        self,
+        pillars: PillarGrid,
+        *,
+        color: Any = "black",
+        line_width: float = 2.5,
+        **kwargs: Any,
+    ) -> Self:
+        """Add a pillar grid to the current 3D scene.
+
+        Parameters
+        ----------
+        pillars : PillarGrid
+            Pillar grid model to render.
+        color : Any, default="black"
+            Color used for the pillar lines and direction arrows.
+        line_width : float, default=2.5
+            Width used when rendering the pillar line.
+        **kwargs : Any
+            Additional keyword arguments forwarded to the pillar layer renderer.
+
+        Returns
+        -------
+        Self
+            The current viewer instance for fluent chaining.
+        """
+        _add_pillars(
+            self.plotter,
+            pillars.pillar_top,
+            pillars.pillar_bottom,
+            # color=color,
+            # line_width=line_width,
+            # **kwargs,
+        )
         return self
     
     def apply_camera(self, cam: Camera3D) -> None:

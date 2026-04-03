@@ -16,7 +16,7 @@ zones = [
   Zone("Zone2", top=h3, base=h4).divide(nk=3),  # 3 layers, continuous with Zone1
 ]
 
-pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=10, nj=10, z_top=0, z_bottom=10)
+pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=10, nj=10, top=0, base=10)
 grid = CornerPointGrid.from_zones(pillars=pillars, zones=zones)
 
 print(f"Grid shape (nk, nj, ni): {grid.shape}")
