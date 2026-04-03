@@ -54,8 +54,7 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
 
 
 ## Technical Architecture
-<div align="center">
-<table width="100%">
+<table style="width: 100%">
   <tr>
     <th>Component</th>
     <th>Implementation</th>
@@ -68,7 +67,6 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
     <td>2D Plotting</td>
     <td>Visualization via Matplotlib</td>
   </tr>
-
   <tr>
     <td>3D Visualization</td>
     <td>Interactive rendering and mesh handling via PyVista</td>
@@ -86,7 +84,6 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
     <td>In-house implementation of Inverse Distance Weighting</td>
   </tr>
 </table>
-</div>
 
 
 
