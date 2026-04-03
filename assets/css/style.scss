@@ -1,0 +1,10 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* Force tables to span the full content width */
+table {
+  width: 100% !important;
+  display: table !important;
+}
