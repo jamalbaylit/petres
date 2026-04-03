@@ -8,7 +8,7 @@ designed to provide a programmatic approach to constructing :ref:`Corner-Point g
 .. important::
    
    Petres is currently in early development. 
-   The API should be considered unstable and may change without notice.
+   The API is not yet stable and may change without notice.
 
 
 Features
@@ -122,8 +122,8 @@ Technical Architecture
 
 Getting Started
 ---------------
-Start modeling with Petres by following the :doc:`installation guide <getting-started/installation>` 
-and the :doc:`quickstart tutorial <getting-started/quickstart>`.
+Start modeling with Petres by following the :doc:`Installation Guide <getting-started/installation>` 
+and the :doc:`Quickstart Tutorial <getting-started/quickstart>`.
 The source code is also available on GitHub: `Petres Repository <https://github.com/jamalbaylit/petres>`_.
 
 Contact
