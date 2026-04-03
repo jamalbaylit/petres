@@ -9,11 +9,13 @@
 </div>
 
 
-# Petres
+# Introduction
 
 Petres is a lightweight, open-source Python library for reservoir grid modeling, providing a fully programmatic approach to constructing Corner-Point grid models.
 
-> **Early Development Notice**  
+For detailed documentation, https://petres.readthedocs.io/
+
+
 > Petres is currently in early development. The API should be considered unstable and may change without notice.
 
 ---
@@ -55,14 +57,16 @@ Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizon
 
 ## Technical Architecture
 
-| Component              | Implementation                                                                 |
-|-----------------------|---------------------------------------------------------------------------------|
-| Grid Operations       | High-performance, vectorized array computations using NumPy                     |
-| 2D Plotting           | Visualization via Matplotlib                                                    |
-| 3D Visualization      | Interactive rendering and mesh handling via PyVista                             |
-| Kriging Interpolation | Ordinary and Universal Kriging via PyKrige                                      |
-| RBF Interpolation     | Multi-dimensional Radial Basis Function interpolation via SciPy                 |
-| IDW Interpolation     | In-house implementation of Inverse Distance Weighting                           |
+
+| Component | Implementation |
+| --- | --- | 
+| Grid Operations | High-performance, vectorized array computations using NumPy |
+| 2D Plotting | Visualization via Matplotlib |
+| 3D Visualization | Interactive rendering and mesh handling via PyVista |
+| Kriging Interpolation | Ordinary and Universal Kriging via PyKrige |
+| RBF Interpolation | Multi-dimensional Radial Basis Function interpolation via SciPy |
+| IDW Interpolation | In-house implementation of Inverse Distance Weighting |
+
 
 ---
 
