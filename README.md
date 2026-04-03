@@ -54,36 +54,14 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
 
 
 ## Technical Architecture
-<table style="width: 100%">
-  <tr>
-    <th>Component</th>
-    <th>Implementation</th>
-  </tr>
-  <tr>
-    <td>Grid Operations</td>
-    <td>High-performance, vectorized array computations using NumPy</td>
-  </tr>
-  <tr>
-    <td>2D Plotting</td>
-    <td>Visualization via Matplotlib</td>
-  </tr>
-  <tr>
-    <td>3D Visualization</td>
-    <td>Interactive rendering and mesh handling via PyVista</td>
-  </tr>
-  <tr>
-    <td>Kriging Interpolation</td>
-    <td>Ordinary and Universal Kriging via PyKrige</td>
-  </tr>
-  <tr>
-    <td>RBF Interpolation</td>
-    <td>Multi-dimensional Radial Basis Function interpolation via SciPy</td>
-  </tr>
-  <tr>
-    <td>IDW Interpolation</td>
-    <td>In-house implementation of Inverse Distance Weighting</td>
-  </tr>
-</table>
+| Component | Implementation |
+|---|---|
+| Grid Operations | High-performance, vectorized array computations using NumPy |
+| 2D Plotting | Visualization via Matplotlib |
+| 3D Visualization | Interactive rendering and mesh handling via PyVista |
+| Kriging Interpolation | Ordinary and Universal Kriging via PyKrige |
+| RBF Interpolation | Multi-dimensional Radial Basis Function interpolation via SciPy |
+| IDW Interpolation | In-house implementation of Inverse Distance Weighting |
 
 
 
