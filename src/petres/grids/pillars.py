@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, Self
+from typing import Self
+
 import numpy as np
 
 
@@ -32,20 +34,13 @@ class PillarGrid:
     pillar_bottom: np.ndarray  # Shape (nj+1, ni+1, 3)
 
     def __init__(self, pillar_top: np.ndarray, pillar_bottom: np.ndarray) -> None:
-        """Initialize a pillar grid from top and bottom pillar endpoints.
+        """Initialize a pillar grid from pillar endpoint arrays.
 
-        Parameters
-        ----------
-        pillar_top : numpy.ndarray
-            Top endpoints of pillars with shape ``(nj+1, ni+1, 3)``.
-        pillar_bottom : numpy.ndarray
-            Bottom endpoints of pillars with shape ``(nj+1, ni+1, 3)``.
-
-        Returns
-        -------
-        None
-            This constructor stores arrays and triggers post-initialization
-            validation.
+        Raises
+        ------
+        ValueError
+            If endpoint arrays do not satisfy shape requirements validated in
+            :meth:`__post_init__`.
         """
         self.pillar_top = pillar_top
         self.pillar_bottom = pillar_bottom
@@ -53,14 +48,6 @@ class PillarGrid:
 
     def __post_init__(self) -> None:
         """Validate pillar array dimensionality and consistency.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -129,7 +116,7 @@ class PillarGrid:
         return self.njv - 1
 
     @property
-    def cell_shape(self) -> Tuple[int, int]:
+    def cell_shape(self) -> tuple[int, int]:
         """Return the cell-array shape.
 
         Returns
@@ -140,7 +127,7 @@ class PillarGrid:
         return (self.nj, self.ni)
 
     @property
-    def vertex_shape(self) -> Tuple[int, int]:
+    def vertex_shape(self) -> tuple[int, int]:
         """Return the pillar-vertex array shape.
 
         Returns
@@ -267,12 +254,12 @@ class PillarGrid:
     def from_regular(
         cls,
         *,
-        xlim: Optional[tuple[float, float]] = None,
-        ylim: Optional[tuple[float, float]] = None,
-        ni: Optional[int] = None,
-        nj: Optional[int] = None,
-        dx: Optional[float] = None,
-        dy: Optional[float] = None,
+        xlim: Sequence[float] | None = None,
+        ylim: Sequence[float] | None = None,
+        ni: int | None = None,
+        nj: int | None = None,
+        dx: float | None = None,
+        dy: float | None = None,
         top: float = 0.0,
         base: float = 1.0,
     ) -> Self:
@@ -280,10 +267,10 @@ class PillarGrid:
 
         Parameters
         ----------
-        xlim : tuple[float, float] or None, default None
-            Inclusive x-limits for grid generation.
-        ylim : tuple[float, float] or None, default None
-            Inclusive y-limits for grid generation.
+        xlim : Sequence[float] or None, default None
+            Two-value x-limits for grid generation.
+        ylim : Sequence[float] or None, default None
+            Two-value y-limits for grid generation.
         ni : int or None, default None
             Number of cells along i when explicit counts are used.
         nj : int or None, default None
@@ -303,7 +290,8 @@ class PillarGrid:
         Raises
         ------
         ValueError
-            If the provided limit/resolution combination is inconsistent.
+            If the provided limit/resolution combination is inconsistent, such
+            as missing required limit values or invalid count/spacing pairs.
 
         Notes
         -----

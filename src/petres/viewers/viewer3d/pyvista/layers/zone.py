@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import Any
-import pyvista as pv
 import numpy as np
+import pyvista as pv
 
 from .....models.zone import Zone
 from ....._utils._color import Color
@@ -153,7 +153,7 @@ from ....._utils._color import Color
 
 
 def _add_zone(
-    backend,
+    backend: Any,
     zone: Zone,
     *,
     x: np.ndarray,
@@ -163,18 +163,51 @@ def _add_zone(
     opacity: float = 1,
     show_layers: bool = True,
     show_outline: bool = True,   # reinterpret as "outline boundary highlight"
-    outline_color="black",
-    outline_width=2,
-    **mesh_kwargs,
+    outline_color: tuple[float, float, float] | str = "black",
+    outline_width: float = 2,
+    **mesh_kwargs: Any,
 ) -> pv.StructuredGrid | list[pv.StructuredGrid]:
-    """
-    Add a Zone as a 3D volume (top & base). If show_layers=True and the zone has
-    internal levels, add each layer as a separate thin volume so layer boundaries
-    are visible.
+    """Render a zone as a 3D volume or stacked thin layer volumes.
 
-    Important:
-    - show_edges does NOT draw all mesh edges (no "grid wireframe").
-      It draws an OUTLINE highlight only (outer sharp edges), via feature edges.
+    Parameters
+    ----------
+    backend : Any
+        Viewer backend that provides ``plotter.add_mesh``.
+    zone : Zone
+        Zone to render, including top and base surfaces and optional levels.
+    x : np.ndarray
+        1D x-coordinates used to sample zone surfaces.
+    y : np.ndarray
+        1D y-coordinates used to sample zone surfaces.
+    name : str | None, default=None
+        Actor name prefix. If ``None``, a default name is derived from ``zone.name``.
+    color : tuple[float, float, float] | str | None, default=None
+        Surface color. If ``None``, defaults to ``"tan"``.
+    opacity : float, default=1
+        Surface opacity in the inclusive range ``[0, 1]``.
+    show_layers : bool, default=True
+        Render each internal layer separately when available.
+    show_outline : bool, default=True
+        Draw outline feature edges for each rendered volume.
+    outline_color : tuple[float, float, float] | str, default="black"
+        Color used for outline edges.
+    outline_width : float, default=2
+        Non-negative line width for outlines.
+    **mesh_kwargs : Any
+        Additional keyword arguments forwarded to ``plotter.add_mesh`` for volumes.
+
+    Returns
+    -------
+    pv.StructuredGrid | list[pv.StructuredGrid]
+        One grid when rendering a single volume, otherwise one grid per layer.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` or ``y`` is not 1D.
+    AssertionError
+        If ``show_outline`` is not boolean, ``opacity`` is outside ``[0, 1]``,
+        or ``outline_width`` is negative.
     """
 
     # ----------------------------
@@ -210,9 +243,14 @@ def _add_zone(
     
 
     def _add_outline_edges(dataset: pv.DataSet, *, outline_name: str) -> None:
-        """
-        Draw only outer "sharp" edges (no internal triangulation edges).
-        Works well for your thin-volume geometry.
+        """Draw only sharp outer edges for a rendered dataset.
+
+        Parameters
+        ----------
+        dataset : pv.DataSet
+            Mesh dataset used to extract surface feature edges.
+        outline_name : str
+            Actor name used when adding the outline mesh.
         """
         surf = dataset.extract_surface(algorithm='dataset_surface')
 
@@ -240,6 +278,7 @@ def _add_zone(
     dz = (z_base - z_top)
 
     def z_at(t: float) -> np.ndarray:
+        """Interpolate z-values at normalized depth ``t``."""
         return z_top + float(t) * dz
 
     # Pre-compute X and Y arrays (same for all layers)
