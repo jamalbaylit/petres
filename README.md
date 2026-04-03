@@ -55,7 +55,7 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
 
 ## Technical Architecture
 
-<table style="width:100%">
+<table width="100%">
   <tr>
     <th>Component</th>
     <th>Implementation</th>
