@@ -2,70 +2,84 @@
 
 ![Banner](./assets/banner-high.png)
 
-
-
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petres.readthedocs.io)
 
 </div>
 
-<!-- Uncomment when published to PyPI
-[![PyPI version](https://badge.fury.io/py/petres.svg)](https://badge.fury.io/py/petres)
-[![Downloads](https://pepy.tech/badge/petres)](https://pepy.tech/project/petres)
--->
 
-## Overview
+# Petres
 
-Petres is a modern Python package for petroleum reservoir modeling and simulation. Built with performance and ease of use in mind, it provides tools for grid generation, fluid property calculations, and reservoir simulation workflows.
+Petres is a lightweight, open-source Python library for reservoir grid modeling, providing a fully programmatic approach to constructing Corner-Point grid models.
+
+> **Early Development Notice**  
+> Petres is currently in early development. The API should be considered unstable and may change without notice.
+
+---
 
 ## Features
 
-- **Grid Generation**: Create and manipulate structured and unstructured reservoir grids
-- **Fluid Properties**: Calculate PVT properties for oil, gas, and water
-- **Modern Python**: Built for Python 3.11+ with type hints and modern tooling
-- **Extensible**: Modular design for easy customization and extension
+### Grid Generation
+Construct Corner-Point, Rectilinear, and Regular grids.  
+Apply boundary polygons to deactivate cells outside the target region.  
+[View tutorial](docs/tutorials/rectilinear-and-regular-grids.md)
 
-## Installation
+### Structural Modeling
+Generate horizon and zone surfaces from well tops to support grid construction.  
+[View tutorial](docs/tutorials/grid-modeling-from-horizons-and-zones.md)
 
-### Quick Install (from PyPI)
+### Property Modeling
+Assign petrophysical properties to grid cells using stochastic or deterministic methods, derived attributes, or interpolation from well data.  
+[View tutorial](docs/tutorials/property-modeling.md)
 
-```bash
-pip install petres
-```
+### Import & Export Grids
+Handle SLB Eclipse reservoir simulation grids using the `.GRDECL` file format.  
+Import, visualize, and export grids within modeling workflows.  
+[View tutorial](docs/tutorials/exporting-grid.md)
 
-### Install from Source
+### Visualization
+Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizons, and spatial property distributions.  
+[View documentation](docs/visualizing-the-grid.md)
 
-For development or latest features:
+---
 
-```bash
-git clone https://github.com/jamalbaylit/petres.git
-cd petres
-uv pip install -e .
-```
+## Why Petres
 
-See the [installation guide](docs/source/getting_started/installation.rst) for detailed instructions.
+- Open access alternative to commercial reservoir modeling software  
+- Fully scriptable workflows using Python  
+- Designed for extensibility and integration  
+- Compatible with AI and machine learning pipelines  
 
-## Quick Start
+---
 
-```python
-import petres
+## Technical Architecture
 
-# Your reservoir modeling code here
-```
+| Component              | Implementation                                                                 |
+|-----------------------|---------------------------------------------------------------------------------|
+| Grid Operations       | High-performance, vectorized array computations using NumPy                     |
+| 2D Plotting           | Visualization via Matplotlib                                                    |
+| 3D Visualization      | Interactive rendering and mesh handling via PyVista                             |
+| Kriging Interpolation | Ordinary and Universal Kriging via PyKrige                                      |
+| RBF Interpolation     | Multi-dimensional Radial Basis Function interpolation via SciPy                 |
+| IDW Interpolation     | In-house implementation of Inverse Distance Weighting                           |
 
-See the [documentation](https://petres.readthedocs.io) for more examples and tutorials.
+---
 
-## Documentation
+## Getting Started
 
-Full documentation is available at [petres.readthedocs.io](https://petres.readthedocs.io)
+- [Installation Guide](docs/getting-started/installation.md)  
+- [Quickstart Tutorial](docs/getting-started/quickstart.md)  
 
-## Contributing
+Source code:  
+https://github.com/jamalbaylit/petres
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+---
 
+## Contact
 
-## License
+- Email: jamalbaylit@gmail.com  
+- LinkedIn: https://www.linkedin.com/in/jamalbaylit  
 
-This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later).
-See the [LICENSE](LICENSE) file for details.
+---
+

@@ -1,17 +1,12 @@
 Grid Modeling from Horizons and Zones
 =====================================
 
-This tutorial demonstrates how to construct a **corner-point grid**
+This tutorial demonstrates how to construct a **Corner-Point grid**
 from pre-defined horizons and zones.
-
-It assumes familiarity with:
-
-- Horizon modeling → :doc:`horizon-modeling`
-- Zone definition and layering → :doc:`zone-modeling`
-- Pillar grid construction → :doc:`pillar-grid-modeling`
-
-The focus here is on **combining these components into a complete
-grid modeling workflow**.
+It assumes prior familiarity with :doc:`horizon modeling <horizon-modeling>`, 
+:doc:`zone modeling <zone-modeling>`, and :doc:`pillar gridding <pillar-gridding>`.
+The focus here is on combining these components into a complete
+grid generation.
 
 
 Workflow Summary
@@ -21,79 +16,57 @@ The workflow follows a structured sequence:
 
 .. code-block:: text
 
-   Horizons → Zones → Layering → Pillars → Corner-Point Grid
+   (Horizons → Zones → Layering) + Pillars → Corner-Point Grid
 
 Each component contributes to a different aspect of the final grid:
 
-- Horizons → define structural surfaces
-- Zones → define vertical intervals
-- Layering → defines vertical resolution
-- Pillars → define lateral structure
+- Horizons → Define structural surfaces used to construct zones
+- Zones → Define vertical intervals derived from horizons
+- Layering → Controls vertical resolution within each zone
+- Pillars → Define the lateral grid geometry and cell alignment
 
 
 Input Preparation
 -----------------
 
-In this tutorial, we assume that:
-
-- Horizons are already defined
-- Zones are created between horizons
-- Zones are subdivided into layers
+First you need to define zones and pillar geometry:
 
 Example setup:
 
 .. code-block:: python
 
-   from petres.models import Horizon, Zone
    from petres.interpolators import IDWInterpolator
+   from petres.models import Horizon, Zone
 
    h1 = Horizon("H1", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[0,1,0,1], interpolator=IDWInterpolator())
    h2 = Horizon("H2", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[2,2,3,3], interpolator=IDWInterpolator())
 
    zone = Zone(name="Reservoir", top=h1, base=h2).divide(nk=4)
 
-.. note::
-
-   For detailed explanations of horizons and zones, refer to:
-
-   - :doc:`horizon-modeling`
-   - :doc:`zone-modeling`
-
-
-Creating the Pillar Grid
-------------------------
-
-The pillar grid defines the lateral structure of the model.
-
-.. code-block:: python
-
    from petres.grids import PillarGrid
 
    pillars = PillarGrid.from_regular(
-       xlim=(0, 100),
-       ylim=(0, 100),
-       ni=50,
-       nj=50,
+      xlim=(0, 100),
+      ylim=(0, 100),
+      ni=50,
+      nj=50,
    )
 
-.. note::
+For detailed explanations, see :doc:`horizon-modeling`, :doc:`zone-modeling`, and :doc:`pillar-gridding`.
 
-   See :doc:`pillar-grid-modeling` for detailed pillar grid workflows.
+Building the Grid
+-----------------
 
-
-Building the Corner-Point Grid
-------------------------------
-
-The corner-point grid is constructed by combining the pillar grid
-with the layered zones:
+The grid is constructed by simply combining the pillar grid
+with the zones using the  :meth:`~petres.grids.CornerPointGrid.from_zones` method:
 
 .. code-block:: python
 
    from petres.grids import CornerPointGrid
 
    grid = CornerPointGrid.from_zones(
-       pillars=pillars,
-       zones=[zone],
+      pillars=pillars,
+      zones=[zone],
    )
 
 This step integrates:

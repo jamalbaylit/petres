@@ -123,7 +123,7 @@ Technical Architecture
 Getting Started
 ---------------
 Start modeling with Petres by following the :doc:`installation guide <getting-started/installation>` 
-and the :doc:`Quickstart tutorial <getting-started/quickstart>`.
+and the :doc:`quickstart tutorial <getting-started/quickstart>`.
 The source code is also available on GitHub: `Petres Repository <https://github.com/jamalbaylit/petres>`_.
 
 Contact
