@@ -1,220 +1,122 @@
-Pillar Grid Creation
-====================
+Pillar Gridding
+===============
 
-This tutorial demonstrates several ways to construct a ``PillarGrid`` in
-Petres. Pillar grids define the structural framework of corner-point
-grids and are commonly used as the geometric basis for more advanced
-grid modeling workflows.
+:ref:`Corner-Point grids <corner-point-grids>` rely on
+pillars as their fundamental structural framework. 
+In Petres, pillars are modeled separately, similar to 
+how Petrel handles them, allowing for precise control 
+over the geometry of the grid independent of the cells themselves.
+If you are unfamiliar with pillars, see the :ref:`pillar-geometry` section for an introduction.
 
-In this tutorial, you will learn how to:
+Creating a Pillar Grid
+----------------------
 
-- create a regular pillar grid from domain limits and cell counts,
-- create a regular pillar grid from cell spacing,
-- build a rectilinear pillar grid with non-uniform coordinates,
-- use ``numpy`` to generate coordinate arrays,
-- manually define pillar top and bottom depths, and
-- visualize the resulting grid.
+Pillar grids can currently be created in two ways. 
+Regular pillar grids are defined with uniform spacing, 
+while rectilinear pillar grids are defined from 
+explicitly provided coordinate arrays.
 
-Import Modules
---------------
+.. note::
 
-To get started with pillar gridding, you need to import the necessary modules: 
+    At this stage, Petres supports only **vertical pillars**. Skewed or
+    faulted pillar geometries are not yet supported.
 
-.. code-block:: python
 
-   from petres.grids import PillarGrid
-   import numpy as np
+Regular Pillar Grids
+~~~~~~~~~~~~~~~~~~~~
 
-Ensure that you have NumPy installed as well.
-
-Create a Regular Pillar Grid from Domain Limits
------------------------------------------------
-
-A regular pillar grid can be created by defining the extent of the model
-in the ``x`` and ``y`` directions together with the number of cells
-along each axis.
+A regular pillar grid is defined by specifying the model extent in the
+``x`` and ``y`` directions together with the number of cells along each axis.
+This is conceptually similar to creating a regular grid (see :ref:`creating-regular-grid`).
 
 .. code-block:: python
 
-   pillars = PillarGrid.from_regular(
-       xlim=(0, 100),
-       ylim=(0, 100),
-       ni=50,
-       nj=50,
-   )
+    from petres.grids import PillarGrid
 
-Here:
+    pillars = PillarGrid.from_regular(
+        xlim=(0, 100),
+        ylim=(0, 100),
+        ni=50,
+        nj=50,
+    )
 
-- ``xlim=(0, 100)`` defines the model extent in the x-direction,
-- ``ylim=(0, 100)`` defines the model extent in the y-direction,
-- ``ni=50`` specifies the number of cells along x, and
-- ``nj=50`` specifies the number of cells along y.
+Here, ``xlim`` and ``ylim`` define the spatial extent of the model in the
+x and y directions, respectively, while ``ni`` and ``nj`` control the
+number of cells along each axis.
 
-This creates a regular grid with uniform spacing in both horizontal
-directions.
-
-
-Create a Regular Pillar Grid from Cell Spacing
-----------------------------------------------
-
-Instead of specifying the number of cells directly, you can define the
-grid using cell spacing.
+Alternatively, it can be defined using cell sizes instead of
+cell counts.
 
 .. code-block:: python
 
-   pillars = PillarGrid.from_regular(
-       xlim=(0, 100),
-       ylim=(0, 100),
-       dx=2,
-       dy=2,
-   )
+    pillars = PillarGrid.from_regular(
+        xlim=(0, 100),
+        ylim=(0, 100),
+        dx=2,
+        dy=2,
+    )
 
-In this case:
-
-- ``dx=2`` sets the cell size in the x-direction, and
-- ``dy=2`` sets the cell size in the y-direction.
-
-This is often convenient when the desired grid resolution is known in
-advance.
+Here, ``dx=2`` and ``dy=2`` specify the cell size in the x and y directions, respectively.
 
 
-Create a Rectilinear Pillar Grid
---------------------------------
+Rectilinear Pillar Grids
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-A rectilinear grid allows non-uniform spacing along each axis. This is
-useful when local refinement is needed in selected regions of the model.
+A rectilinear pillar grid allows **non-uniform spacing** along each axis,
+making it suitable for local refinement in specific regions of the model.
+This follows the same principles as rectilinear grid generation (see :ref:`creating-rectilinear-grid`).
 
 .. code-block:: python
 
-   pillars = PillarGrid.from_rectilinear(
-       x=[0, 10, 50, 70, 100],
-       y=np.linspace(0, 100, 50),
-   )
+    pillars = PillarGrid.from_rectilinear(
+        x=[0, 10, 50, 70, 100],
+        y=np.linspace(0, 100, 50),
+    )
 
-In this example:
+In this example, the ``x`` coordinates are defined explicitly, resulting
+in non-uniform spacing, while the ``y`` coordinates are generated using
+:meth:`numpy.linspace`, producing evenly spaced values.
 
-- the ``x`` coordinates are defined explicitly, resulting in non-uniform
-  spacing in the x-direction,
-- the ``y`` coordinates are generated using ``numpy.linspace``, producing
-  evenly spaced coordinates in the y-direction.
+Specifying Top and Base Depths
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This approach is useful when grid spacing needs to vary while preserving
-a structured pillar layout.
-
-
-Use NumPy to Generate Coordinates
----------------------------------
-
-You can also use ``numpy`` arrays directly to define the grid geometry.
+Pillar top and base values can be defined explicitly when creating a
+rectilinear grid, allowing precise placement of the pillar geometry
+within the model.
 
 .. code-block:: python
 
-   pillars = PillarGrid.from_rectilinear(
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
-       z_top=0,
-       z_bottom=15,
-   )
+    pillars = PillarGrid.from_rectilinear(
+        x=[0, 10, 50, 70, 100],
+        y=np.linspace(0, 100, 50),
+        top=1000,
+        base=1500,
+    )
 
-Here, both ``x`` and ``y`` are generated using ``numpy.linspace``.
-Additionally:
+In this example, the pillars are positioned with tops at ``1000`` and
+bases at ``1500``. These values may represent either elevation or depth,
+depending on the conventions used in your workflow.
 
-- ``z_top=0`` defines the elevation or depth of the pillar tops,
-- ``z_bottom=15`` defines the elevation or depth of the pillar bottoms.
+.. note::
 
-This creates a structured pillar grid with uniform horizontal spacing and
-constant vertical pillar endpoints.
-
-
-Specify Pillar Top and Bottom Depths Manually
----------------------------------------------
-
-You may also define the top and bottom elevations or depths explicitly
-when creating a rectilinear grid.
-
-.. code-block:: python
-
-   pillars = PillarGrid.from_rectilinear(
-       x=[0, 10, 50, 70, 100],
-       y=np.linspace(0, 100, 50),
-       z_top=1000,
-       z_bottom=1500,
-   )
-
-This is useful when the pillar grid needs to be placed at a specific
-depth interval within the model.
-
-In this example:
-
-- the pillar tops are placed at ``1000``,
-- the pillar bottoms are placed at ``1500``.
-
-The values may represent elevation or depth, depending on the
-conventions used in your workflow.
-
+    By default, ``top=0.0`` and ``base=1.0``. If you are concerned
+    about numerical precision or want to adjust the vertical scale of your
+    grid, you can modify these values when creating the pillar grid.
 
 Visualize the Pillar Grid
 -------------------------
 
-The grid can be visualized interactively using the ``show`` method.
+The grid can be visualized interactively using the :meth:`show` method.
 
 .. code-block:: python
 
-   pillars.show()
+    pillars.show()
 
 This provides a quick way to inspect the geometry of the generated pillar
 grid.
 
 
-Complete Example
-----------------
+Next Steps
+----------
 
-The full example is shown below.
-
-.. code-block:: python
-
-   from petres.grids import PillarGrid
-   import numpy as np
-
-   pillars = PillarGrid.from_regular(xlim=(0, 100), ylim=(0, 100), ni=50, nj=50)
-   pillars = PillarGrid.from_regular(xlim=(0, 100), ylim=(0, 100), dx=2, dy=2)
-
-   pillars = PillarGrid.from_rectilinear(
-       x=[0, 10, 50, 70, 100],
-       y=np.linspace(0, 100, 50),
-   )
-
-   # You can also use NumPy to generate the coordinates.
-   pillars = PillarGrid.from_rectilinear(
-       x=np.linspace(0, 100, 50),
-       y=np.linspace(0, 100, 50),
-       z_top=0,
-       z_bottom=15,
-   )
-
-   # You may also specify the pillar top and bottom depths manually.
-   pillars = PillarGrid.from_rectilinear(
-       x=[0, 10, 50, 70, 100],
-       y=np.linspace(0, 100, 50),
-       z_top=1000,
-       z_bottom=1500,
-   )
-
-   pillars.show()
-
-
-Summary
--------
-
-In this tutorial, you learned how to create a ``PillarGrid`` using
-different construction methods in Petres. Depending on the modeling
-requirements, you can use:
-
-- ``from_regular`` for uniform grids,
-- ``from_rectilinear`` for non-uniform structured grids,
-- ``numpy`` arrays for flexible coordinate generation, and
-- explicit ``z_top`` and ``z_bottom`` values to define pillar geometry
-  vertically.
-
-The resulting pillar grid can then serve as a foundation for more
-advanced grid construction and modeling workflows.
+- :doc:`grid-modeling-from-horizons-and-zones`

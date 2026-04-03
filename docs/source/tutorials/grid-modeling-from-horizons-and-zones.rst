@@ -1,9 +1,6 @@
 Grid Modeling from Horizons and Zones
 =====================================
 
-Overview
---------
-
 This tutorial demonstrates how to construct a **corner-point grid**
 from pre-defined horizons and zones.
 
@@ -105,6 +102,8 @@ This step integrates:
 - Vertical layering from zones
 - Surface geometry from horizons
 
+
+.. _visualizing-the-grid:
 
 Visualizing the Grid
 --------------------

@@ -1,13 +1,14 @@
+from __future__ import annotations
+
 """Interpolation-related error definitions."""
 
 from .base import PetresError
 
 
 class InterpolationError(PetresError):
-    """Represent the base exception for interpolation failures.
+    """Signal failures raised by interpolation workflows.
 
-    This exception is raised for errors encountered during interpolation
-    workflows across the project.
+    Use this exception as the common base for interpolation-specific errors.
 
     Attributes
     ----------

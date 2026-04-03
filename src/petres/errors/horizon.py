@@ -1,14 +1,15 @@
 """Horizon-related error definitions."""
 
+from __future__ import annotations
+
 from .base import PetresError
 
 
 class HorizonError(PetresError):
     """Represent errors raised during horizon operations.
 
-    This exception provides a horizon-specific error type so callers can
-    distinguish horizon failures from other domain errors and handle them
-    consistently.
+    Use this exception to distinguish horizon-specific failures from other
+    domain errors and handle them consistently.
 
     Attributes
     ----------

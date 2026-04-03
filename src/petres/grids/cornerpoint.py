@@ -17,7 +17,7 @@ from ..errors.property import MissingEclipseKeywordError
 from ..errors.grid import UnsupportedGridAttributeError
 from ..eclipse.grids.write import GRDECLWriter
 from ..eclipse.grids.read import GRDECLReader
-from .pillar import PillarGrid
+from .pillars import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
 from ..grids.properties import GridProperties, GridProperty
@@ -741,7 +741,7 @@ class CornerPointGrid:
         """
         
         z = _validate_vertex_array(z, "z")
-        pillars = PillarGrid.from_rectilinear(x=x, y=y, z_top=z[0], z_bottom=z[-1])
+        pillars = PillarGrid.from_rectilinear(x=x, y=y, top=z[0], base=z[-1])
         
         # Create simple ZCORN with flat layers
         nj, ni = pillars.cell_shape
