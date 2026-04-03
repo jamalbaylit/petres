@@ -54,7 +54,7 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
 
 
 ## Technical Architecture
-
+<div align="center">
 <table width="100%">
   <tr>
     <th>Component</th>
@@ -62,7 +62,7 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
   </tr>
   <tr>
     <td>Grid Operations</td>
-    <td>High-performance, vectorized array computations using NumPy &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+    <td>High-performance, vectorized array computations using NumPy</td>
   </tr>
   <tr>
     <td>2D Plotting</td>
@@ -86,7 +86,7 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
     <td>In-house implementation of Inverse Distance Weighting</td>
   </tr>
 </table>
-
+</div>
 
 
 
