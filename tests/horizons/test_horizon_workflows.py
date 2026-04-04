@@ -14,7 +14,7 @@ def test_horizon_store_picks_false_releases_pick_arrays():
     h = Horizon(name="Top", xy=xy, depth=z, interpolator=IDWInterpolator(), store_picks=False)
 
     assert h.xy.shape == (0, 2)
-    assert h.z.shape == (0,)
+    assert h.depth.shape == (0,)
 
 
 def test_horizon_intersect_matches_sample_value(horizon_plane_top):

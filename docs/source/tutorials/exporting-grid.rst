@@ -1,9 +1,6 @@
 Exporting Grid Models
 =====================
 
-Overview
---------
-
 Currently, Petres supports exporting grids to the Eclipse ``.GRDECL`` file format,
 which is especially used for :ref:`Corner-Point grids <corner-point-grids>`.
 

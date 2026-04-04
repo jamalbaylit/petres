@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Eclipse/GRDECL-related error definitions."""
 
 from typing import ClassVar
@@ -6,11 +8,11 @@ from .base import ExportError, PetresError
 
 
 class EclipseError(PetresError):
-    """Base error for Eclipse input and output operations.
+    """Represent errors raised by Eclipse input and output operations.
 
     This exception specializes :class:`petres.errors.base.PetresError` for
-    Eclipse-specific workflows. Message formatting follows the inherited
-    constructor behavior and supports keyword interpolation.
+    Eclipse-specific workflows and supports keyword interpolation through the
+    inherited constructor.
 
     Parameters
     ----------
@@ -29,10 +31,10 @@ class EclipseError(PetresError):
 
 
 class GRDECLExportError(EclipseError, ExportError):
-    """Base error for GRDECL export operations.
+    """Represent errors raised during GRDECL export operations.
 
-    This exception is raised for generic failures during GRDECL serialization
-    and export routines.
+    This exception captures generic failures that occur during GRDECL
+    serialization and export routines.
 
     Parameters
     ----------
@@ -51,7 +53,7 @@ class GRDECLExportError(EclipseError, ExportError):
 
 
 class GRDECLMissingValueError(GRDECLExportError):
-    """Raise when GRDECL export encounters missing values for a keyword.
+    """Represent errors raised when GRDECL export encounters missing values.
 
     This exception is intended for validation failures where exported keyword
     arrays still contain NaN values.

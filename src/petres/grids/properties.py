@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ItemsView, Literal, Optional, Sequence, ValuesView
+from collections.abc import Callable, ItemsView, Sequence, ValuesView
 from dataclasses import dataclass, field
-import numpy as np
+from typing import TYPE_CHECKING, Any, Literal
 import warnings
+import numpy as np
 from numpy.typing import ArrayLike
 
 
@@ -48,9 +49,9 @@ class GridProperty:
     """
     name: str = field(repr=True)
     grid: "CornerPointGrid" = field(repr=False)
-    values: Optional[np.ndarray] = None 
-    eclipse_keyword: Optional[str] = None                 # Eclipse keyword (PORO, PERMX, ...)
-    description: Optional[str] = None
+    values: np.ndarray | None = None
+    eclipse_keyword: str | None = None                 # Eclipse keyword (PORO, PERMX, ...)
+    description: str | None = None
 
     def __init__(
         self,
@@ -60,29 +61,15 @@ class GridProperty:
         eclipse_keyword: str | None = None,
         description: str | None = None,
     ) -> None:
-        """Initialize a grid property object and normalize optional inputs.
+        """Initialize the property and run post-initialization validation.
 
-        Parameters
-        ----------
-        name : str
-            Property name.
-        grid : CornerPointGrid
-            Owning grid used for shape and masking operations.
-        values : ArrayLike or None, optional, default None
-            Initial property values. If ``None``, values are initialized to
-            ``NaN`` in :meth:`__post_init__`.
-        eclipse_keyword : str or None, optional, default None
-            Optional Eclipse keyword used during GRDECL export.
-        description : str or None, optional, default None
-            Optional property description.
-
-        Returns
-        -------
-        None
-
-        Notes
-        -----
-        All semantic validation is handled by :meth:`__post_init__`.
+        Raises
+        ------
+        TypeError
+            If ``name`` or ``eclipse_keyword`` has an invalid type.
+        ValueError
+            If ``name`` is empty, ``values`` shape mismatches the grid, or
+            ``eclipse_keyword`` resolves to an empty keyword.
         """
         self.name = name
         self.grid = grid
@@ -93,10 +80,6 @@ class GridProperty:
 
     def __post_init__(self) -> None:
         """Validate and normalize property initialization inputs.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -157,10 +140,6 @@ class GridProperty:
             Window title; ``'auto'`` uses the property name.
         **kwargs
             Forwarded to viewer ``add_grid``.
-
-        Returns
-        -------
-        None
 
         Notes
         -----
@@ -349,9 +328,9 @@ class GridProperty:
         func: Callable[..., Any],
         *,
         source: str | GridProperty | Sequence[str | GridProperty],
-        zone: Optional[str | Zone] = None,
+        zone: str | Zone | None = None,
         include_inactive: bool = True,
-    ) -> "GridProperty":
+    ) -> GridProperty:
         """
         Apply a function to geometric sources and/or existing properties,
         then assign the result into this property.
@@ -466,7 +445,7 @@ class GridProperty:
         self,
         value: float | int,
         *,
-        zone: Optional[str | Zone] = None,
+        zone: str | Zone | None = None,
         include_inactive: bool = True,
     ) -> GridProperty:
         """Fill target cells with a constant numeric value.
@@ -793,10 +772,6 @@ class GridProperty:
         path : str
             Destination file path.
 
-        Returns
-        -------
-        None
-
         Raises
         ------
         MissingEclipseKeywordError
@@ -827,9 +802,9 @@ class GridProperty:
         """
         lines = [
             "Property Summary",
-            "════════════        : {self.name}",
-            f"Descri════",
-            f"Name      ption       : {self.description}",
+            "════════════════════════════════════════════════════════════════",
+            f"Name              : {self.name}",
+            f"Description       : {self.description}",
             f"Eclipse Keyword   : {self.eclipse_keyword}",
             f"Grid Shape        : {self.shape}",
             f"Min               : {self.min}",
@@ -852,7 +827,7 @@ class GridProperty:
 
         Parameters
         ----------
-        wells : sequence of VerticalWell
+        wells : sequence[VerticalWell]
             Wells providing sampled values.
         source : str
             Property key used to read values from each well.
@@ -861,10 +836,9 @@ class GridProperty:
 
         Returns
         -------
-        coords : ndarray
-            Shape (n, 2) for XY mode or (n, 3) for XYZ mode.
-        values : ndarray
-            Shape (n,).
+        tuple[np.ndarray, np.ndarray]
+            Coordinates with shape ``(n, 2)`` or ``(n, 3)`` and values with
+            shape ``(n,)``.
         """
         coords_list: list[list[float]] = []
         values_list: list[float] = []
@@ -908,16 +882,16 @@ class GridProperty:
         self,
         location: Literal["center", "top", "bottom"] = "center",
     ) -> np.ndarray:
-        """Return interpolation target coordinates for a cell location.
+        """Build interpolation target coordinates for a cell location.
 
         Parameters
         ----------
         location : {"center", "top", "bottom"}, default "center"
-            Which cell location to target for interpolation.
+            Cell location to target for interpolation.
 
         Returns
         -------
-        ndarray
+        np.ndarray
             Target coordinates in XYZ order.
         """
         match location:
@@ -940,7 +914,9 @@ class GridProperty:
                     f"Unsupported location {location!r}. "
                     "Supported values are: 'center', 'top', 'bottom'."
                 )
-            
+    
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name={self.name!r}, eclipse_keyword={self.eclipse_keyword!r}, description={self.description!r})"
     
 # ============================================================
 # GridProperties
@@ -967,19 +943,16 @@ class GridProperties:
     print(poro2.mean)
 
     """
+    def __repr__(self):
+        prop_names = ", ".join(self._grid._properties.keys())
+        return f"GridProperties({prop_names})"
 
+    def __iter__(self):
+        """Iterate over GridProperty instances."""
+        return iter(self._grid._properties.values())
+    
     def __init__(self, grid: "CornerPointGrid") -> None:
-        """Initialize a property manager bound to one grid.
-
-        Parameters
-        ----------
-        grid : CornerPointGrid
-            Grid instance that stores property objects.
-
-        Returns
-        -------
-        None
-        """
+        """Initialize a property manager bound to one grid."""
         self._grid = grid
 
     def create(
@@ -1116,15 +1089,6 @@ class GridProperties:
         -------
         str
             Validated name.
-
-        Raises
-        ------
-        TypeError
-            If ``name`` is not a string.
-        ValueError
-            If ``name`` is empty after stripping.
-        ReservedPropertyNameError
-            If ``name`` is a reserved grid property name.
         """
         from .cornerpoint import RESERVED_GRID_PROPERTY_NAMES
         

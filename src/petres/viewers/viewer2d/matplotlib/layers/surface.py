@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 
-from matplotlib.axes import Axes
-import matplotlib.pyplot as plt
 from typing import Any
+
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.collections import QuadMesh
+from numpy.typing import NDArray
 
 def _add_surface(
     ax: Axes,
-    scalars: np.ndarray,
+    scalars: NDArray[Any],
     *,
-    x: np.ndarray,
-    y: np.ndarray,
+    x: NDArray[Any],
+    y: NDArray[Any],
 
     cmap: str = "viridis",
     # Colorbar Options
@@ -27,8 +30,53 @@ def _add_surface(
     contour_color: str = "black",
     contour_linewidth: float = 0.7,
     **kwargs: Any,
-) -> Any:
-    """Add a horizon as a color-mapped surface with optional contours."""
+) -> QuadMesh:
+    """Plot a scalar surface with optional contour overlays.
+
+    Parameters
+    ----------
+    ax : Axes
+        Target axes where the surface is drawn.
+    scalars : NDArray[Any]
+        Scalar values on a 2D grid with shape ``(len(y), len(x))``.
+    x : NDArray[Any]
+        X coordinates convertible to a one-dimensional float array.
+    y : NDArray[Any]
+        Y coordinates convertible to a one-dimensional float array.
+    cmap : str, default="viridis"
+        Colormap name used for the surface.
+    show_colorbar : bool, default=True
+        Whether to draw a colorbar for the generated mesh.
+    colorbar_shrink : float, default=0.95
+        Shrink factor passed to ``matplotlib.pyplot.colorbar``.
+    show_contours : bool, default=True
+        Whether to draw contour lines on top of the surface.
+    contour_levels : int, default=10
+        Number of contour levels.
+    show_contour_labels : bool, default=True
+        Whether to render labels on contour lines.
+    contour_label_fontsize : int, default=8
+        Font size used for contour labels.
+    contour_opacity : float, default=0.8
+        Opacity applied to contour lines.
+    contour_color : str, default="black"
+        Color used for contour lines.
+    contour_linewidth : float, default=0.7
+        Line width used for contour lines.
+    **kwargs : Any
+        Additional keyword arguments forwarded to ``Axes.pcolormesh``.
+
+    Returns
+    -------
+    QuadMesh
+        Mesh artist created by ``Axes.pcolormesh``.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` or ``y`` are not one-dimensional after conversion, or if
+        ``scalars`` does not match shape ``(len(y), len(x))``.
+    """
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
 

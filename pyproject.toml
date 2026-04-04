@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "petres"
 version = "0.1.0"
-description = "Add your description here"
+description = "A lightweight, open-source Python library for reservoir grid modeling"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
@@ -70,6 +70,7 @@ docs = [
     "sphinx-autodoc-typehints>=3.6.2; python_version >= '3.12'",
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.7.0",
+    "sphinx-inline-svg>=0.2.0",
     "sphinx-rtd-theme>=3.1.0",
 ]
 
@@ -85,6 +86,7 @@ llm = [
     "aiohttp>=3.9.9",
     "pygithub>=2.9.0",
     "python-decouple>=3.8",
+    "tqdm>=4.67.3",
 ]
 
 

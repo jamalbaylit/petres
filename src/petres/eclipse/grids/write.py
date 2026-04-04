@@ -1,39 +1,31 @@
-from pathlib import Path
-from typing import Mapping, Sequence
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
 from datetime import datetime
-from typing import TextIO
+from pathlib import Path
+from typing import Any, TextIO
+
 import numpy as np
 
 from ...errors.eclipse import GRDECLMissingValueError
-
-from .validation import (
-    validate_specgrid, 
-    validate_coord_array_shape, 
-    validate_coord_array_size, 
-    validate_zcorn_array_shape, 
-    validate_zcorn_array_size,
-    validate_actnum_array_shape,
-    validate_actnum_array_size,
-)
+from .keywords import NOT_PROPERTY_KEYWORDS
 
 
 class GRDECLWriter:
-    """
-    Write Eclipse/Petrel corner-point data to GRDECL files.
+    """Write Eclipse/Petrel corner-point data to GRDECL files.
 
-    The class provides methods for exporting full grids and individual
-    properties, including optional run-length encoding for compact output.
+    Parameters
+    ----------
+    None
+
+    Notes
+    -----
+    The writer is stateless. Grid arrays are supplied to method calls rather
+    than stored on the instance.
     """
-    
+
     def __init__(self) -> None:
-        """
-        Initialize a GRDECL writer.
-
-        Notes
-        -----
-        The writer is stateless. Grid arrays are supplied to method calls
-        rather than stored on the instance.
-        """
+        """Initialize a stateless GRDECL writer."""
 
     def write_property(
         self,
@@ -42,8 +34,7 @@ class GRDECLWriter:
         values: np.ndarray,
         keyword: str
     ) -> None:
-        """
-        Write a single property array as a GRDECL keyword block.
+        """Write a single property array to a GRDECL keyword block.
 
         Parameters
         ----------
@@ -52,12 +43,14 @@ class GRDECLWriter:
         values : numpy.ndarray
             Property values to write.
         keyword : str
-            Eclipse keyword to associate with ``values`` (for example,
-            ``"PORO"`` or ``"PERMX"``).
+            Eclipse keyword associated with ``values``.
 
-        Returns
-        -------
-        None
+        Raises
+        ------
+        ValueError
+            If ``values`` contains infinite values.
+        GRDECLMissingValueError
+            If ``values`` contains missing values.
         """
         with open(path, "w") as f:
             GRDECLWriter._write_array(f, keyword, values, rle=True)
@@ -69,14 +62,12 @@ class GRDECLWriter:
         coord: np.ndarray, 
         zcorn: np.ndarray, 
         actnum: np.ndarray | None = None,
-        property_values: Mapping[str, np.ndarray] | None = None,
-        property_keywords: Sequence[str] | None = None,
+        properties: Mapping[str, np.ndarray] | None = None,
         rle: bool = True,
         units: str = "FEET",
         mapunits: str = "FEET",
     ) -> None:
-        """
-        Write a complete corner-point grid to a GRDECL file.
+        """Write a complete corner-point grid to a GRDECL file.
 
         Parameters
         ----------
@@ -89,11 +80,8 @@ class GRDECLWriter:
             ``(2 * nk, 2 * nj, 2 * ni)``.
         actnum : numpy.ndarray | None, default=None
             Optional active-cell mask for the ``ACTNUM`` keyword.
-        property_values : Mapping[str, numpy.ndarray] | None, default=None
+        properties : Mapping[str, numpy.ndarray] | None, default=None
             Optional mapping of property keyword to property array.
-        property_keywords : Sequence[str] | None, default=None
-            Optional ordered subset of keys from ``property_values``.
-            When omitted, all keys from ``property_values`` are written.
         rle : bool, default=True
             If ``True``, use run-length encoding for array export.
         units : str, default="FEET"
@@ -101,15 +89,15 @@ class GRDECLWriter:
         mapunits : str, default="FEET"
             Reserved map unit label.
 
-        Returns
-        -------
-        None
-
         Raises
         ------
         KeyError
             If ``property_keywords`` contains a keyword not present in
             ``property_values``.
+        ValueError
+            If ``coord``, ``zcorn``, or ``actnum`` contain infinite values.
+        GRDECLMissingValueError
+            If ``coord``, ``zcorn``, or ``actnum`` contain missing values.
         """
         
         # zcorn is shaped (2*nk, 2*nj, 2*ni); convert back to cell counts
@@ -148,13 +136,15 @@ class GRDECLWriter:
                 f = GRDECLWriter._write_array(f, "ACTNUM", actnum, type=np.int8, nan_fill=0, rle=rle)
             
             # Properties
-            if property_values:
-                keywords = property_keywords if property_keywords is not None else property_values.keys()
-                for prop_name in keywords:
-                    if prop_name not in property_values:
-                        raise KeyError(f"Property keyword '{prop_name}' is missing from property_values.")
-                    prop_array = property_values[prop_name]
-                    f = GRDECLWriter._write_array(f, prop_name, prop_array, rle=rle)
+            if properties is not None:
+                for kw, arr in properties.items():
+                    if arr.shape != (nk, nj, ni):
+                        raise ValueError(f"Property array for keyword '{kw}' has shape {arr.shape}, expected {(nk, nj, ni)}.")
+                    kw = kw.upper().strip()
+                    if kw in NOT_PROPERTY_KEYWORDS:
+                        raise ValueError(f"Keyword '{kw}' is not a valid property keyword and cannot be exported.")
+
+                    f = GRDECLWriter._write_array(f, kw, arr, rle=rle)
 
 
     def _write_header(
@@ -164,8 +154,7 @@ class GRDECLWriter:
         nj: int,
         nk: int
     ) -> TextIO:
-        """
-        Write a metadata header block.
+        """Write a metadata header block.
 
         Parameters
         ----------
@@ -193,13 +182,7 @@ class GRDECLWriter:
         return f
 
     def _auto_mapaxes(self) -> list[float]:
-        """
-        Compute default MAPAXES coordinates from ``self.COORD``.
-
-        Parameters
-        ----------
-        self : GRDECLWriter
-            Writer instance expected to expose ``COORD``.
+        """Compute default MAPAXES coordinates from ``self.COORD``.
 
         Returns
         -------
@@ -225,13 +208,12 @@ class GRDECLWriter:
         keyword: str,
         array: np.ndarray, 
         ncol: int = 20, 
-        type: np.dtype = np.float32, 
+        type: Any = np.float32, 
         decimals: int | None = None,
         nan_fill: float | int | None = None,
         rle: bool = False
     ) -> TextIO:
-        """
-        Write an array as a GRDECL keyword block.
+        """Write an array as a GRDECL keyword block.
 
         Parameters
         ----------
@@ -274,8 +256,7 @@ class GRDECLWriter:
 
     @staticmethod
     def _normalize_keyword(keyword: str) -> str:
-        """
-        Normalize a keyword to Eclipse-compatible uppercase form.
+        """Normalize a keyword to Eclipse-compatible uppercase form.
 
         Parameters
         ----------
@@ -297,11 +278,10 @@ class GRDECLWriter:
         keyword: str,
         array: np.ndarray, 
         ncol: int = 20, 
-        type: np.dtype = np.float32, 
+        type: Any = np.float32, 
         decimals: int | None = None
     ) -> TextIO:
-        """
-        Write an array in plain (non-RLE) GRDECL form.
+        """Write an array in plain (non-RLE) GRDECL form.
 
         Parameters
         ----------
@@ -339,11 +319,10 @@ class GRDECLWriter:
         keyword: str,
         array: np.ndarray,
         ncol: int = 12,
-        type: np.dtype = np.float32,
+        type: Any = np.float32,
         decimals: int | None = None,
     ) -> TextIO:
-        """
-        Write an array using run-length encoded GRDECL tokens.
+        """Write an array using run-length encoded GRDECL tokens.
 
         Parameters
         ----------
@@ -380,8 +359,7 @@ class GRDECLWriter:
             
     @staticmethod
     def _rle_writer(f: TextIO, lengths: np.ndarray, values: np.ndarray, ncol: int = 12) -> None:
-        """
-        Write precomputed RLE token pairs with line wrapping.
+        """Write precomputed RLE token pairs with line wrapping.
 
         Parameters
         ----------
@@ -393,10 +371,6 @@ class GRDECLWriter:
             Run values associated with ``lengths``.
         ncol : int, default=12
             Maximum number of output tokens per line.
-
-        Returns
-        -------
-        None
         """
         line = []
         for n, v in zip(lengths, values):
@@ -411,8 +385,7 @@ class GRDECLWriter:
 
     @staticmethod
     def _rle(flat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Compute run-length encoding using exact equality.
+        """Compute run-length encoding using exact equality.
 
         Parameters
         ----------
@@ -446,8 +419,7 @@ class GRDECLWriter:
 
     @staticmethod
     def _get_fmt(array: np.ndarray, decimals: int | None) -> str:
-        """
-        Build the numeric format string for array export.
+        """Build the numeric format string for array export.
 
         Parameters
         ----------

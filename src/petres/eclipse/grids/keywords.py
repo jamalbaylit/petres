@@ -1,4 +1,13 @@
-CELL_KEYWORDS = {
+from __future__ import annotations
+
+from typing import Final
+
+
+# List of keywords that will be skipped when looking for property data
+NOT_PROPERTY_KEYWORDS: Final[set[str]] = {"COORD", "ZCORN", "SPECGRID", "MAPAXES", "NOECHO", "ECHO", "MAPUNITS", "GRIDUNIT", "GDORIENT", "INC", "DEC", "FAULTS"}
+
+"""Keyword descriptions for Eclipse grid cell properties."""
+CELL_KEYWORDS: Final[dict[str, str]] = {
     # --- Rock Properties ---
     "PORO": "Porosity of each grid cell (fraction, 0–1).",
     "PERMX": "Permeability in X direction (mD).",

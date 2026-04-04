@@ -11,13 +11,13 @@ xy = np.array([[0, 0], [1, 5], [2, 1], [1, 1]])
 z = np.array([0, 1, 1, 0])
 horizon = Horizon(name="Horizon", interpolator=IDWInterpolator(), xy=xy, depth=z)
 zone = horizon.to_zone(name="Zone", depth=2)  # creates a Zone with base shifted 2 units deeper than horizon
-zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50), color="cyan")
+zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50))
 
 # Divide the zone into 4 equal layers:
 zone.divide(nk=4)
-zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50), color="cyan", show_layers=True)
+zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50))
 
 
 # Divide the zone into 3 layers with specified thickness fractions in increasing depth order: 
 zone.divide(fractions=[0.15, 0.5, 0.35])
-zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50), color="cyan", show_layers=True)
+zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50))

@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-Color = str | tuple[float, float, float] | tuple[float, float, float, float]
-
 
 @dataclass(frozen=True)
 class Matplotlib2DViewerTheme:
@@ -22,7 +20,7 @@ class Matplotlib2DViewerTheme:
         Figure resolution in dots per inch.
     constrained_layout : bool, default=True
         Whether Matplotlib constrained layout is enabled.
-    background : Color, default="white"
+    background : str | tuple[float, float, float] | tuple[float, float, float, float], default="white"
         Axes background color accepted by Matplotlib.
     aspect : {"auto", "equal"}, default="equal"
         Aspect ratio mode passed to Matplotlib axes.
@@ -73,7 +71,7 @@ class Matplotlib2DViewerTheme:
     constrained_layout: bool = True
 
     # Axes
-    background: Color = "white"
+    background: str | tuple[float, float, float] | tuple[float, float, float, float] = "white"
     aspect: Literal["auto", "equal"] = "equal"
     margins: float = 0.03
 
@@ -97,14 +95,6 @@ class Matplotlib2DViewerTheme:
 
     def __post_init__(self) -> None:
         """Validate numeric theme values after dataclass initialization.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
 
         Raises
         ------

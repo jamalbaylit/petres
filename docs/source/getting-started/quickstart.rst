@@ -5,7 +5,7 @@ Create a Simple Grid
 --------------------
 
 Create a basic :ref:`Rectilinear grid <rectilinear-grids>` using the
-:ref:`Corner-Point grid <corner-point-grids>` representation:
+:ref:`Corner-Point grids <corner-point-grids>` representation:
 
 .. code-block:: python
 
@@ -97,7 +97,6 @@ What to Learn Next
 
 After this quickstart, consider exploring:
 
-- Building corner-point grids from geological surfaces
+- Building Corner-Point grids from geological surfaces
 - Defining horizons and zones for stratigraphic modeling
 - Advanced property modeling and spatial distributions
-- Importing existing GRDECL files 

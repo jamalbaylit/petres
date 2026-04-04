@@ -28,7 +28,8 @@ pillars = PillarGrid.from_regular(
     ni=50,
     nj=50,
 )
-
+print('asdasd')
+pillars.show()  # Visualize the grid
 
 # ---------------------------------------------------------------------
 # Example 2: Regular grid using cell spacing (dx, dy)
@@ -40,7 +41,7 @@ pillars = PillarGrid.from_regular(
     dy=2,
 )
 
-
+pillars.show()
 # ---------------------------------------------------------------------
 # Example 3: Rectilinear grid with non-uniform spacing
 # ---------------------------------------------------------------------
@@ -48,7 +49,7 @@ pillars = PillarGrid.from_rectilinear(
     x=[0, 10, 50, 70, 100],
     y=np.linspace(0, 100, 50),
 )
-
+pillars.show()
 
 # ---------------------------------------------------------------------
 # Example 4: Using NumPy to generate structured coordinates
@@ -56,10 +57,10 @@ pillars = PillarGrid.from_rectilinear(
 pillars = PillarGrid.from_rectilinear(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50),
-    z_top=0,
-    z_bottom=15,
+    top=0,
+    base=15,
 )
-
+pillars.show()
 
 # ---------------------------------------------------------------------
 # Example 5: Manually specifying pillar top and bottom depths
@@ -67,8 +68,8 @@ pillars = PillarGrid.from_rectilinear(
 pillars = PillarGrid.from_rectilinear(
     x=[0, 10, 50, 70, 100],
     y=np.linspace(0, 100, 50),
-    z_top=1000,
-    z_bottom=1500,
+    top=1000,
+    base=1500,
 )
 
 # ---------------------------------------------------------------------

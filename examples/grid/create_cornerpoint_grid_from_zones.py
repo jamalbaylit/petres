@@ -5,6 +5,7 @@ from petres.viewers import Viewer3D
 import numpy as np
 
 h1 = Horizon("H1", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[0,1,0,1], interpolator=IDWInterpolator())
+h1.show(x=np.linspace(0,100,50), y=np.linspace(0,100,50), view='2d')
 h2 = Horizon("H2", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[2,2,3,3], interpolator=IDWInterpolator())
 h3 = Horizon("H3", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[5,7,8,4], interpolator=IDWInterpolator())
 h4 = Horizon("H4", xy=[[0,0],[100,0],[100,100],[0,100]], depth=[11,14,13,12], interpolator=IDWInterpolator())
@@ -27,7 +28,8 @@ viewer.show()
 
 pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=50, nj=50)
 # pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), dx=2, dy=2)
-# pillars = PillarGrid.from_rectilinear(x=np.linspace(0,100,50), y=np.linspace(0,100,50), z_top=0, z_bottom=15)
+# pillars = PillarGrid.from_rectilinear(x=np.linspace(0,100,50), y=np.linspace(0,100,50), top=0, base=15)
 
 grid = CornerPointGrid.from_zones(pillars=pillars, zones=zones)
 grid.show(show_inactive=False)
+grid.to_grdecl("cornerpoint_grid_from_zones.grdecl")

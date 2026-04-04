@@ -2,9 +2,6 @@
 Corner-Point Grid
 =================
 
-Overview
---------
-
 A **Corner-Point grid (CPG)** is a three-dimensional structured grid
 widely used in reservoir simulation to represent complex geological
 structures. The grid is defined on a logical indexing system
@@ -37,6 +34,7 @@ would introduce redundancy and may lead to inconsistencies due to numerical
 precision. Instead, the geometry is defined implicitly and reconstructed from
 pillar geometry and corner depth values.
 
+.. _pillar-geometry:
 Pillar Geometry
 ---------------
 
@@ -57,8 +55,8 @@ cell geometry.
 
    Pillar arrangement and indexing on the :math:`(i, j)` lattice; :math:`P_i` and :math:`P_j` denote the number of pillars in the :math:`i` and :math:`j` directions.
 
-Corner-Point Interpolation
---------------------------
+Cell Interpolation
+------------------
 
 Corner coordinates are obtained by interpolating along pillars using
 corner depths provided in the grid definition. For a corner located at
@@ -203,8 +201,8 @@ ACTNUM
 
 The ``ACTNUM`` keyword defines the activity status of each grid cell.
 
-- ``1`` → active (included in simulation)  
-- ``0`` → inactive (excluded from simulation)  
+- ``1`` → Active (included in simulation)  
+- ``0`` → Inactive (excluded from simulation)  
 
 It does not modify the geometry defined by :ref:`COORD <eclipse-coord>` and :ref:`ZCORN <eclipse-zcorn>`. Instead, it acts as a mask over the defined cells,
 determining which cells participate in the simulation. 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing_extensions import Literal
+from typing import Literal
 
 from .._validation import _validate_finite_float, _validate_nonempty_string
 
@@ -22,7 +22,7 @@ class VerticalWell:
     x : float
         Well-head x coordinate.
     y : float
-        Well head coordinates.
+        Well-head y coordinate.
     tops : dict[str, float], optional
         Mapping of horizon name to measured top depth.
     samples : dict[str, dict[float | None, float]], optional
@@ -41,21 +41,7 @@ class VerticalWell:
 
     # check value types and validity in __post_init__
     def __post_init__(self) -> None:
-        """Validate and normalize the initialized well state.
-
-        This method validates the well identifier and coordinates, then
-        normalizes/validates every provided top entry.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        ValueError
-            If the well name is empty, coordinates are non-finite, a top name
-            is invalid, or a top depth is not numeric/finite.
-        """
+        """Validate and normalize the initialized well state."""
         self.name = _validate_nonempty_string(self.name, "name")
         self.x = _validate_finite_float(self.x, "x")
         self.y = _validate_finite_float(self.y, "y")
@@ -65,24 +51,19 @@ class VerticalWell:
             self.tops[name] = depth
 
     def _validate_tops_sample(self, name: str, value: float) -> tuple[str, float]:
-        """Validate a single top entry.
+        """Validate and normalize one top entry.
 
         Parameters
         ----------
         name : str
-            Horizon name to validate.
+            Horizon name.
         value : float
-            Top depth value to validate.
+            Top depth value.
 
         Returns
         -------
         tuple[str, float]
             Normalized ``(name, value)`` pair.
-
-        Raises
-        ------
-        ValueError
-            If ``name`` is empty or ``value`` is not numeric/finite.
         """
         try:
             name = _validate_nonempty_string(name, "name")
@@ -117,10 +98,6 @@ class VerticalWell:
             Horizon name to add.
         depth : float
             Measured top depth.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -162,10 +139,6 @@ class VerticalWell:
         horizon : str
             Horizon name to remove.
 
-        Returns
-        -------
-        None
-
         Raises
         ------
         KeyError
@@ -198,10 +171,6 @@ class VerticalWell:
             Sample value.
         depth : float or None, default=None
             Depth for depth-indexed mode. Use ``None`` for scalar mode.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -259,6 +228,9 @@ class VerticalWell:
 
         Raises
         ------
+        ValueError
+            If ``name`` is not a non-empty string or ``depth`` is non-finite
+            when provided.
         KeyError
             If no sample exists for ``(name, depth)``.
         """
@@ -291,6 +263,11 @@ class VerticalWell:
         dict[float or None, float]
             Mapping from depth keys to sample values. Returns an empty mapping
             if the property has no samples.
+
+        Raises
+        ------
+        ValueError
+            If ``name`` is not a non-empty string.
         """
         name = _validate_nonempty_string(name, "name")
         return dict(self.samples.get(name, {}))
@@ -309,12 +286,11 @@ class VerticalWell:
         depth : float or None, default=None
             Depth key used for removal. Use ``None`` for scalar samples.
 
-        Returns
-        -------
-        None
-
         Raises
         ------
+        ValueError
+            If ``name`` is not a non-empty string or ``depth`` is non-finite
+            when provided.
         KeyError
             If no sample exists for ``(name, depth)``.
         """

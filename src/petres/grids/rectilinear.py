@@ -1,77 +1,59 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 
 @dataclass
 class Rectilinear2DGrid:
-    """Represent a 2D structured rectilinear grid with lazy-evaluated meshes.
+    """Represent a 2D structured rectilinear grid.
 
     The class stores vertex coordinates in each axis and computes cell-center
     coordinates and coordinate meshes on demand.
 
     Parameters
     ----------
-    x_vertex : numpy.ndarray
+    x_vertex : ArrayLike
         1D vertex coordinates along x of length ``ni+1``.
-    y_vertex : numpy.ndarray
+    y_vertex : ArrayLike
         1D vertex coordinates along y of length ``nj+1``.
-    active : numpy.ndarray
+    active : ArrayLike
         Boolean mask of shape ``(nj, ni)`` indicating active cells.
+
+    Raises
+    ------
+    ValueError
+        If ``active`` does not match the expected shape ``(nj, ni)``.
 
     Notes
     -----
     Coordinate meshes are cached lazily and reused after first computation.
     """
 
-    x_vertex: np.ndarray   # Grid line coordinates (ni+1,)
-    y_vertex: np.ndarray   # Grid line coordinates (nj+1,)
-    active: np.ndarray     # Boolean mask (nj, ni)
+    x_vertex: NDArray[np.float64]   # Grid line coordinates (ni+1,)
+    y_vertex: NDArray[np.float64]   # Grid line coordinates (nj+1,)
+    active: NDArray[np.bool_]     # Boolean mask (nj, ni)
     
     # --- cached 1D centers ---
-    _x_center: np.ndarray | None = field(init=False, repr=False, default=None)
-    _y_center: np.ndarray | None = field(init=False, repr=False, default=None)
+    _x_center: NDArray[np.float64] | None = field(init=False, repr=False, default=None)
+    _y_center: NDArray[np.float64] | None = field(init=False, repr=False, default=None)
 
     # --- cached 2D center mesh ---
-    _xx_vertex: np.ndarray | None = field(init=False, repr=False, default=None)
-    _yy_vertex: np.ndarray | None = field(init=False, repr=False, default=None)
+    _xx_vertex: NDArray[np.float64] | None = field(init=False, repr=False, default=None)
+    _yy_vertex: NDArray[np.float64] | None = field(init=False, repr=False, default=None)
 
     # --- cached 2D center mesh ---
-    _xx_center: np.ndarray | None = field(init=False, repr=False, default=None)
-    _yy_center: np.ndarray | None = field(init=False, repr=False, default=None)
+    _xx_center: NDArray[np.float64] | None = field(init=False, repr=False, default=None)
+    _yy_center: NDArray[np.float64] | None = field(init=False, repr=False, default=None)
 
     def __init__(self, x_vertex: ArrayLike, y_vertex: ArrayLike, active: ArrayLike) -> None:
-        """Initialize a 2D rectilinear grid from vertex coordinates and activity mask.
+        """Initialize the rectilinear grid and validate input shapes.
 
-        Parameters
-        ----------
-        x_vertex : ArrayLike
-            One-dimensional x-direction vertex coordinates with length ``ni + 1``.
-        y_vertex : ArrayLike
-            One-dimensional y-direction vertex coordinates with length ``nj + 1``.
-        active : ArrayLike
-            Cell activity mask expected to match shape ``(nj, ni)`` after conversion
-            to a boolean NumPy array.
-
-        Returns
-        -------
-        None
-
-        Notes
-        -----
-        Input arrays are normalized in :meth:`__post_init__`, where the
-        activity-mask shape is also validated.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> grid = Rectilinear2DGrid(
-        ...     x_vertex=np.array([0.0, 1.0, 2.0]),
-        ...     y_vertex=np.array([0.0, 1.0]),
-        ...     active=np.array([[True, True]])
-        ... )
-        >>> grid.cell_shape
-        (1, 2)
+        Raises
+        ------
+        ValueError
+            If ``active`` does not match the expected shape ``(nj, ni)``.
         """
         self.x_vertex = np.asarray(x_vertex)
         self.y_vertex = np.asarray(y_vertex)
@@ -88,10 +70,6 @@ class Rectilinear2DGrid:
 
     def __post_init__(self) -> None:
         """Validate normalized arrays and enforce the activity-mask shape.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -115,7 +93,7 @@ class Rectilinear2DGrid:
 
     @property
     def cell_shape(self) -> tuple[int, int]:
-        """Return the number of cells along j and i.
+        """Get the number of cells along j and i.
 
         Returns
         -------
@@ -126,7 +104,7 @@ class Rectilinear2DGrid:
 
     @property
     def vertex_shape(self) -> tuple[int, int]:
-        """Return the number of vertices along j and i.
+        """Get the number of vertices along j and i.
 
         Returns
         -------
@@ -141,7 +119,7 @@ class Rectilinear2DGrid:
 
     @property
     def niv(self) -> int:
-        """Return the number of vertices in the i-direction.
+        """Get the number of vertices in the i-direction.
 
         Returns
         -------
@@ -153,7 +131,7 @@ class Rectilinear2DGrid:
 
     @property
     def njv(self) -> int:
-        """Return the number of vertices in the j-direction.
+        """Get the number of vertices in the j-direction.
 
         Returns
         -------
@@ -165,7 +143,7 @@ class Rectilinear2DGrid:
 
     @property
     def ni(self) -> int:
-        """Return the number of cells in the i-direction.
+        """Get the number of cells in the i-direction.
 
         Returns
         -------
@@ -177,7 +155,7 @@ class Rectilinear2DGrid:
 
     @property
     def nj(self) -> int:
-        """Return the number of cells in the j-direction.
+        """Get the number of cells in the j-direction.
 
         Returns
         -------
@@ -191,8 +169,8 @@ class Rectilinear2DGrid:
     # Cell centers (1D)
     # ----------------------------
     @property
-    def x_center(self) -> np.ndarray:
-        """Return 1D x cell-center coordinates.
+    def x_center(self) -> NDArray[np.float64]:
+        """Get 1D x cell-center coordinates.
 
         Returns
         -------
@@ -204,8 +182,8 @@ class Rectilinear2DGrid:
         return self._x_center
 
     @property
-    def y_center(self) -> np.ndarray:
-        """Return 1D y cell-center coordinates.
+    def y_center(self) -> NDArray[np.float64]:
+        """Get 1D y cell-center coordinates.
 
         Returns
         -------
@@ -217,8 +195,8 @@ class Rectilinear2DGrid:
         return self._y_center
 
     @property
-    def xx_vertex(self) -> np.ndarray:
-        """Return x coordinates on the 2D vertex mesh.
+    def xx_vertex(self) -> NDArray[np.float64]:
+        """Get x coordinates on the 2D vertex mesh.
 
         Returns
         -------
@@ -230,8 +208,8 @@ class Rectilinear2DGrid:
         return self._xx_vertex
     
     @property
-    def yy_vertex(self) -> np.ndarray:
-        """Return y coordinates on the 2D vertex mesh.
+    def yy_vertex(self) -> NDArray[np.float64]:
+        """Get y coordinates on the 2D vertex mesh.
 
         Returns
         -------
@@ -243,8 +221,8 @@ class Rectilinear2DGrid:
         return self._yy_vertex
     
     @property
-    def xx_center(self) -> np.ndarray:
-        """Return x coordinates on the 2D cell-center mesh.
+    def xx_center(self) -> NDArray[np.float64]:
+        """Get x coordinates on the 2D cell-center mesh.
 
         Returns
         -------
@@ -256,8 +234,8 @@ class Rectilinear2DGrid:
         return self._xx_center
     
     @property
-    def yy_center(self) -> np.ndarray:
-        """Return y coordinates on the 2D cell-center mesh.
+    def yy_center(self) -> NDArray[np.float64]:
+        """Get y coordinates on the 2D cell-center mesh.
 
         Returns
         -------
@@ -272,15 +250,15 @@ class Rectilinear2DGrid:
     # ----------------------------
     # Cell center mesh (2D)
     # ----------------------------
-    def _build_mesh(self, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Build a 2D mesh from 1D coordinate arrays.
+    def _build_mesh(self, x: NDArray[np.float64], y: NDArray[np.float64]) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Build 2D coordinate meshes from 1D arrays.
 
         Parameters
         ----------
         x : numpy.ndarray
-            1D coordinates for the i-direction.
+            1D i-direction coordinates.
         y : numpy.ndarray
-            1D coordinates for the j-direction.
+            1D j-direction coordinates.
 
         Returns
         -------

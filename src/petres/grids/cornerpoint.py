@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Self, Sequence
-from dataclasses import dataclass, field
-from typing import Callable
-from pathlib import Path
-import numpy as np
 import warnings
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Self
+
+import numpy as np
 
 
 
@@ -17,7 +18,7 @@ from ..errors.property import MissingEclipseKeywordError
 from ..errors.grid import UnsupportedGridAttributeError
 from ..eclipse.grids.write import GRDECLWriter
 from ..eclipse.grids.read import GRDECLReader
-from .pillar import PillarGrid
+from .pillars import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
 from ..grids.properties import GridProperties, GridProperty
@@ -47,7 +48,7 @@ class GridAttributeSpec:
 
     name: str
     description: str
-    resolver: Callable[["CornerPointGrid"], np.ndarray]
+    resolver: Callable[[CornerPointGrid], np.ndarray]
     aliases: tuple[str, ...] = ()
 
 
@@ -102,28 +103,16 @@ class CornerPointGrid:
     
     pillars: PillarGrid
     zcorn: np.ndarray                     # Shape (2*nk, 2*nj, 2*ni)
-    active: Optional[np.ndarray] = None      # Shape (nk, nj, ni), boolean, or None for all active
+    active: np.ndarray | None = None      # Shape (nk, nj, ni), boolean, or None for all active
 
-    zone_index: Optional[np.ndarray] = None        # shape (nk, nj, ni), int
+    zone_index: np.ndarray | None = None        # shape (nk, nj, ni), int
     zone_names: dict[int, str] = field(default_factory=dict)
     
     _properties: dict[str, GridProperty] = field(default_factory=dict, repr=False)
     _zone_name_to_id: dict[str, int] = field(default_factory=dict, init=False, repr=False)
     
     def __post_init__(self) -> None:
-        """Validate dimensions, active mask, and zone/property consistency.
-
-        Parameters
-        ----------
-        None
-            This hook receives dataclass-initialized attributes from
-            :class:`CornerPointGrid`.
-
-        Returns
-        -------
-        None
-            Updates validated attributes in place and initializes zone lookup
-            metadata.
+        """Validate grid arrays and initialize zone lookup metadata.
 
         Raises
         ------
@@ -316,11 +305,6 @@ class CornerPointGrid:
         zone_names : dict[int, str], optional
             Mapping from zone id to zone name.
             If not provided, names will be auto-generated as "Zone {id}".
-
-        Returns
-        -------
-        None
-            Stores normalized zone arrays and lookup dictionaries on the grid.
 
         Raises
         ------
@@ -588,7 +572,9 @@ class CornerPointGrid:
     def from_grdecl(
         cls, path: str | Path,
         *,
-        use_actnum: bool = True
+        use_actnum: bool = True,
+        properties: Sequence[str] | None = None,
+
     ) -> CornerPointGrid:
         """Load a grid from a GRDECL file.
 
@@ -605,21 +591,38 @@ class CornerPointGrid:
             Grid populated from GRDECL arrays.
         """
 
-        # Local import avoids circular deps and keeps startup light
-
-        data = GRDECLReader().read(path, use_actnum=use_actnum)  # returns raw arrays/spec, not a grid
+        if properties is not None:
+            try:
+                properties = tuple(properties)
+            except Exception as e:
+                raise TypeError(f"`properties` must be a sequence of property names.") from e
+            
+        data = GRDECLReader().read(path, use_actnum=use_actnum, properties=properties)  # returns raw arrays/spec, not a grid
         coord = data.coord
         zcorn = data.zcorn
         actnum = data.actnum
+        # For properties, we need to convert raw arrays into GridProperty instances
         
         pillars = PillarGrid.from_eclipse_coord(coord)
-        return cls(pillars=pillars, zcorn=zcorn, active=actnum)
+        grid = cls(pillars=pillars, zcorn=zcorn, active=actnum)
+        
+        for kw, val in data.properties.items():
+            if kw in RESERVED_GRID_PROPERTY_NAMES:
+                raise UnsupportedGridAttributeError(
+                    f"Cannot load property '{kw}' from GRDECL because it conflicts with a reserved grid attribute name."
+                )
+            prop = grid.properties.create(
+                name=kw,
+                eclipse_keyword=kw
+            )
+            prop.from_array(val)
+        return grid
 
     def to_grdecl(
         self, 
         path: str | Path, 
         *,
-        properties: Optional[Sequence[str]] = None,
+        properties: Sequence[str] | None = None,
         include_actnum: bool = True,
     ) -> None:
         """Write grid geometry and selected properties to a GRDECL file.
@@ -633,11 +636,6 @@ class CornerPointGrid:
             written.
         include_actnum : bool, default True
             Whether to export ``ACTNUM`` from the grid active mask.
-
-        Returns
-        -------
-        None
-            Writes GRDECL content to disk.
 
         Raises
         ------
@@ -657,34 +655,32 @@ class CornerPointGrid:
                 properties = tuple(properties)
             except Exception as e:
                 raise TypeError(f"`properties` must be a sequence of property names.") from e
-        
-        property_values = []
-        property_keywords = []
-        for prop_name in properties:
-            prop = self.properties[prop_name]
-            eclipse_keyword = prop.eclipse_keyword
-            if eclipse_keyword is None:
-                raise MissingEclipseKeywordError(property_name=prop_name)
-                
-            property_values.append(prop.values)
-            property_keywords.append(prop.eclipse_keyword)
+
+        _properties = {}
+        if properties:
+            for prop_name in properties:
+                prop = self.properties[prop_name]
+                eclipse_keyword = prop.eclipse_keyword
+                if eclipse_keyword is None:
+                    raise MissingEclipseKeywordError(property_name=prop_name)
+                _properties[eclipse_keyword] = prop.values
 
         return writer.write(
             path=path, 
             coord=coord, 
             zcorn=zcorn, 
             actnum=actnum, 
-            property_values=property_values, 
-            property_keywords=property_keywords,
+            properties=_properties,
         )
+
 
     def show(
         self, 
         show_inactive: bool = False, 
         scalars: str | None = None,
         color: Any = 'tan', 
-        cmap: Optional[str] = 'turbo', 
-        title: Optional[str] = None,
+        cmap: str | None = 'turbo', 
+        title: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Render the grid in 3D PyVista viewer.
@@ -703,11 +699,6 @@ class CornerPointGrid:
             Figure title.
         **kwargs
             Forwarded to viewer ``add_grid``.
-
-        Returns
-        -------
-        None
-            Opens an interactive 3D rendering window.
         """
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         viewer = PyVista3DViewer()
@@ -741,7 +732,7 @@ class CornerPointGrid:
         """
         
         z = _validate_vertex_array(z, "z")
-        pillars = PillarGrid.from_rectilinear(x=x, y=y, z_top=z[0], z_bottom=z[-1])
+        pillars = PillarGrid.from_rectilinear(x=x, y=y, top=z[0], base=z[-1])
         
         # Create simple ZCORN with flat layers
         nj, ni = pillars.cell_shape
@@ -844,11 +835,6 @@ class CornerPointGrid:
         Notes
         -----
         Updates ``active`` in place; cached property masks may become stale.
-
-        Returns
-        -------
-        None
-            Applies the boundary mask directly to ``active``.
         """
         # Get cell centers (nk, nj, ni, 3)
         centers = self.cell_centers
@@ -930,8 +916,10 @@ class CornerPointGrid:
             
             # Compute interpolation parameter
             dz = z_bot - z_top
-            # Handle vertical pillars (avoid division by zero)
-            t = np.where(np.abs(dz) > 1e-10, (z[..., np.newaxis] - z_top) / dz, 0.5)
+            # Handle vertical pillars (avoid evaluating invalid divisions)
+            numerator = z[..., np.newaxis] - z_top
+            t = np.full_like(numerator, 0.5, dtype=np.float64)
+            np.divide(numerator, dz, out=t, where=np.abs(dz) > 1e-10)
             
             # Interpolate position
             pos = pillar_top + t * (pillar_bottom - pillar_top)
