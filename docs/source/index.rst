@@ -1,8 +1,8 @@
 Welcome to Petres
 =================
 
-Petres is a lightweight, open-source Python library designed for reservoir grid modeling, 
-designed to provide a programmatic approach to constructing :ref:`Corner-Point grid <corner-point-grid>` models. 
+Petres is a lightweight, open-source Python library for reservoir grid modeling, 
+providing a fully programmatic approach to constructing :ref:`Corner-Point grid <corner-point-grid>` models. 
 
 
 .. important::
@@ -66,9 +66,8 @@ Features
          :title: Import & Export Grids
 
       Handle Eclipse grids (SLB reservoir simulator) 
-      using the ``.GRDECL`` file format. Import, visualize,
-      and export grids seamlessly within your modeling
-      and simulation workflows.
+      using the ``.GRDECL`` file format. Visualize,
+      and export modeled Corner-Point grids.
 
 
    .. grid-item-card:: 

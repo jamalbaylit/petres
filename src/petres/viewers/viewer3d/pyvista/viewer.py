@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any, Self
+import numpy as np
 
 import pyvista as pv
 from .layers.cornerpoint import _add_corner_point_grid
@@ -255,7 +256,7 @@ class PyVista3DViewer(Base3DViewer):
         """
         p = self.plotter
         # Base view preset
-        if cam.view == "ico":
+        if cam.view == "iso":
             p.view_isometric()
         elif cam.view == "top":
             p.view_xy(negative=False)

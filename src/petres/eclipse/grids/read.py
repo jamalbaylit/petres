@@ -3,14 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
 from numpy.typing import DTypeLike, NDArray
 
+from .keywords import NOT_PROPERTY_KEYWORDS
 from .validation import (
-    validate_actnum_array_shape,
-    validate_actnum_array_size,
+    validate_array_shape,
+    validate_array_size,
     validate_coord_array_shape,
     validate_coord_array_size,
     validate_zcorn_array_size,
@@ -37,6 +38,8 @@ class GRDECLData:
     actnum : numpy.ndarray of int or None
         ACTNUM array reshaped to ``(nk, nj, ni)``, or ``None`` if missing or
         disabled.
+    properties : dict[str, numpy.ndarray] or None
+        Optional dictionary of property arrays, keyed by name.
     """
 
     ni: int
@@ -45,6 +48,7 @@ class GRDECLData:
     coord: NDArray[np.float64]   # (nj+1, ni+1, 6)
     zcorn: NDArray[np.float64]   # (2*nk, 2*nj, 2*ni)
     actnum: NDArray[np.int_] | None  # (nk, nj, ni) or None
+    properties: dict[str, NDArray[Any]] # Optional dict of property arrays
 
 
 class GRDECLReader:
@@ -93,7 +97,7 @@ class GRDECLReader:
             out.append(line)
         return "\n".join(out)
 
-    def read(self, path: str | Path, *, use_actnum: bool = True) -> GRDECLData:
+    def read(self, path: str | Path, *, use_actnum: bool = True, properties: Sequence[str] | None = None) -> GRDECLData:
         """Read and validate grid keywords from a GRDECL file.
 
         Parameters
@@ -134,11 +138,28 @@ class GRDECLReader:
         actnum = None
         if self._has_keyword(text, "ACTNUM") and use_actnum:
             act = self._get_keyword_array(text, "ACTNUM", dtype=int)
-            validate_actnum_array_size(act, ni=ni, nj=nj, nk=nk)
+            validate_array_size(act, "ACTNUM", ni=ni, nj=nj, nk=nk)
             actnum = act.reshape((nk, nj, ni))
-            validate_actnum_array_shape(actnum, ni=ni, nj=nj, nk=nk)
+            validate_array_shape(actnum, "ACTNUM", ni=ni, nj=nj, nk=nk)
 
-        return GRDECLData(ni=ni, nj=nj, nk=nk, coord=coord, zcorn=zcorn, actnum=actnum)
+        properties_dict = {}
+        if properties is not None:
+            properties = set(properties)
+            for kw in properties:
+                if kw in NOT_PROPERTY_KEYWORDS:
+                    raise ValueError(f"Keyword '{kw}' is not a valid property keyword and cannot be imported.")
+                if not self._has_keyword(text, kw):
+                    raise ValueError(f"Keyword '{kw}' is not found in the input file.")
+                prop = self._get_keyword_array(text, kw, dtype=float)
+                validate_array_size(prop, kw, ni=ni, nj=nj, nk=nk)
+                properties_dict[kw] = prop.reshape((nk, nj, ni))
+
+        
+
+                        
+
+
+        return GRDECLData(ni=ni, nj=nj, nk=nk, coord=coord, zcorn=zcorn, actnum=actnum, properties=properties_dict)
 
     # ----------------------------
     # helpers

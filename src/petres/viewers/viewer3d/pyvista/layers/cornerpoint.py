@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import Any
-import numpy as np
 import pyvista as pv
+import numpy as np
 
 from ....._utils._color import Color
 from .....grids import CornerPointGrid
