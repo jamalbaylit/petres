@@ -4,26 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "petres"
-version = "0.1.0"
-description = "A lightweight, open-source Python library for reservoir grid modeling"
-readme = "README.md"
+version = "0.1.0-rc3"
+description = "Petres: lightweight Python library for reservoir grid modeling and visualization"
+readme = { file = "README.md", content-type = "text/markdown" }
+
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [
     { name = "Tayfun Jamalbayli" }
 ]
 keywords = [
-    "corner-point-grid", 
-    "eclipse", 
-    "geomodeling", 
-    "grid-generation", 
-    "petres", 
-    "petroleum-engineering", 
-    "python", 
-    "reservoir-modeling", 
-    "reservoir-simulation", 
-    "structured-grids", 
-    "subsurface-modeling"
+    "corner-point-grid",
+    "reservoir-modeling",
+    "eclipse",
+    "reservoir-simulation"
 ]
 
 
@@ -36,10 +30,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Visualization",
-    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
 dependencies = [
