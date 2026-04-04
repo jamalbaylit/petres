@@ -1,8 +1,9 @@
 <div align="center">
 
 ![Banner](./assets/banner-high.png)
-
-
+<em>
+    A lightweight, open-source Python library for reservoir grid modeling
+</em>
 
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
@@ -10,62 +11,87 @@
 
 </div>
 
-<!-- Uncomment when published to PyPI
-[![PyPI version](https://badge.fury.io/py/petres.svg)](https://badge.fury.io/py/petres)
-[![Downloads](https://pepy.tech/badge/petres)](https://pepy.tech/project/petres)
--->
 
-## Overview
+# Introduction
 
-Petres is a modern Python package for petroleum reservoir modeling and simulation. Built with performance and ease of use in mind, it provides tools for grid generation, fluid property calculations, and reservoir simulation workflows.
+Petres is a lightweight, open-source Python library for reservoir grid modeling, providing a fully programmatic approach to constructing Corner-Point grid models.
+
+For complete documentation, see the [Petres documentation](https://petres.readthedocs.io/).
+
+> **Stability Notice**  
+> Petres is currently in early development. The API is not yet stable and may change without notice.
+
+
+## Why Petres?
+
+- **Open Access:** Free alternative for engineers and students without access to expensive commercial softwares.
+
+- **Scriptable Modeling:** Avoid UI complexity and work with code-driven workflows.
+
+- **Fully Customizable:** Integrate your own code alongside built-in methods.
+
+- **AI Integration:** Use the Python ecosystem to apply AI and Machine Learning techniques.
 
 ## Features
 
-- **Grid Generation**: Create and manipulate structured and unstructured reservoir grids
-- **Fluid Properties**: Calculate PVT properties for oil, gas, and water
-- **Modern Python**: Built for Python 3.11+ with type hints and modern tooling
-- **Extensible**: Modular design for easy customization and extension
+- **Grid Generation:** Construct Corner-Point, Rectilinear, and Regular grids.  
+Apply boundary polygons to deactivate cells outside the target region.  
 
-## Installation
+- **Structural Modeling:** Generate horizon and zone surfaces from well tops to support grid construction.  
 
-### Quick Install (from PyPI)
+- **Property Modeling:** Assign petrophysical properties to grid cells using stochastic or deterministic methods, derived attributes, or interpolation from well data.  
 
-```bash
-pip install petres
-```
+- **Import & Export Grids:** Handle Eclipse grids (SLB reservoir simulator) using the ``.GRDECL`` file format. Visualize and export modeled Corner-Point grids.
 
-### Install from Source
-
-For development or latest features:
-
-```bash
-git clone https://github.com/jamalbaylit/petres.git
-cd petres
-uv pip install -e .
-```
-
-See the [installation guide](docs/source/getting_started/installation.rst) for detailed instructions.
-
-## Quick Start
-
-```python
-import petres
-
-# Your reservoir modeling code here
-```
-
-See the [documentation](https://petres.readthedocs.io) for more examples and tutorials.
-
-## Documentation
-
-Full documentation is available at [petres.readthedocs.io](https://petres.readthedocs.io)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+- **Visualization:**
+Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizons, and spatial property distributions.  
 
 
-## License
+## Getting Started
 
-This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPL-3.0-or-later).
-See the [LICENSE](LICENSE) file for details.
+To get started with Petres, refer to the [Installation Guide](https://petres.readthedocs.io/en/latest/getting-started/installation.html) and the [Quickstart Tutorial](https://petres.readthedocs.io/en/latest/getting-started/quickstart.html).  
+
+
+
+## Technical Architecture
+<div align="center">
+<table width="100%">
+  <tr>
+    <th>Component</th>
+    <th>Implementation</th>
+  </tr>
+  <tr>
+    <td>Grid Operations</td>
+    <td>High-performance, vectorized array computations using NumPy</td>
+  </tr>
+  <tr>
+    <td>2D Plotting</td>
+    <td>Visualization via Matplotlib</td>
+  </tr>
+
+  <tr>
+    <td>3D Visualization</td>
+    <td>Interactive rendering and mesh handling via PyVista</td>
+  </tr>
+  <tr>
+    <td>Kriging Interpolation</td>
+    <td>Ordinary and Universal Kriging via PyKrige</td>
+  </tr>
+  <tr>
+    <td>RBF Interpolation</td>
+    <td>Multi-dimensional Radial Basis Function interpolation via SciPy</td>
+  </tr>
+  <tr>
+    <td>IDW Interpolation</td>
+    <td>In-house implementation of Inverse Distance Weighting</td>
+  </tr>
+</table>
+</div>
+
+
+
+
+
+## Contact
+
+For questions or collaboration, please contact [jamalbaylit@gmail.com](mailto:jamalbaylit@gmail.com) or connect via [LinkedIn](https://www.linkedin.com/in/jamalbaylit).

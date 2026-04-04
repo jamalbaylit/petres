@@ -17,7 +17,7 @@ zones = [
 ]
 # Gap between h2 (depth~2-3) and h3 (depth~5-8) should create 1 inactive layer
 
-pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=10, nj=10, z_top=0, z_bottom=10)
+pillars = PillarGrid.from_regular(xlim=(0,100), ylim=(0,100), ni=10, nj=10, top=0, base=10)
 grid = CornerPointGrid.from_zones(pillars=pillars, zones=zones)
 
 print(f"Grid shape (nk, nj, ni): {grid.shape}")

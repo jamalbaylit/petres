@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 """Zone-related error definitions."""
 
-from petres.errors.base import PetresError
+from .base import PetresError
 
 
 class ZoneError(PetresError):
     """Represent errors raised during zone operations.
 
-    This exception provides a zone-specific error type so callers can catch
-    and handle failures that occur in zone modeling and processing workflows.
+    Use this exception to distinguish zone-specific failures from other domain
+    errors and handle them consistently.
 
     Attributes
     ----------

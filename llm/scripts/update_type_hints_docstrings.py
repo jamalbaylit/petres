@@ -13,9 +13,9 @@ def main():
         repo_name=REPO_NAME,
         instruction_path=prompt_path,
         target_branch_name = "dev",
-        working_branch_name = "copilot/type-hints-docstrings",
+        working_branch_name = "copilot/v3type-hints-docstrings",
         auto_review = True,
-        auto_merge = True,
+        auto_merge = False,
     )
     agent.run(
         file_regex=file_regex,

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from dataclasses import dataclass
-from typing import Sequence
+from collections.abc import Iterable, Sequence
+
 import numpy as np
 
 
-from ..pillar import PillarGrid
+from ..pillars import PillarGrid
 from ...models.zone import Zone
 
 
@@ -199,16 +198,36 @@ def _build_zcorn_from_zones(
     zones: Sequence[Zone],
 ) -> tuple[np.ndarray, np.ndarray | None, np.ndarray, dict[int, str]]:
     """
-    Build Eclipse-style ZCORN and ACTNUM from stratigraphic zones.
+    Build ZCORN, ACTNUM, and zone membership from stratigraphic zones.
 
-    Also returns cell-wise zone membership:
-    - zone_index[k, j, i] = zone id
-    - 0 means gap / undefined / unassigned
+    Parameters
+    ----------
+    pillars : PillarGrid
+        Pillar geometry used to sample horizons and define cell topology.
+    zones : Sequence[Zone]
+        Non-empty ordered zones from top to bottom. Each zone must provide
+        strictly increasing levels that start at 0.0 and end at 1.0.
 
     Returns
     -------
     tuple[np.ndarray, np.ndarray | None, np.ndarray, dict[int, str]]
-        zcorn, actnum, zone_index, zone_names
+        zcorn : np.ndarray
+            Eclipse ZCORN array with shape (2*nk, 2*nj, 2*ni).
+        actnum : np.ndarray | None
+            Activity mask with shape (nk, nj, ni), or None when all layers are active.
+        zone_index : np.ndarray
+            Integer zone ids per cell with shape (nk, nj, ni). A value of 0 marks
+            gap or unassigned layers.
+        zone_names : dict[int, str]
+            Mapping from positive zone id to zone name.
+
+    Raises
+    ------
+    ValueError
+        If zone geometry is invalid, levels are malformed, or there are not enough
+        interfaces to form at least one layer.
+    RuntimeError
+        If internal layer metadata sizes become inconsistent.
     """
     assert isinstance(zones, Iterable), f"Expected iterable for zones. Got {type(zones)}."
     assert len(zones) > 0, "At least one zone is required."

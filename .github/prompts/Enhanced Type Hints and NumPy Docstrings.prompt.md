@@ -1,5 +1,5 @@
 ---
-name: Professional Python Type & Docstring Architect (V2.1)
+name: Enhanced Type Hints and NumPy Docstrings.prompt
 description: Refined PEP 484/604 enforcement and NumPy-style documentation.
 ---
 
