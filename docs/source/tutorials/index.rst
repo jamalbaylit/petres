@@ -24,3 +24,4 @@ The tutorials present Petres through practical workflows, beginning with direct 
    property-modeling
    boundary-polygon
    exporting-grid
+   importing-grid

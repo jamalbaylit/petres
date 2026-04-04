@@ -41,7 +41,7 @@ Apply boundary polygons to deactivate cells outside the target region.
 
 - **Property Modeling:** Assign petrophysical properties to grid cells using stochastic or deterministic methods, derived attributes, or interpolation from well data.  
 
-- **Import & Export Grids:** Handle SLB Eclipse reservoir simulation grids using the `.GRDECL` file format. Import, visualize, and export grids within modeling workflows.  
+- **Import & Export Grids:** Handle Eclipse grids (SLB reservoir simulator) using the ``.GRDECL`` file format. Visualize,and export modeled Corner-Point grids.
 
 - **Visualization:**
 Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizons, and spatial property distributions.  

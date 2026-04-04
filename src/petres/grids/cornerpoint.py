@@ -572,7 +572,9 @@ class CornerPointGrid:
     def from_grdecl(
         cls, path: str | Path,
         *,
-        use_actnum: bool = True
+        use_actnum: bool = True,
+        properties: Sequence[str] | None = None,
+
     ) -> CornerPointGrid:
         """Load a grid from a GRDECL file.
 
@@ -589,15 +591,32 @@ class CornerPointGrid:
             Grid populated from GRDECL arrays.
         """
 
-        # Local import avoids circular deps and keeps startup light
-
-        data = GRDECLReader().read(path, use_actnum=use_actnum)  # returns raw arrays/spec, not a grid
+        if properties is not None:
+            try:
+                properties = tuple(properties)
+            except Exception as e:
+                raise TypeError(f"`properties` must be a sequence of property names.") from e
+            
+        data = GRDECLReader().read(path, use_actnum=use_actnum, properties=properties)  # returns raw arrays/spec, not a grid
         coord = data.coord
         zcorn = data.zcorn
         actnum = data.actnum
+        # For properties, we need to convert raw arrays into GridProperty instances
         
         pillars = PillarGrid.from_eclipse_coord(coord)
-        return cls(pillars=pillars, zcorn=zcorn, active=actnum)
+        grid = cls(pillars=pillars, zcorn=zcorn, active=actnum)
+        
+        for kw, val in data.properties.items():
+            if kw in RESERVED_GRID_PROPERTY_NAMES:
+                raise UnsupportedGridAttributeError(
+                    f"Cannot load property '{kw}' from GRDECL because it conflicts with a reserved grid attribute name."
+                )
+            prop = grid.properties.create(
+                name=kw,
+                eclipse_keyword=kw
+            )
+            prop.from_array(val)
+        return grid
 
     def to_grdecl(
         self, 
@@ -636,26 +655,24 @@ class CornerPointGrid:
                 properties = tuple(properties)
             except Exception as e:
                 raise TypeError(f"`properties` must be a sequence of property names.") from e
-        
-        property_values = []
-        property_keywords = []
-        for prop_name in properties:
-            prop = self.properties[prop_name]
-            eclipse_keyword = prop.eclipse_keyword
-            if eclipse_keyword is None:
-                raise MissingEclipseKeywordError(property_name=prop_name)
-                
-            property_values.append(prop.values)
-            property_keywords.append(prop.eclipse_keyword)
+
+        _properties = {}
+        if properties:
+            for prop_name in properties:
+                prop = self.properties[prop_name]
+                eclipse_keyword = prop.eclipse_keyword
+                if eclipse_keyword is None:
+                    raise MissingEclipseKeywordError(property_name=prop_name)
+                _properties[eclipse_keyword] = prop.values
 
         return writer.write(
             path=path, 
             coord=coord, 
             zcorn=zcorn, 
             actnum=actnum, 
-            property_values=property_values, 
-            property_keywords=property_keywords,
+            properties=_properties,
         )
+
 
     def show(
         self, 

@@ -55,8 +55,8 @@ cell geometry.
 
    Pillar arrangement and indexing on the :math:`(i, j)` lattice; :math:`P_i` and :math:`P_j` denote the number of pillars in the :math:`i` and :math:`j` directions.
 
-Corner-Point Interpolation
---------------------------
+Cell Interpolation
+------------------
 
 Corner coordinates are obtained by interpolating along pillars using
 corner depths provided in the grid definition. For a corner located at

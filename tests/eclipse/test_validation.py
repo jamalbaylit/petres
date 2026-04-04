@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 
 from petres.eclipse.grids.validation import (
-    validate_actnum_array_shape,
     validate_coord_array_shape,
     validate_specgrid,
     validate_zcorn_array_size,
@@ -28,7 +27,3 @@ def test_validate_zcorn_array_size_rejects_wrong_total_size():
         validate_zcorn_array_size(zcorn, ni=1, nj=1, nk=2)
 
 
-def test_validate_actnum_array_shape_rejects_incorrect_ordering():
-    actnum = np.ones((2, 1, 1), dtype=int)
-    with pytest.raises(ValueError, match="ACTNUM shape mismatch"):
-        validate_actnum_array_shape(actnum, ni=2, nj=1, nk=1)

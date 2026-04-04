@@ -941,6 +941,9 @@ class GridProperties:
     print(poro2.mean)
 
     """
+    def __repr__(self):
+        prop_names = ", ".join(self._grid._properties.keys())
+        return f"GridProperties({prop_names})"
 
     def __init__(self, grid: "CornerPointGrid") -> None:
         """Initialize a property manager bound to one grid."""
