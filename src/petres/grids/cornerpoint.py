@@ -916,8 +916,10 @@ class CornerPointGrid:
             
             # Compute interpolation parameter
             dz = z_bot - z_top
-            # Handle vertical pillars (avoid division by zero)
-            t = np.where(np.abs(dz) > 1e-10, (z[..., np.newaxis] - z_top) / dz, 0.5)
+            # Handle vertical pillars (avoid evaluating invalid divisions)
+            numerator = z[..., np.newaxis] - z_top
+            t = np.full_like(numerator, 0.5, dtype=np.float64)
+            np.divide(numerator, dz, out=t, where=np.abs(dz) > 1e-10)
             
             # Interpolate position
             pos = pillar_top + t * (pillar_bottom - pillar_top)
