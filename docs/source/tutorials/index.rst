@@ -21,7 +21,9 @@ The tutorials present Petres through practical workflows, beginning with direct 
    zone-modeling
    pillar-gridding
    grid-modeling-from-horizons-and-zones
+   grid-visualization
    property-modeling
    boundary-polygon
    exporting-grid
    importing-grid
+   

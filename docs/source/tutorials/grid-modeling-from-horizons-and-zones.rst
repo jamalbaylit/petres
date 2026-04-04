@@ -9,8 +9,8 @@ The focus here is on combining these components into a complete
 grid generation.
 
 
-Workflow Summary
-----------------
+Workflow
+--------
 
 The workflow follows a structured sequence:
 
@@ -68,44 +68,19 @@ with the zones using the  :meth:`~petres.grids.CornerPointGrid.from_zones` metho
       pillars=pillars,
       zones=[zone],
    )
-
-This step integrates:
-
-- Lateral geometry from pillars
-- Vertical layering from zones
-- Surface geometry from horizons
-
-
-.. _visualizing-the-grid:
-
-Visualizing the Grid
---------------------
-
-.. code-block:: python
-
    grid.show()
 
-Optional:
+The zone boundaries and zone layers define the vertical resolution of the grid, 
+while the pillars determine the horizontal :math:`(x, y)` resolution.  
+If the provided zones are not touching, the grid will include a single layer of inactive cells between them.
 
-.. code-block:: python
-
-   grid.show(show_inactive=False)
-
-
-Key Observations
-----------------
-
-- Grid layering follows the subdivision defined in each zone
-- Cell geometry conforms to interpolated horizon surfaces
-- Pillar spacing controls lateral resolution
-- Vertical resolution is controlled independently via zone layering
+.. important::
+   The grid construction process assumes that the provided zones are **not** overlapping or intersecting. 
+   It is perfectly fine if zone boundaries share the same horizon.
 
 
-Where to Go Next
-----------------
+Next Steps
+----------
 
-After constructing the grid, typical next steps include:
-
-- Assigning properties → :doc:`grid-properties`
-- Exporting the model → :doc:`exporting-grid`
-- Exploring advanced workflows → :doc:`../api/index`
+- :doc:`property-modeling`
+- :doc:`exporting-grid`

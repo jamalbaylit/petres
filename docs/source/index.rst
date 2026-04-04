@@ -165,7 +165,6 @@ For questions, suggestions, or collaboration, feel free to reach out:
    :hidden:
 
    tutorials/index
-   examples
    api/index
 
 
