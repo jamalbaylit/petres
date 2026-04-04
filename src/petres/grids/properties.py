@@ -914,7 +914,9 @@ class GridProperty:
                     f"Unsupported location {location!r}. "
                     "Supported values are: 'center', 'top', 'bottom'."
                 )
-            
+    
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name={self.name!r}, eclipse_keyword={self.eclipse_keyword!r}, description={self.description!r})"
     
 # ============================================================
 # GridProperties
@@ -945,6 +947,10 @@ class GridProperties:
         prop_names = ", ".join(self._grid._properties.keys())
         return f"GridProperties({prop_names})"
 
+    def __iter__(self):
+        """Iterate over GridProperty instances."""
+        return iter(self._grid._properties.values())
+    
     def __init__(self, grid: "CornerPointGrid") -> None:
         """Initialize a property manager bound to one grid."""
         self._grid = grid
