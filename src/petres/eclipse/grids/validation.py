@@ -187,19 +187,22 @@ def validate_zcorn_array_shape(
 # ---------------------------------------------------------
 # ACTNUM
 # ---------------------------------------------------------
-def validate_actnum_array_size(
-    actnum: np.ndarray,
+def validate_array_size(
+    array: np.ndarray,
+    name: str,
     *,
     ni: int,
     nj: int,
     nk: int,
 ) -> None:
-    """Validate the ACTNUM array size.
+    """Validate the array size.
 
     Parameters
     ----------
-    actnum : np.ndarray
-        Activity mask array to validate.
+    array : np.ndarray
+        Array to validate.
+    name : str
+        Name of the array for error messages.
     ni : int
         Number of cells in the I direction. Must be non-negative.
     nj : int
@@ -214,25 +217,28 @@ def validate_actnum_array_size(
     """
     expected_size = ni * nj * nk
 
-    if actnum.size != expected_size:
+    if array.size != expected_size:
         raise ValueError(
-            f"ACTNUM size mismatch: expected "
-            f"{ni}*{nj}*{nk}={expected_size}, got {actnum.size}"
+            f"{name} size mismatch: expected "
+            f"{ni}*{nj}*{nk}={expected_size}, got {array.size}"
         )
 
-def validate_actnum_array_shape(
-    actnum: np.ndarray,
+def validate_array_shape(
+    array: np.ndarray,
+    name: str,
     *,
     ni: int,
     nj: int,
     nk: int,
 ) -> None:
-    """Validate the ACTNUM array shape.
+    """Validate the array shape.
 
     Parameters
     ----------
-    actnum : np.ndarray
-        Activity mask array to validate.
+    array : np.ndarray
+        Array to validate.
+    name : str
+        Name of the array for error messages.
     ni : int
         Number of cells in the I direction. Must be non-negative.
     nj : int
@@ -247,9 +253,9 @@ def validate_actnum_array_shape(
     """
     expected_shape = (nk, nj, ni)
 
-    if actnum.shape != expected_shape:
+    if array.shape != expected_shape:
         raise ValueError(
-            f"ACTNUM shape mismatch: expected "
-            f"{expected_shape}, got {actnum.shape}"
+            f"{name} shape mismatch: expected "
+            f"{expected_shape}, got {array.shape}"
         )
 

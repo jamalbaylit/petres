@@ -70,6 +70,9 @@ arguments in each direction.
 The :meth:`summary` method provides a brief overview of the grid, 
 while :meth:`show` visualizes it.
 
+.. note::
+   For more advanced visualization options refer to :doc:`grid-visualization`.
+
 Using Cell Sizes
 ~~~~~~~~~~~~~~~~
 

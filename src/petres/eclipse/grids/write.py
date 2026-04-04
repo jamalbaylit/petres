@@ -8,6 +8,7 @@ from typing import Any, TextIO
 import numpy as np
 
 from ...errors.eclipse import GRDECLMissingValueError
+from .keywords import NOT_PROPERTY_KEYWORDS
 
 
 class GRDECLWriter:
@@ -61,8 +62,7 @@ class GRDECLWriter:
         coord: np.ndarray, 
         zcorn: np.ndarray, 
         actnum: np.ndarray | None = None,
-        property_values: Mapping[str, np.ndarray] | None = None,
-        property_keywords: Sequence[str] | None = None,
+        properties: Mapping[str, np.ndarray] | None = None,
         rle: bool = True,
         units: str = "FEET",
         mapunits: str = "FEET",
@@ -80,11 +80,8 @@ class GRDECLWriter:
             ``(2 * nk, 2 * nj, 2 * ni)``.
         actnum : numpy.ndarray | None, default=None
             Optional active-cell mask for the ``ACTNUM`` keyword.
-        property_values : Mapping[str, numpy.ndarray] | None, default=None
+        properties : Mapping[str, numpy.ndarray] | None, default=None
             Optional mapping of property keyword to property array.
-        property_keywords : Sequence[str] | None, default=None
-            Optional ordered subset of keys from ``property_values``.
-            When omitted, all keys from ``property_values`` are written.
         rle : bool, default=True
             If ``True``, use run-length encoding for array export.
         units : str, default="FEET"
@@ -139,13 +136,15 @@ class GRDECLWriter:
                 f = GRDECLWriter._write_array(f, "ACTNUM", actnum, type=np.int8, nan_fill=0, rle=rle)
             
             # Properties
-            if property_values:
-                keywords = property_keywords if property_keywords is not None else property_values.keys()
-                for prop_name in keywords:
-                    if prop_name not in property_values:
-                        raise KeyError(f"Property keyword '{prop_name}' is missing from property_values.")
-                    prop_array = property_values[prop_name]
-                    f = GRDECLWriter._write_array(f, prop_name, prop_array, rle=rle)
+            if properties is not None:
+                for kw, arr in properties.items():
+                    if arr.shape != (nk, nj, ni):
+                        raise ValueError(f"Property array for keyword '{kw}' has shape {arr.shape}, expected {(nk, nj, ni)}.")
+                    kw = kw.upper().strip()
+                    if kw in NOT_PROPERTY_KEYWORDS:
+                        raise ValueError(f"Keyword '{kw}' is not a valid property keyword and cannot be exported.")
+
+                    f = GRDECLWriter._write_array(f, kw, arr, rle=rle)
 
 
     def _write_header(

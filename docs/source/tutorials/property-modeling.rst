@@ -358,40 +358,20 @@ First, define the wells and add property samples:
     well1.add_sample(name="porosity", value=100, depth=10)
     well2.add_sample(name="porosity", value=50, depth=15)
 
-Each sample represents a known property value at a specific location in space.
-
-Next, interpolate these values across the grid:
+Each sample represents a known property value at a specific location in space. Next, interpolate these values across the grid with selected wells:
 
 .. code-block:: python
 
     porosity.from_wells(
         wells=[well1, well2],
         interpolator=UKInterpolator(),
-        mode="xyz",
     )
-
-The well samples are used as input data, and the interpolator estimates a
-property value for each grid cell.
-
-The ``wells`` argument defines the source data points.
-The ``interpolator`` argument controls how the values are distributed in space.
-The ``mode`` argument defines which spatial coordinates are used during
-interpolation. For example, ``"xyz"`` uses full three-dimensional coordinates,
-while ``"xy"`` can be used for interpolation only in the horizontal plane.
-
 In this example, Universal Kriging (:class:`~petres.interpolators.UniversalKrigingInterpolator`) is used. 
 Different interpolators may produce different results depending on the sample
 distribution and interpolation method. Choose the interpolator that best fits
 the available data and the intended modeling workflow.
-For more details and additional interpolation options, see
-the :doc:`/tutorials/interpolators`.
-
-
-
-
-
-
-
+.. For more details and additional interpolation options, see
+.. the :doc:`/tutorials/interpolators`.
 
 
 
