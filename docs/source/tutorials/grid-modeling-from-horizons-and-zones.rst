@@ -20,10 +20,10 @@ The workflow follows a structured sequence:
 
 Each component contributes to a different aspect of the final grid:
 
-- Horizons → Define structural surfaces used to construct zones
-- Zones → Define vertical intervals derived from horizons
-- Layering → Controls vertical resolution within each zone
-- Pillars → Define the lateral grid geometry and cell alignment
+- Horizons: Define structural surfaces used to construct zones
+- Zones: Define vertical intervals derived from horizons
+- Layering: Controls vertical resolution within each zone
+- Pillars: Define the lateral grid geometry and cell alignment
 
 
 Input Preparation
@@ -70,6 +70,9 @@ with the zones using the  :meth:`~petres.grids.CornerPointGrid.from_zones` metho
    )
    grid.show()
 
+.. note::
+   For more advanced visualization options refer to :doc:`grid-visualization`.
+
 The zone boundaries and zone layers define the vertical resolution of the grid, 
 while the pillars determine the horizontal :math:`(x, y)` resolution.  
 If the provided zones are not touching, the grid will include a single layer of inactive cells between them.
@@ -82,5 +85,6 @@ If the provided zones are not touching, the grid will include a single layer of 
 Next Steps
 ----------
 
+- :doc:`grid-visualization`
 - :doc:`property-modeling`
 - :doc:`exporting-grid`

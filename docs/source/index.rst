@@ -56,6 +56,7 @@ Features
 
 
 
+   
    .. grid-item-card::
       :link: tutorials/exporting-grid
       :link-type: doc
@@ -71,8 +72,8 @@ Features
 
 
    .. grid-item-card:: 
-      :link: visualizing-the-grid
-      :link-type: ref
+      :link: tutorials/grid-visualization
+      :link-type: doc
       :class-card: grid-item-card
 
       .. grid-item-header:: _static/svg/visualization.svg
@@ -82,6 +83,9 @@ Features
       Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizons, and spatial property distributions.
 
 
+
+
+      
 Why Petres?
 -----------
 
