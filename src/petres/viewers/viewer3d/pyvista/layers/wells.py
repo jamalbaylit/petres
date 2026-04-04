@@ -6,7 +6,7 @@ from typing import Any, Protocol
 import numpy as np
 import pyvista as pv
 
-from ..._core.theme import SceneTheme3D
+from ..._core.theme import PyVista3DViewerTheme
 
 
 class _BackendLike(Protocol):
@@ -14,7 +14,7 @@ class _BackendLike(Protocol):
 
 
 class _ViewerLike(Protocol):
-    theme: SceneTheme3D
+    theme: PyVista3DViewerTheme
 
 
 class _WellLike(Protocol):

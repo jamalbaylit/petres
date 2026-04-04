@@ -78,7 +78,7 @@ in non-uniform spacing, while the ``y`` coordinates are generated using
 :meth:`numpy.linspace`, producing evenly spaced values.
 
 Specifying Top and Base Depths
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Pillar top and base values can be defined explicitly when creating a
 rectilinear grid, allowing precise placement of the pillar geometry

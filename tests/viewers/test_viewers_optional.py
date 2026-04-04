@@ -23,10 +23,13 @@ def test_horizon_show2d_delegates_to_matplotlib_viewer(monkeypatch, horizon_plan
     calls = {"added": False, "shown": False}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_horizon(self, *args, **kwargs):
             calls["added"] = True
 
-        def show(self):
+        def show(self, *args, **kwargs):
             calls["shown"] = True
 
     monkeypatch.setattr("petres.models.horizon.Matplotlib2DViewer", DummyViewer, raising=False)
@@ -35,7 +38,7 @@ def test_horizon_show2d_delegates_to_matplotlib_viewer(monkeypatch, horizon_plan
     import petres.viewers.viewer2d.matplotlib.viewer as viewer_mod
     monkeypatch.setattr(viewer_mod, "Matplotlib2DViewer", DummyViewer)
 
-    horizon_plane_top.show()
+    horizon_plane_top.show(view="2d", x=[0, 10], y=[0, 10])
 
     assert calls["added"] and calls["shown"]
 
@@ -44,10 +47,13 @@ def test_zone_show2d_delegates_to_matplotlib_viewer(monkeypatch, horizon_plane_t
     calls = {"added": False, "shown": False}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_zone(self, *args, **kwargs):
             calls["added"] = True
 
-        def show(self):
+        def show(self, *args, **kwargs):
             calls["shown"] = True
 
     import petres.viewers.viewer2d.matplotlib.viewer as viewer_mod
@@ -63,16 +69,19 @@ def test_boundary_show2d_delegates_to_matplotlib_viewer(monkeypatch, boundary_bo
     calls = {"added": False, "shown": False}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_boundary_polygon(self, *args, **kwargs):
             calls["added"] = True
 
-        def show(self):
+        def show(self, *args, **kwargs):
             calls["shown"] = True
 
     import petres.viewers.viewer2d.matplotlib.viewer as viewer_mod
     monkeypatch.setattr(viewer_mod, "Matplotlib2DViewer", DummyViewer)
 
-    boundary_box.show2d()
+    boundary_box.show()
 
     assert calls["added"] and calls["shown"]
 

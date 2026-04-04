@@ -8,7 +8,7 @@ def test_horizon_show_calls_3d_viewer(monkeypatch, horizon_plane_top):
         def add_horizon(self, *args, **kwargs):
             calls["added"] = True
 
-        def show(self):
+        def show(self, *args, **kwargs):
             calls["shown"] = True
 
     monkeypatch.setattr("petres.viewers.viewer3d.pyvista.viewer.PyVista3DViewer", DummyViewer)
@@ -27,7 +27,7 @@ def test_zone_show_calls_3d_viewer(monkeypatch, horizon_plane_top, horizon_plane
         def add_zone(self, *args, **kwargs):
             calls["added"] = True
 
-        def show(self):
+        def show(self, *args, **kwargs):
             calls["shown"] = True
 
     monkeypatch.setattr("petres.viewers.viewer3d.pyvista.viewer.PyVista3DViewer", DummyViewer)
@@ -38,18 +38,21 @@ def test_zone_show_calls_3d_viewer(monkeypatch, horizon_plane_top, horizon_plane
     assert calls["added"] and calls["shown"]
 
 
-def test_boundary_show_calls_3d_viewer(monkeypatch, boundary_box):
+def test_boundary_show_calls_2d_viewer(monkeypatch, boundary_box):
     calls = {"added": False, "shown": False}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_boundary_polygon(self, *args, **kwargs):
             calls["added"] = True
 
-        def show(self):
+        def show(self, *args, **kwargs):
             calls["shown"] = True
 
-    monkeypatch.setattr("petres.viewers.viewer3d.pyvista.viewer.PyVista3DViewer", DummyViewer)
+    monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer.Matplotlib2DViewer", DummyViewer)
 
-    boundary_box.show(x=[0, 10], y=[0, 10])
+    boundary_box.show()
 
     assert calls["added"] and calls["shown"]

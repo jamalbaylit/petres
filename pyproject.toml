@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "petres"
 version = "0.1.0"
-description = "Add your description here"
+description = "A lightweight, open-source Python library for reservoir grid modeling"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
