@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "petres"
-version = "0.1.0-rc3"
+version = "0.1.0rc4"
 description = "Petres: lightweight Python library for reservoir grid modeling and visualization"
 readme = { file = "README.md", content-type = "text/markdown" }
 
