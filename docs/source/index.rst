@@ -66,7 +66,7 @@ Features
          :title: Import & Export Grids
 
       Handle Eclipse grids (SLB reservoir simulator) 
-      using the ``.GRDECL`` file format. Visualize,
+      using the ``.GRDECL`` file format. Visualize
       and export modeled Corner-Point grids.
 
 
