@@ -108,7 +108,10 @@ llm = [
 ]
 
 
-
+[tool.uv.dependency-groups]
+docs = {requires-python = ">=3.11"}
+examples = {requires-python = ">=3.11"}
+llm = {requires-python = ">=3.11"}
 
 
 [tool.setuptools]
