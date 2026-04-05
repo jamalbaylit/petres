@@ -24,6 +24,26 @@ Quick Start
 
    uv run --group test pytest
 
+**Run tests with minimum direct dependency versions:**
+
+.. code-block:: bash
+
+   uv pip install --resolution lowest-direct --upgrade . --group test
+   uv run --no-sync --group test pytest -ra
+
+**Automatically discover lower bounds and update** ``pyproject.toml``:
+
+.. code-block:: bash
+
+   # Dry run: print discovered minimums
+   uv run python scripts/discover_min_deps.py
+
+   # Apply discovered minimums to pyproject.toml
+   uv run python scripts/discover_min_deps.py --apply
+
+   # Optional: custom pytest selection
+   uv run python scripts/discover_min_deps.py --pytest-args "-q -m unit"
+
 **Run fast unit tests only (58 tests, ~0.5s):**
 
 .. code-block:: bash
@@ -200,6 +220,21 @@ Running Tests with Options
 .. code-block:: bash
 
    uv run --group test pytest --timeout=10
+
+Minimum Dependency Policy
+-------------------------
+
+Petres treats dependency lower bounds in ``pyproject.toml`` as a tested compatibility contract.
+To keep those bounds accurate and stable for users:
+
+1. Keep dependency specifiers as lower bounds (for example, ``numpy>=X.Y``).
+2. Run minimum-dependency tests using ``--resolution lowest-direct`` before release.
+3. Only raise a lower bound when tests or supported APIs require it.
+4. Validate bounds continuously in CI.
+
+For repeatability, use ``scripts/discover_min_deps.py`` when re-baselining dependency floors.
+
+This policy helps avoid accidental drift toward latest-only compatibility while preserving flexibility for downstream environments.
 
 Coverage Reports
 ----------------
