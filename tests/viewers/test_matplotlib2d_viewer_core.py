@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import matplotlib
 import numpy as np
 import pytest
+
+matplotlib.use("Agg")
 
 from petres.viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
 from petres.viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
