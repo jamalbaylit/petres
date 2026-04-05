@@ -27,6 +27,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+      - name: Create virtual environment
+        run: uv venv
       - name: Install minimum direct dependencies
         run: uv pip install --resolution lowest-direct --upgrade . --group test
       - name: Run tests against minimum dependencies
@@ -55,6 +57,8 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: false
+      - name: Create virtual environment
+        run: uv venv
       - name: Sync test dependencies
         run: uv sync --group test --system
       - name: Run tests
