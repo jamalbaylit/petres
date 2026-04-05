@@ -10,19 +10,43 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+
+x-matrix: &os-python-matrix
+  os: [ubuntu-latest, windows-latest, macos-latest]
+  python-version: [3.8, 3.9, 3.10, 3.11, 3.12, 3.13]
+
+
 jobs:
+  min-deps:
+    name: Minimum dependencies (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix: *os-python-matrix
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install minimum direct dependencies
+        run: uv pip install --resolution lowest-direct --upgrade . --group test
+
+      - name: Run tests against minimum dependencies
+        run: uv run --no-sync --group test pytest -ra --maxfail=1 --durations=10
+
   test:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12", "3.13"]
-        include:
-          - os: ubuntu-latest
-            python-version: "3.14"
-            experimental: true
+      matrix: *os-python-matrix
+
 
     continue-on-error: ${{ matrix.experimental || false }}
 
