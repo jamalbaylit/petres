@@ -42,7 +42,7 @@ jobs:
           enable-cache: false
 
       - name: Sync test dependencies
-        run: uv sync --group test
+        run: uv sync --only-group test
 
       - name: Run tests
         run: uv run --group test pytest -ra
