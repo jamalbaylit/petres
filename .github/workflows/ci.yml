@@ -56,7 +56,7 @@ jobs:
         with:
           enable-cache: false
       - name: Sync test dependencies
-        run: uv sync --group test
+        run: uv sync --group test --system
       - name: Run tests
         run: uv run --group test pytest -ra
   # ---------------------------------------
