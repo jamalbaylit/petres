@@ -50,8 +50,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Install maximum direct dependencies
-        run: uv sync --resolution highest-direct --group test
+      - name: Install maximum dependencies
+        run: uv sync --resolution highest --group test
       - name: Run tests
         run: uv run pytest -ra --maxfail=1 --durations=10
 
