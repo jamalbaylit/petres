@@ -79,6 +79,7 @@ jobs:
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          verbose: true
           repository-url: https://test.pypi.org/legacy/
 
   publish-pypi:
@@ -106,3 +107,5 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
