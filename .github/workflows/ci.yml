@@ -30,7 +30,7 @@ jobs:
         with:
           enable-cache: true
       - name: Install minimum direct dependencies
-        run: uv sync --resolution lowest-direct --group test
+        run: uv sync --resolution lowest-direct --only-group test
       - name: Run tests
         run: uv run pytest -ra --maxfail=1 --durations=10
 
@@ -51,7 +51,7 @@ jobs:
         with:
           enable-cache: true
       - name: Install maximum dependencies
-        run: uv sync --resolution highest --group test
+        run: uv sync --resolution highest --only-group test
       - name: Run tests
         run: uv run pytest -ra --maxfail=1 --durations=10
 
@@ -77,7 +77,7 @@ jobs:
         with:
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --group test
+        run: uv sync --only-group test
       - name: Run tests
         run: uv run pytest -ra --durations=10
 
