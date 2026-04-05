@@ -1,6 +1,7 @@
 <div align="center">
 
-![Banner](./assets/banner-high.png)
+![Banner](https://raw.githubusercontent.com/jamalbaylit/petres/main/assets/banner-high.png)
+
 <em>
     A lightweight, open-source Python library for reservoir grid modeling
 </em>
