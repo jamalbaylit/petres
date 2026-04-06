@@ -188,10 +188,6 @@ class PyVista3DViewer(Base3DViewer):
         self.plotter.close()
         self.plotter = pv.Plotter()
 
-
-
-        # if z_scale != 1.0:
-
         
     def add_grid(
         self, 
