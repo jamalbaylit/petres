@@ -187,9 +187,8 @@ def _add_surface(
                 labels.append(f"{value:.2f}")
 
             if label_points:
-                backend.plotter.add_point_labels(
-                    np.asarray(label_points),
-                    labels,
+                point_labels = np.asarray(label_points)
+                label_kwargs = dict(
                     font_size=contour_label_fontsize,
                     text_color=contour_color,
                     shape_opacity=0.0,
@@ -197,4 +196,14 @@ def _add_surface(
                     always_visible=False,
                     name=f"{name}_contour_labels" if name else None,
                 )
+
+                defer_labels = getattr(backend, "_defer_point_labels", None)
+                if callable(defer_labels):
+                    defer_labels(point_labels, labels, **label_kwargs)
+                else:
+                    backend.plotter.add_point_labels(
+                        point_labels,
+                        labels,
+                        **label_kwargs,
+                    )
     return grid

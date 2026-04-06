@@ -681,6 +681,7 @@ class CornerPointGrid:
         color: Any = 'tan', 
         cmap: str | None = 'turbo', 
         title: str | None = None,
+        z_scale: float = 1.0,
         **kwargs: Any,
     ) -> None:
         """Render the grid in 3D PyVista viewer.
@@ -697,11 +698,17 @@ class CornerPointGrid:
             Colormap applied when ``scalars`` is provided.
         title : str or None, optional
             Figure title.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis.
         **kwargs
             Forwarded to viewer ``add_grid``.
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
         scalars = self._resolve_source(scalars) if scalars is not None else None
         color = None if scalars is not None else color
         viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)

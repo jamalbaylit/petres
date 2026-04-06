@@ -126,6 +126,7 @@ class GridProperty:
         show_inactive: bool = False, 
         cmap: str | None = "turbo",
         title: str | Literal["auto"] | None = "auto", 
+        z_scale: float = 1.0,
         **kwargs: Any
     ) -> None:
         """Visualize the property in 3D using the grid viewer.
@@ -138,6 +139,8 @@ class GridProperty:
             Colormap used for rendering.
         title : str or 'auto', default 'auto'
             Window title; ``'auto'`` uses the property name.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis.
         **kwargs
             Forwarded to viewer ``add_grid``.
 
@@ -145,11 +148,14 @@ class GridProperty:
         -----
         ``title='auto'`` expands to ``Property: <name>``.
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
         viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
-        if title == 'auto':
-            title = f"Property: {self.name}"
+        title = f"Property: {self.name}" if title == 'auto' else str(title)
         viewer.show(title=title)
                           
     @property
