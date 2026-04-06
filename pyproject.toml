@@ -4,58 +4,76 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "petres"
-version = "0.1.0"
-description = "A lightweight, open-source Python library for reservoir grid modeling"
-readme = "README.md"
-requires-python = ">=3.11"
+version = "0.1.0rc5"
+description = "Petres: lightweight Python library for reservoir grid modeling and visualization"
+readme = { file = "README.md", content-type = "text/markdown" }
+
+requires-python = ">=3.8"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Tayfun Jamalbayli" }
+    { name = "Tayfun Jamalbayli", email = "jamalbaylit@gmail.com"  }
 ]
 keywords = [
-    "corner-point-grid", 
-    "eclipse", 
-    "geomodeling", 
-    "grid-generation", 
-    "petres", 
-    "petroleum-engineering", 
-    "python", 
-    "reservoir-modeling", 
-    "reservoir-simulation", 
-    "structured-grids", 
-    "subsurface-modeling"
+    "corner-point-grid",
+    "reservoir-modeling",
+    "reservoir-engineering",
+    "eclipse",
+    "reservoir-simulation",
+    "grid-modeling",
+    "visualization",
 ]
 
 
 
 classifiers = [
+    # Project maturity
+    "Development Status :: 3 - Alpha",
+
+    # Audience
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
+
+    # License
     "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
+
+    # Python versions you officially support/test
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
+
+    # OS support
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+
+    # Topics
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Visualization",
-    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
+
 dependencies = [
-    "numpy>=2.4.2",
-    "scipy>=1.17.0",
-    "matplotlib>=3.10.8",
-    "pyvista>=0.47.0",
-    "shapely>=2.1.2",
-    "pykrige>=1.7.3",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "matplotlib>=3.7.0",
+    "pyvista>=0.43.0",
+    "shapely>=2.0.0",
+    "pykrige>=1.7.0",
 ]
 
 
 
 [project.urls]
+Homepage = "https://petres.readthedocs.io/"
 Documentation = "https://petres.readthedocs.io/"
-Repository = "https://github.com/jamalbaylit/petres"
+Source = "https://github.com/jamalbaylit/petres"
 Issues = "https://github.com/jamalbaylit/petres/issues"
 
 
@@ -90,7 +108,10 @@ llm = [
 ]
 
 
-
+[tool.uv.dependency-groups]
+docs = {requires-python = ">=3.11"}
+examples = {requires-python = ">=3.11"}
+llm = {requires-python = ">=3.11"}
 
 
 [tool.setuptools]

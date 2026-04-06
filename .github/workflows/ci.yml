@@ -1,5 +1,4 @@
 name: CI
-
 on:
   pull_request:
     branches: [dev, main]
@@ -11,82 +10,118 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ---------------------------------------
+  # MINIMUM DEPENDENCIES
+  # ---------------------------------------
+  min-deps:
+    name: Min deps (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install minimum direct dependencies
+        run: uv sync --resolution lowest-direct --only-group test
+      - name: Run tests
+        run: uv run pytest -ra --maxfail=1 --durations=10
+
+  max-deps:
+    name: Max deps (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install maximum dependencies
+        run: uv sync --resolution highest --only-group test
+      - name: Run tests
+        run: uv run pytest -ra --maxfail=1 --durations=10
+
+  # ---------------------------------------
+  # FULL TEST MATRIX
+  # ---------------------------------------
   test:
     name: Test (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12", "3.13"]
-        include:
-          - os: ubuntu-latest
-            python-version: "3.14"
-            experimental: true
-
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     continue-on-error: ${{ matrix.experimental || false }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v5
         with:
-          enable-cache: false
-
-      - name: Sync test dependencies
-        run: uv sync --group test
-
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --only-group test
       - name: Run tests
-        run: uv run --group test pytest -ra
+        run: uv run pytest -ra --durations=10
 
+  # ---------------------------------------
+  # PACKAGE BUILD
+  # ---------------------------------------
   package:
     name: Build package
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - name: Build distributions
+        run: uv build
+      - name: Check distributions
         run: |
-          uv pip install --system build twine
-          python -m build
+          uv pip install --system twine
           twine check dist/*
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
+  # ---------------------------------------
+  # DOCS BUILD
+  # ---------------------------------------
   docs:
     name: Build docs
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-
-      - name: Sync docs dependencies
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install docs dependencies
         run: uv sync --group docs
-
       - name: Build docs
         run: make -C docs html
