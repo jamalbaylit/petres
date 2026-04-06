@@ -116,7 +116,8 @@ class Zone:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-
+        z_scale: float = 1.0,
+        title: str | Literal["auto"] | None = "auto",
         color: Any | None = 'gray',
         show_layers: bool = True,
         show_edges: bool = True,
@@ -143,14 +144,22 @@ class Zone:
             Whether to render internal layers derived from `levels`.
         show_edges : bool, default True
             Whether to draw mesh edges.
-
+        title : str or 'auto', default 'auto'
+            Window title; ``'auto'`` uses the property name.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis.
         Examples
         --------
         >>> zone.show3d(x=[0, 100], y=[0, 50], ni=50, nj=25, color="lightgray")
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        title="Zone: " + self.name
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
+        
+        title = f"Zone: {self.name}" if title == 'auto' else str(title)
         viewer.add_zone(
             self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
             color=color,

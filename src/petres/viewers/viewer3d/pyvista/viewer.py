@@ -17,6 +17,7 @@ from ....models.horizon import Horizon
 from .layers.zone import _add_zone
 from ....models.zone import Zone
 from .._core.base import Base3DViewer
+import vtk
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -40,6 +41,7 @@ class PyVista3DViewer(Base3DViewer):
     theme: PyVista3DViewerTheme
     camera: Camera3D
     plotter: pv.Plotter
+    _deferred_point_labels: list[tuple[np.ndarray, list[str], dict[str, Any]]]
 
     def __init__(
         self, 
@@ -63,6 +65,9 @@ class PyVista3DViewer(Base3DViewer):
             depth_down=True
         ))
         self.set_plotter(plotter or pv.Plotter())  
+        self._deferred_point_labels = []
+
+
 
     def set_plotter(self, plotter: pv.Plotter) -> None:
         """Assign the underlying PyVista plotter.
@@ -121,16 +126,34 @@ class PyVista3DViewer(Base3DViewer):
             Theme values controlling background color and axes visibility.
         """
         p = self.plotter
+        p.set_scale(*theme.scale)
         p.set_background(theme.background, top=theme.background)
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
         p.show_bounds(
+            ticks='outside',
             grid='back',
             location='outer',
-            all_edges=True,
-        ) if theme.show_coordinate_axes else p.remove_bounds_axes()
-        # p.set_scale(*theme.scale)
-        # p.camera.up = theme.camera_up
+            all_edges=False,
+        )
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
+
+    def _defer_point_labels(
+        self,
+        points: np.ndarray,
+        labels: list[str],
+        **kwargs: Any,
+    ) -> None:
+        self._deferred_point_labels.append((np.asarray(points, dtype=float), labels, kwargs))
+
+    def _flush_deferred_point_labels(self) -> None:
+        if not self._deferred_point_labels:
+            return
+
+        scale = np.asarray(self.theme.scale, dtype=float)
+        for points, labels, kwargs in self._deferred_point_labels:
+            self.plotter.add_point_labels(points * scale, labels, **kwargs)
+
+        self._deferred_point_labels.clear()
 
     def reset_camera(self) -> None:
         """Reset camera position and clipping range to defaults."""
@@ -144,8 +167,13 @@ class PyVista3DViewer(Base3DViewer):
         ----------
         title : str or None, default=None
             Optional scene title text displayed at the configured theme position.
+        z_scale : float, default=1.0
+            Vertical scale factor applied to the full scene.
         """
+
+        # Always apply an explicit scale so repeated calls are deterministic.
         self.apply_theme(self.theme)
+        self._flush_deferred_point_labels()
         # self.plotter.set_viewup((-1, 0, 0))
         # self._set_y_front_slight_top(self.plotter, tilt=0.5)
         if title:
@@ -155,9 +183,15 @@ class PyVista3DViewer(Base3DViewer):
                 font_size=self.theme.title_fontsize,
                 color=self.theme.title_color,
             )
-        self.apply_camera(self.camera)
+
         self.plotter.show()
+        self.plotter.close()
         self.plotter = pv.Plotter()
+
+
+
+        # if z_scale != 1.0:
+
         
     def add_grid(
         self, 

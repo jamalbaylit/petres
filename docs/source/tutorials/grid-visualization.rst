@@ -18,6 +18,26 @@ You can call the ``show()`` method to display the grid in an interactive 3D view
     )
     grid.show()
 
+
+Adjusting Z-Scale
+-----------------
+
+You can exaggerate or compress the vertical dimension of the grid using the ``z_scale`` parameter: 
+
+.. code-block:: python
+
+    grid.show(z_scale=3)
+
+
+``z_scale=1`` represents the default scaling with no change applied, 
+while values greater than 1 stretch the grid vertically to enhance 
+height differences, and values less than 1 compress the grid vertically.
+This is especially useful when your data has small variations in vertical 
+axis compared to horizontal axes, making features hard to see.
+
+.. note::
+    This only affects visualization and does not modify the original data.
+
 Visualizing Inactive Cells
 --------------------------
 

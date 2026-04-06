@@ -337,7 +337,8 @@ class Horizon:
         color: Any | None = "tan",
         scalars: bool = True,
         cmap: str | None = "turbo",
-        title: str | None = "auto",
+        title: str | Literal["auto"] | None = "auto", 
+        z_scale: float = 1.0,
     ) -> None:
         """Render the horizon in an interactive 3D PyVista scene.
 
@@ -361,15 +362,21 @@ class Horizon:
             Whether to color by depth values.
         cmap : str or None, default 'turbo'
             Colormap name applied when `scalars` is True.
-        title : str or None, default 'auto'
-            Figure title; when 'auto' uses the horizon name.
+        title : str or 'auto', default 'auto'
+            Window title; ``'auto'`` uses the property name.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis to exaggerate vertical relief.
 
         Examples
         --------
         >>> horizon.show3d(x=[0, 100], y=[0, 100], ni=50, nj=50, cmap="viridis")
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
         viewer.add_horizon(
             self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
             color=color, 
@@ -378,8 +385,7 @@ class Horizon:
             show_colorbar=True,
             colorbar_title='Depth',
         )
-        if title == 'auto':
-            title = "Horizon: " + self.name
+        title = f"Horizon: {self.name}" if title == 'auto' else str(title)
         viewer.show(title=title)
 
     def show2d(
@@ -397,6 +403,7 @@ class Horizon:
         show_contours: bool = True,
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
+        title: str | Literal["auto"] | None = "auto",
         **kwargs: Any,
     ) -> None:
         """Render the horizon as a 2D Matplotlib map.
@@ -422,6 +429,8 @@ class Horizon:
             Number of contour levels.
         aspect : {'auto', 'equal'}, default 'auto'
             Axes aspect ratio.
+        title : str or 'auto', default 'auto'
+            Window title; ``'auto'`` uses the property name.
         **kwargs
             Additional keyword arguments forwarded to the Matplotlib surface helper.
 
@@ -431,8 +440,7 @@ class Horizon:
         """
         from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
         from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
-
-        title="Horizon: " + self.name
+        
         viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
         viewer.add_horizon(
             self, 
@@ -445,6 +453,7 @@ class Horizon:
             contour_levels=contour_levels,
             **kwargs
         )
+        title = f"Horizon: {self.name}" if title == 'auto' else str(title)
         viewer.show(title=title)
 
     def _validate_interpolator(self, interpolator: Any) -> BaseInterpolator:

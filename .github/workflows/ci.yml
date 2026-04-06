@@ -31,6 +31,12 @@ jobs:
           enable-cache: true
       - name: Install minimum direct dependencies
         run: uv sync --resolution lowest-direct --only-group test
+      - name: Install project package
+        run: uv pip install .
+      - name: Validate package imports
+        run: |
+          uv run python -m compileall -q src/petres
+          uv run python -c "import pkgutil, petres; [__import__(modname) for _, modname, _ in pkgutil.walk_packages(petres.__path__, petres.__name__ + '.')]"
       - name: Run tests
         run: uv run pytest -ra --maxfail=1 --durations=10
 
@@ -52,6 +58,12 @@ jobs:
           enable-cache: true
       - name: Install maximum dependencies
         run: uv sync --resolution highest --only-group test
+      - name: Install project package
+        run: uv pip install .
+      - name: Validate package imports
+        run: |
+          uv run python -m compileall -q src/petres
+          uv run python -c "import pkgutil, petres; [__import__(modname) for _, modname, _ in pkgutil.walk_packages(petres.__path__, petres.__name__ + '.')]"
       - name: Run tests
         run: uv run pytest -ra --maxfail=1 --durations=10
 
@@ -78,6 +90,12 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: uv sync --only-group test
+      - name: Install project package
+        run: uv pip install .
+      - name: Validate package imports
+        run: |
+          uv run python -m compileall -q src/petres
+          uv run python -c "import pkgutil, petres; [__import__(modname) for _, modname, _ in pkgutil.walk_packages(petres.__path__, petres.__name__ + '.')]"
       - name: Run tests
         run: uv run pytest -ra --durations=10
 
