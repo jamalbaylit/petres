@@ -900,26 +900,24 @@ class GridProperty:
         np.ndarray
             Target coordinates in XYZ order.
         """
-        match location:
-            case "center":
-                return self.grid.cell_centers
+        if location == "center":
+            return self.grid.cell_centers
 
-            case "top" | "bottom":
-                corners = self.grid._compute_cell_corners()   # (nk, nj, ni, 8, 3)
-                xy = np.mean(corners[..., :, :2], axis=-2)   # (nk, nj, ni, 2)
+        elif location in ("top", "bottom"):
+            corners = self.grid._compute_cell_corners()   # (nk, nj, ni, 8, 3)
+            xy = np.mean(corners[..., :, :2], axis=-2)   # (nk, nj, ni, 2)
 
-                zcorn = corners[..., 2]                      # (nk, nj, ni, 8)
-                z_top = np.min(zcorn[..., :4], axis=-1)
-                z_bottom = np.max(zcorn[..., 4:], axis=-1)
-                z = z_top if location == "top" else z_bottom
+            zcorn = corners[..., 2]                      # (nk, nj, ni, 8)
+            z_top = np.min(zcorn[..., :4], axis=-1)
+            z_bottom = np.max(zcorn[..., 4:], axis=-1)
+            z = z_top if location == "top" else z_bottom
 
-                return np.concatenate([xy, z[..., np.newaxis]], axis=-1)
-
-            case _:
-                raise ValueError(
-                    f"Unsupported location {location!r}. "
-                    "Supported values are: 'center', 'top', 'bottom'."
-                )
+            return np.concatenate([xy, z[..., np.newaxis]], axis=-1)
+        else:
+            raise ValueError(
+                f"Unsupported location {location!r}. "
+                "Supported values are: 'center', 'top', 'bottom'."
+            )
     
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name!r}, eclipse_keyword={self.eclipse_keyword!r}, description={self.description!r})"
