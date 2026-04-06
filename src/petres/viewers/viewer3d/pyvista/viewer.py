@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Self
+from typing import Any
 import numpy as np
 
 import pyvista as pv
@@ -198,7 +198,7 @@ class PyVista3DViewer(Base3DViewer):
         scalars: np.ndarray | None = None,
         cmap: str | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a supported grid to the current 3D scene.
 
         Parameters
@@ -218,7 +218,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
 
         Raises
@@ -227,12 +227,11 @@ class PyVista3DViewer(Base3DViewer):
             If ``grid`` is not a supported grid type.
         """
 
-        match grid:
-            case CornerPointGrid():
-                self._add_corner_point_grid(grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color,**kwargs)
-            case _:
-                raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
-        return self
+        if isinstance(grid, CornerPointGrid): 
+            self._add_corner_point_grid(grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color,**kwargs)
+            return self
+        
+        raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
 
     def add_pillars(
         self,
@@ -241,7 +240,7 @@ class PyVista3DViewer(Base3DViewer):
         color: Any = "black",
         line_width: float = 2.5,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a pillar grid to the current 3D scene.
 
         Parameters
@@ -257,7 +256,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         _add_pillars(
@@ -366,7 +365,7 @@ class PyVista3DViewer(Base3DViewer):
         show_layers: bool = True,
         cmap: str = "gist_rainbow",
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add multiple zones to the scene using a discrete colormap.
 
         Parameters
@@ -398,7 +397,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(
@@ -427,7 +426,7 @@ class PyVista3DViewer(Base3DViewer):
         color: Any | None = None,
         show_layers: bool = True,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a single zone to the scene.
 
         Parameters
@@ -459,7 +458,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(
@@ -489,7 +488,7 @@ class PyVista3DViewer(Base3DViewer):
         scalars: bool = True,
         cmap: str | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a single horizon surface to the scene.
 
         Parameters
@@ -523,7 +522,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(
@@ -550,7 +549,7 @@ class PyVista3DViewer(Base3DViewer):
         dy: float | None = None,
         cmap: str = "turbo",
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add multiple horizons to the scene with distinct colors.
 
         Parameters
@@ -580,7 +579,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(

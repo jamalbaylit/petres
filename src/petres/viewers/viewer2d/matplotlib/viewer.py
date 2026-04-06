@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Self
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -145,7 +145,7 @@ class Matplotlib2DViewer(Base2DViewer):
         dx: float | None = None,
         dy: float | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> Matplotlib2DViewer:
         """Add a horizon map to the 2D axes.
 
         The method resolves/derives 1D vertex coordinates, samples the horizon on
@@ -223,7 +223,7 @@ class Matplotlib2DViewer(Base2DViewer):
         dy: float | None = None,
         mode: Literal["top", "base", "thickness"] = "thickness",
         **kwargs: Any,
-    ) -> Self:
+    ) -> Matplotlib2DViewer:
         """Add a zone scalar map to the 2D axes.
 
         The method samples the zone top/base surfaces on a resolved grid and plots
@@ -316,7 +316,7 @@ class Matplotlib2DViewer(Base2DViewer):
         label_box: bool = True,
         pad_ratio: float | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> Matplotlib2DViewer:
         """
         Add a boundary polygon overlay to the 2D axes.
 

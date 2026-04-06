@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Self
+from typing import Any
 
 import numpy as np
 
@@ -720,7 +720,7 @@ class CornerPointGrid:
         x: np.ndarray,
         y: np.ndarray,
         z: np.ndarray
-    ) -> Self:
+    ) -> CornerPointGrid:
         """Create a corner-point grid from rectilinear coordinate vertices.
 
         Parameters
@@ -734,7 +734,7 @@ class CornerPointGrid:
 
         Returns
         -------
-        Self
+        CornerPointGrid
             Grid with vertical pillars and broadcasted layer surfaces.
         """
         
@@ -776,7 +776,7 @@ class CornerPointGrid:
         dx: float | None = None,
         dy: float | None = None,
         dz: float | None = None,
-        ) -> Self:
+        ) -> CornerPointGrid:
         """Build a rectilinear corner-point grid from limits or spacings.
 
         Parameters
@@ -802,7 +802,7 @@ class CornerPointGrid:
 
         Returns
         -------
-        Self
+        CornerPointGrid
             Corner-point grid resolved from the provided geometric constraints.
         """
         x, y, z = _resolve_xyz_vertices(
@@ -811,7 +811,7 @@ class CornerPointGrid:
         return cls.from_rectilinear(x=x, y=y, z=z)
 
     @classmethod
-    def from_zones(cls, *, pillars: PillarGrid, zones: Sequence[Zone]) -> Self:
+    def from_zones(cls, *, pillars: PillarGrid, zones: Sequence[Zone]) -> CornerPointGrid:
         """Create CornerPointGrid from zones with gap detection.
         
         Parameters

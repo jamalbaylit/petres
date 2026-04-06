@@ -1,7 +1,7 @@
 Installation
 ============
 
-Petres requires **Python ≥ 3.8** and is tested on Linux, Windows, and macOS platforms.
+Petres requires **Python ≥ 3.9** and is tested on Linux, Windows, and macOS platforms.
 
 
 Install from PyPI
