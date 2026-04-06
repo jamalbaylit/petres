@@ -57,7 +57,7 @@ Petres includes several built-in grid attributes, such as ``top`` and ``active``
     grid.show(scalars="top")
     grid.show(scalars="active")
 
-You can find a full list of available grid attributes in the :ref:`<grid-attributes>` section.
+You can find a full list of available grid attributes in the :ref:`grid-attributes` section.
 
 Visualizing Grid Properties
 ---------------------------
