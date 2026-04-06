@@ -1,12 +1,13 @@
 <div align="center">
 
-![Banner](./assets/banner-high.png)
+![Banner](https://raw.githubusercontent.com/jamalbaylit/petres/main/assets/banner-high.png)
+
 <em>
     A lightweight, open-source Python library for reservoir grid modeling
 </em>
 
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
-[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python Version](https://img.shields.io/badge/python-3.8%E2%80%933.13-blue.svg)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://petres.readthedocs.io)
 
 </div>
