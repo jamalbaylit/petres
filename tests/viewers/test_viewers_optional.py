@@ -90,6 +90,9 @@ def test_pillar_grid_show_delegates_to_pyvista_viewer(monkeypatch, simple_pillar
     calls = {"added": False, "shown": False, "pillars": None}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_pillars(self, pillars, *args, **kwargs):
             calls["added"] = True
             calls["pillars"] = pillars

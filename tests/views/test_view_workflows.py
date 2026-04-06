@@ -5,6 +5,9 @@ def test_horizon_show_calls_3d_viewer(monkeypatch, horizon_plane_top):
     calls = {"added": False, "shown": False}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_horizon(self, *args, **kwargs):
             calls["added"] = True
 
@@ -24,6 +27,9 @@ def test_zone_show_calls_3d_viewer(monkeypatch, horizon_plane_top, horizon_plane
     calls = {"added": False, "shown": False}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_zone(self, *args, **kwargs):
             calls["added"] = True
 
