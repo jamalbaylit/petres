@@ -1,47 +1,20 @@
 Mapping Wells to Grid Cells
 ===========================
 
-This section shows how to determine which grid cells a well trajectory
-intersects and how to retrieve their indices (``i, j, k``) for simulation use.
-
-Input
------
-
-- Grid model
-- Well trajectory as ``(x, y, z)`` coordinates
-
-Output
-------
-
-- Ordered list of intersected grid indices:
-
-  ::
-
-      [(i, j, k), ...]
-
-Basic Approach
---------------
-
-1. Loop over well trajectory points
-2. Find the containing cell for each point
-3. Remove duplicates while preserving order
-
-Example
--------
+This method maps a vertical well to the grid column it intersects 
+based on the top surface geometry. Active or inactive cells are 
+ignored. If the well lies outside the grid, the method returns ``None``.
 
 .. code-block:: python
 
-    indices = []
+    from petres.models import VerticalWell
 
-    for point in well_points:
-        idx = grid.find_cell(point)   # returns (i, j, k)
-        if idx is not None:
-            if not indices or indices[-1] != idx:
-                indices.append(idx)
+    well = VerticalWell("Well-A", x=100, y=200)
+    i, j = grid.well_indices(well)
 
-Notes
------
+    # Or using (x, y) coordinates directly
+    i, j = grid.well_indices((100, 200))
 
-- This method is fast but may miss cells if trajectory spacing is coarse.
-- For better accuracy, check intersections along segments between points.
-- The result can be passed directly to simulators as well connections.
+You can pass either a :class:`~petres.models.VerticalWell` object or an ``(x, y)`` tuple.
+The returned ``(i, j)`` indicates the grid column where the well 
+intersects the top surface.

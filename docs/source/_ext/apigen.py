@@ -443,7 +443,6 @@ class APIGenerator:
                     "   :show-inheritance:",
                     "   :special-members: __init__",
                     f"   :exclude-members: {', '.join(exclude_members)}",
-                    "   :no-index:",
                 ])
             elif obj_type == 'function':
                 lines.extend([

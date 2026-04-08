@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -21,9 +21,10 @@ from ..eclipse.grids.read import GRDECLReader
 from .pillars import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
+from ..models.wells import VerticalWell
 from ..grids.properties import GridProperties, GridProperty
 
-
+from .._validation import _validate_finite_float
 
 @dataclass(frozen=True)
 class GridAttributeSpec:
@@ -827,7 +828,7 @@ class CornerPointGrid:
         zcorn, actnum, zone_index, zone_names = _build_zcorn_from_zones(pillars=pillars, zones=zones)
         return cls(pillars=pillars, zcorn=zcorn, active=actnum, zone_index=zone_index, zone_names=zone_names)
     
-    def apply_boundary(self, boundary: BoundaryPolygon) -> None:
+    def apply_boundary(self, boundary: BoundaryPolygon) -> CornerPointGrid:
         """Mask grid activity using a boundary polygon.
 
         Cells whose centers fall outside the polygon become inactive (ACTNUM=0).
@@ -837,9 +838,15 @@ class CornerPointGrid:
         boundary : BoundaryPolygon
             XY boundary polygon used to clip the grid.
 
+        Returns
+        -------
+        CornerPointGrid
+            Updated grid with activity masked by the boundary.
+            
         Notes
         -----
         Updates ``active`` in place; cached property masks may become stale.
+        
         """
         # Get cell centers (nk, nj, ni, 3)
         centers = self.cell_centers
@@ -860,7 +867,118 @@ class CornerPointGrid:
             self.active = np.array(self.active, dtype=bool)
         
         self.active &= inside_mask
-        
+        return self
+    
+
+    def _surface_cell_at_xy(self, x: float, y: float, surface: Literal["top", "bottom"]) -> tuple[int, int] | None:
+        """Find the (j, i) column index whose surface quad contains point (x, y).
+
+        Uses a cross-product sign test on all cells simultaneously — no loops.
+
+        Parameters
+        ----------
+        x, y : float
+            Query point in grid XY coordinates.
+        surface : Literal["top", "bottom"]
+            The surface to check.
+
+        Returns
+        -------
+        tuple[int, int] or None
+            ``(j, i)`` of the containing column, or ``None`` if outside the grid.
+        """
+        if surface == "top":
+            pt = self.pillars.pillar_top  # (nj+1, ni+1, 3)
+        elif surface == "bottom":
+            pt = self.pillars.pillar_bottom  # (nj+1, ni+1, 3)
+        else:
+            raise ValueError("`surface` must be 'top' or 'bottom'.")
+
+        # Each cell (j, i) is bounded by 4 pillars at corners:
+        #   (j,   i  ) = "00"    (j,   i+1) = "10"
+        #   (j+1, i+1) = "11"    (j+1, i  ) = "01"
+        #
+        # Slicing off-by-one gives us (nj, ni) arrays — one value per cell.
+        x00 = pt[:-1, :-1, 0];  y00 = pt[:-1, :-1, 1]
+        x10 = pt[:-1,  1:, 0];  y10 = pt[:-1,  1:, 1]
+        x11 = pt[ 1:,  1:, 0];  y11 = pt[ 1:,  1:, 1]
+        x01 = pt[ 1:, :-1, 0];  y01 = pt[ 1:, :-1, 1]
+
+        # ----------------------------------------------------------------
+        # Cross product sign test (how it works)
+        # ----------------------------------------------------------------
+        # For two points A and B defining a directed edge, the 2D cross product
+        # of (B - A) and (P - A) tells you which *side* of that edge point P is on:
+        #
+        #   cross = (B.x - A.x) * (P.y - A.y) - (B.y - A.y) * (P.x - A.x)
+        #
+        #   cross > 0  →  P is to the LEFT  of edge A→B
+        #   cross < 0  →  P is to the RIGHT of edge A→B
+        #   cross = 0  →  P is exactly ON   edge A→B
+        #
+        # If we walk around the quad in order 00→10→11→01→(back to 00),
+        # a point INSIDE the quad will be on the SAME side of all 4 edges.
+        # A point OUTSIDE will be on the wrong side of at least one edge.
+        #
+        # Because pillar grids can be wound either CW or CCW depending on
+        # coordinate system, we accept both "all positive" and "all negative".
+        # ----------------------------------------------------------------
+
+        def _cross(ax, ay, bx, by):
+            # All inputs are (nj, ni) arrays; x and y are scalars.
+            # Result is (nj, ni) — one signed area value per cell.
+            return (bx - ax) * (y - ay) - (by - ay) * (x - ax)
+
+        d0 = _cross(x00, y00, x10, y10)  # edge 00 → 10  (bottom edge)
+        d1 = _cross(x10, y10, x11, y11)  # edge 10 → 11  (right edge)
+        d2 = _cross(x11, y11, x01, y01)  # edge 11 → 01  (top edge)
+        d3 = _cross(x01, y01, x00, y00)  # edge 01 → 00  (left edge)
+
+        inside = (
+            ((d0 >= 0) & (d1 >= 0) & (d2 >= 0) & (d3 >= 0)) |  # CCW winding
+            ((d0 <= 0) & (d1 <= 0) & (d2 <= 0) & (d3 <= 0))    # CW  winding
+        )  # (nj, ni) bool
+
+        hits = np.argwhere(inside)
+        if hits.size == 0:
+            return None
+
+        return (int(hits[0, 0]), int(hits[0, 1]))
+
+    def well_indices(self, well: VerticalWell | tuple[float, float]) -> tuple[int, int] | None:
+        """Locate the surface grid column indices intersected by a vertical well.
+
+        Parameters
+        ----------
+        well : VerticalWell or tuple[float, float]
+            Well object providing ``x`` and ``y`` map coordinates, or a tuple of coordinates.
+
+        Returns
+        -------
+        tuple[int, int] or None
+            ``(j, i)`` index of the top-surface column containing the well
+            head location. Returns ``None`` when the well lies outside the
+            grid footprint.
+
+        Notes
+        -----
+        This method performs a geometric XY containment lookup on the grid top
+        surface only. It does not evaluate completion intervals or active-cell
+        status.
+        """
+        if isinstance(well, VerticalWell):
+            x, y = well.x, well.y
+        elif isinstance(well, tuple) and len(well) == 2:
+            x, y = well
+            try:
+                x = _validate_finite_float(x, "well x-coordinate")
+                y = _validate_finite_float(y, "well y-coordinate")
+            except (TypeError, ValueError) as e:
+                raise TypeError("`well` coordinates must be finite numbers.") from e
+        else:
+            raise TypeError("`well` must be an instance of VerticalWell or a tuple of coordinates (x, y).")
+        return self._surface_cell_at_xy(x, y, surface="top")
+
     def _compute_cell_corners(self) -> np.ndarray:
         """Compute 3D coordinates of all 8 corners for each cell.
 
@@ -1105,6 +1223,15 @@ class CornerPointGrid:
             f"n_active={self.n_active}/{self.n_cells}, "
             f"properties={list(self._properties.keys())})"
         )
+
+
+
+
+
+
+
+
+
     # # ----------------------------
     # # Cell geometry
     # # ----------------------------

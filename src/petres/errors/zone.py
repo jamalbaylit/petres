@@ -10,11 +10,6 @@ class ZoneError(PetresError):
 
     Use this exception to distinguish zone-specific failures from other domain
     errors and handle them consistently.
-
-    Attributes
-    ----------
-    default_message : str
-        Fallback message used when an explicit message is not provided.
     """
 
     default_message: str = "An error occurred related to zone operations."
