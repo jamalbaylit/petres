@@ -123,6 +123,10 @@ table.docutils th{
     border-top: 1px solid var(--color-table-border);;
 }
 
+article table.align-default{
+    margin-left: 0;
+    margin-right: 0;
+}
 /* Override Definition column (2nd column) */
 /* .eclipse-keyword-table td:nth-child(2),
 .eclipse-keyword-table th:nth-child(2) {

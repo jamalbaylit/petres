@@ -84,7 +84,7 @@ Or alternatively through the grid using the property name:
 Export to Eclipse Format
 ------------------------
 
-Export the grid and its associated properties in Eclipse-compatible
+Export the grid and its associated properties in Eclipse
 ``.GRDECL`` format:
 
 .. code-block:: python

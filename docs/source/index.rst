@@ -126,7 +126,7 @@ Getting Started
 ---------------
 Start modeling with Petres by following the :doc:`Installation Guide <getting-started/installation>` 
 and the :doc:`Quickstart Tutorial <getting-started/quickstart>`.
-The source code is also available on GitHub: `Petres Repository <https://github.com/jamalbaylit/petres>`_.
+The source code is also available on `GitHub <https://github.com/jamalbaylit/petres>`_.
 
 Contact
 -------

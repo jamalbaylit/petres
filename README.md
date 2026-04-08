@@ -2,9 +2,22 @@
 
 ![Banner](https://raw.githubusercontent.com/jamalbaylit/petres/main/assets/banner-high.png)
 
-<em>
-    A lightweight, open-source Python library for reservoir grid modeling
-</em>
+
+
+<p>
+  <em>
+    <strong> 
+      Lightweight Python Library for Reservoir Grid Modeling and Simulation
+    </strong>
+  </em>
+</p>
+
+
+<p>
+  <a href="https://petres.readthedocs.io/en/latest/index.html">Documentation</a> •
+  <a href="https://petres.readthedocs.io/en/latest/getting-started/installation.html">Installation</a> •
+  <a href="https://petres.readthedocs.io/en/latest/getting-started/quickstart.html">Quick Start</a>
+</p>
 
 [![License](https://img.shields.io/badge/License-LGPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![Python Version](https://img.shields.io/badge/python-3.9%E2%80%933.13-blue.svg)](https://www.python.org/downloads/)
@@ -23,7 +36,7 @@ For complete documentation, see the [Petres documentation](https://petres.readth
 > Petres is currently in early development. The API is not yet stable and may change without notice.
 
 
-## Why Petres?
+# Why Petres?
 
 - **Open Access:** Free alternative for engineers and students without access to expensive commercial softwares.
 
@@ -33,7 +46,7 @@ For complete documentation, see the [Petres documentation](https://petres.readth
 
 - **AI Integration:** Use the Python ecosystem to apply AI and Machine Learning techniques.
 
-## Features
+# Features
 
 - **Grid Generation:** Construct Corner-Point, Rectilinear, and Regular grids.  
 Apply boundary polygons to deactivate cells outside the target region.  
@@ -48,13 +61,13 @@ Apply boundary polygons to deactivate cells outside the target region.
 Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizons, and spatial property distributions.  
 
 
-## Getting Started
+# Getting Started
 
 To get started with Petres, refer to the [Installation Guide](https://petres.readthedocs.io/en/latest/getting-started/installation.html) and the [Quickstart Tutorial](https://petres.readthedocs.io/en/latest/getting-started/quickstart.html).  
 
 
 
-## Technical Architecture
+# Technical Architecture
 <div align="center">
 <table width="100%">
   <tr>
@@ -93,6 +106,6 @@ To get started with Petres, refer to the [Installation Guide](https://petres.rea
 
 
 
-## Contact
+# Contact
 
 For questions or collaboration, please contact [jamalbaylit@gmail.com](mailto:jamalbaylit@gmail.com) or connect via [LinkedIn](https://www.linkedin.com/in/jamalbaylit).
