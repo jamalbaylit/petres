@@ -24,10 +24,10 @@ class Horizon:
     interpolator : BaseInterpolator
         Fitted in ``__post_init__`` on the provided ``xy``/``depth`` picks.
         Must accept 2D inputs.
-    xy : ndarray of shape (n, 2)
+    xy : ndarray with dimensions (n, 2)
         XY coordinates for the picked horizon points.
-    depth : ndarray of shape (n,)
-        Depth values for each pick. Must align with ``xy`` rows.
+    depth : ndarray with dimensions (n,)
+        Depth values for each pick. Must align with the rows of ``xy``.
     store_picks : bool, default True
         Whether to retain the raw picks after fitting. Set to ``False`` to
         minimize memory once the interpolator is trained.
@@ -49,8 +49,8 @@ class Horizon:
         Raises
         ------
         ValueError
-            If ``xy`` is not shape ``(n, 2)`` or ``depth`` does not match
-            ``xy`` length.
+            If ``xy`` does not have dimensions ``(n, 2)`` or ``depth`` does
+            not match the number of picks.
         TypeError
             If the interpolator is not a ``BaseInterpolator`` instance or does
             not support 2D coordinates.
@@ -194,13 +194,13 @@ class Horizon:
 
         Parameters
         ----------
-        xy : array-like of shape (n, 2)
+        xy : array-like with dimensions (n, 2)
             Points containing x and y coordinates.
 
         Returns
         -------
         ndarray
-            Depth values of shape (n,).
+            Depth values with length ``n``.
 
         Raises
         ------
@@ -231,7 +231,8 @@ class Horizon:
         Returns
         -------
         ndarray
-            Depth array of shape (len(y), len(x)) matching meshgrid (y, x) order.
+            Depth array with dimensions ``(len(y), len(x))`` matching
+            ``meshgrid(y, x)`` order.
 
         Examples
         --------

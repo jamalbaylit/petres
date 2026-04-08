@@ -298,10 +298,11 @@ class CornerPointGrid:
         Parameters
         ----------
         zone_index : np.ndarray
-            Integer array of shape (nk, nj, ni) assigning each cell to a zone.
-            Convention:
-                0  -> gap / undefined / unassigned
-                >0 -> valid zone id
+            Integer array of shape ``(nk, nj, ni)`` assigning each cell to a
+            zone. Values use this convention:
+
+            - ``0`` means gap, undefined, or unassigned.
+            - ``> 0`` means a valid zone id.
         zone_names : dict[int, str], optional
             Mapping from zone id to zone name.
             If not provided, names will be auto-generated as "Zone {id}".
@@ -314,7 +315,6 @@ class CornerPointGrid:
             If ``zone_index`` cannot be converted to an integer ndarray.
         """
 
-        
         # ----------------------------
         # 1. Validate zone_index
         # ----------------------------
@@ -328,7 +328,7 @@ class CornerPointGrid:
                 zone_index = np.asarray(zone_index, dtype=np.int32)
             except Exception as e:
                 raise TypeError(f"Failed to convert `zone_index` to numpy array: {e}") from e
-            
+
             if zone_index.shape != self.shape:
                 raise ValueError(
                     f"`zone_index` shape {zone_index.shape} != expected {self.shape}"
@@ -337,11 +337,9 @@ class CornerPointGrid:
             if np.any(zone_index < 0):
                 raise ValueError("`zone_index` cannot contain negative values.")
 
-
             # Extract used zone IDs (exclude 0 = gap)
             unique_ids = np.unique(zone_index)
             unique_ids = unique_ids[unique_ids != 0]
-
 
             # ----------------------------
             # 2. Handle zone_names

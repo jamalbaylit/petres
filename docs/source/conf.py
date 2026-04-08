@@ -48,10 +48,11 @@ extensions = [
     'sphinx_inline_svg',
     "sphinx_design",
     "sphinx_copybutton",
-    "apigen",
-    "exampledocs",
     "furo_nav_sections",
+    "apigen",
+    # "exampledocs",
 ]
+
 
 templates_path = ["_templates"]
 
@@ -59,6 +60,7 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
+    "drafts/*",
 ]
 
 root_doc = "index"
@@ -120,6 +122,9 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
+    "pykrige": ("https://geostat-framework.readthedocs.io/projects/pykrige/en/stable/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
 # -- Options for HTML output -------------------------------------------------
