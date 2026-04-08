@@ -1,7 +1,13 @@
-GridError
+Matplotlib2DViewerTheme
 ================================================================================
 
-.. autoclass:: petres.errors.GridError
+**Aliases:**
+
+- ``petres.viewers.Viewer2DTheme``
+
+----
+
+.. autoclass:: petres.viewers.Matplotlib2DViewerTheme
    :members:
    :undoc-members:
    :show-inheritance:

@@ -1,9 +1,16 @@
-Viewer2DTheme
+PyVista3DViewerTheme
 ================================================================================
 
-.. autoclass:: petres.viewers.Viewer2DTheme
+**Aliases:**
+
+- ``petres.viewers.Viewer3DTheme``
+
+----
+
+.. autoclass:: petres.viewers.PyVista3DViewerTheme
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__
    :exclude-members: __weakref__
+   :no-index:

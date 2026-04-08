@@ -337,9 +337,7 @@ class GridProperty:
         zone: str | Zone | None = None,
         include_inactive: bool = True,
     ) -> GridProperty:
-        """
-        Apply a function to geometric sources and/or existing properties,
-        then assign the result into this property.
+        """Apply a function to one or more source arrays and store the result.
 
         Parameters
         ----------
@@ -371,15 +369,15 @@ class GridProperty:
 
         Examples
         --------
-        poro.apply(lambda z: 0.32 - 0.00015 * z, source="depth")
+        >>> poro.apply(lambda z: 0.32 - 0.00015 * z, source="depth")
 
-        perm.apply(lambda p: 1000 * p**3, source=poro)
+        >>> perm.apply(lambda p: 1000 * p**3, source=poro)
 
-        perm.apply(
-            lambda z, p: (1000 * p**3) * np.exp(-z / 3000.0),
-            source=("depth", poro),
-        )
-
+        >>> perm.apply(
+        ...     lambda z, p: (1000 * p**3) * np.exp(-z / 3000.0),
+        ...     source=("depth", poro),
+        ... )
+        
         Raises
         ------
         TypeError

@@ -52,7 +52,7 @@ and interpolator controls how the continuous surface is reconstructed from these
 .. note::
 
    The choice of interpolator affects the geometry of the surface.  
-   See :doc:`/tutorials/interpolators` for more details and available options.
+   See :doc:`/tutorials/interpolators` page for more details and available options.
 
 .. _horizon-from-wells:
 
@@ -110,6 +110,7 @@ After the horizon is created, you can find the depth where it intersects **any w
 
 
 .. _horizon-visualization:
+
 Visualizing a Horizon
 ---------------------
 

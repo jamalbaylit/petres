@@ -1,4 +1,5 @@
 .. _corner-point-grids:
+
 Corner-Point Grid
 =================
 
@@ -35,6 +36,7 @@ precision. Instead, the geometry is defined implicitly and reconstructed from
 pillar geometry and corner depth values.
 
 .. _pillar-geometry:
+
 Pillar Geometry
 ---------------
 
@@ -90,6 +92,7 @@ interpolation to all eight corners using the appropriate pillar and
 corner depth values.
 
 .. _corner-point-grid-representation-in-eclipse:
+
 Representation in Eclipse
 -------------------------
 
@@ -146,6 +149,7 @@ In the Eclipse input file, the dimensions are defined in the order :math:`(N_i, 
 
 
 .. _eclipse-coord:
+
 COORD
 ~~~~~
 
@@ -169,6 +173,7 @@ Accordingly, the logical shape of the ``COORD`` array is :math:`(N_j + 1,\; N_i 
 and the total number of stored values is :math:`6 (N_i + 1)(N_j + 1)`.
 
 .. _eclipse-zcorn:
+
 ZCORN
 ~~~~~
 
