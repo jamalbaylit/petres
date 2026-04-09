@@ -91,3 +91,31 @@ Colors and titles can be customized for better presentation:
 .. note::
 
    For more color options, see the `Matplotlib named colors gallery <https://matplotlib.org/stable/gallery/color/named_colors.html>`_.
+
+
+Visualizing Wells
+-----------------
+
+Petres allows you to visualize vertical wells directly on top of your Corner-Point grid.
+Create one or more vertical wells using the :class:`~petres.models.VerticalWell` class and pass them
+to the grid’s :meth:`~petres.grids.CornerPointGrid.show` method:
+
+.. code-block:: python
+
+    from petres.grids import CornerPointGrid
+    from petres.wells import VerticalWell
+
+    grid = CornerPointGrid.from_grdecl("path/to/your/grid.GRDECL")
+
+    # Define wells
+    well1 = VerticalWell("Well-1", x=100, y=200)
+    well2 = VerticalWell("Well-2", x=120, y=220)
+
+    # Visualize wells on the grid
+    grid.show(wells=[well1, well2])
+
+You can also pass a single well directly without wrapping it in a list:
+
+.. code-block:: python
+
+    grid.show(wells=well1)

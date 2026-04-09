@@ -13,8 +13,9 @@ from ..interpolators.base import BaseInterpolator
 from ..errors.property import ExistingPropertyNameError, MissingEclipseKeywordError, MissingPropertyValueError, ReservedPropertyNameError
 from ..errors.eclipse import GRDECLMissingValueError
 from ..eclipse.grids.write import GRDECLWriter
-from ..models.wells import VerticalWell
+from ..models.wells import VerticalWell, _validate_well_sequence
 from ..models.zone import Zone
+
 
 if TYPE_CHECKING:
     from .cornerpoint import CornerPointGrid
@@ -127,6 +128,7 @@ class GridProperty:
         cmap: str | None = "turbo",
         title: str | Literal["auto"] | None = "auto", 
         z_scale: float = 1.0,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any
     ) -> None:
         """Visualize the property in 3D using the grid viewer.
@@ -141,6 +143,8 @@ class GridProperty:
             Window title; ``'auto'`` uses the property name.
         z_scale : float, default 1.0
             Scale factor for the z-axis.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
         **kwargs
             Forwarded to viewer ``add_grid``.
 
@@ -152,10 +156,17 @@ class GridProperty:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         if not np.isfinite(z_scale) or z_scale <= 0:
             raise ValueError("z_scale must be a positive finite value.")
+        
+        
+            
+
         theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
         viewer = PyVista3DViewer(theme=theme)
-        viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
         title = f"Property: {self.name}" if title == 'auto' else str(title)
+        viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
+        
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
                           
     @property

@@ -1,7 +1,7 @@
 import numpy as np
 
 from petres.interpolators import IDWInterpolator
-from petres.models import Horizon, Zone
+from petres.models import Horizon, Zone, VerticalWell
 from petres.viewers import Viewer3D
 
 
@@ -52,15 +52,20 @@ zone1.divide(levels=[0.0, 0.2, 1.0])
 #
 # You can provide x and y coordinates directly, and the interpolator
 # will compute the corresponding z values.
+
+well1 = VerticalWell(name="Well 1", x=50, y=50)
+well2 = VerticalWell(name="Well 2", x=75, y=25)
 zone1.show(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50),
-    view="2d",
+    view="3d",
+    wells=[well1, well2]
 )
 zone1.show(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50),
     view="2d",
+    wells=[well1, well2]
 )
 
 # Alternatively, you can define the sampling region using axis limits
@@ -70,6 +75,7 @@ zone1.show(
     ylim=(0, 100),
     ni=50,
     nj=50,
+    wells=[well1, well2]
 )
 
 # You can also define the sampling density using grid spacing
@@ -79,6 +85,7 @@ zone1.show(
     ylim=(0, 100),
     dx=2,
     dy=2,
+    wells=[well1, well2]
 )
 
 

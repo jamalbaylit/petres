@@ -1,4 +1,4 @@
-from petres.interpolators import UKInterpolator
+from petres.interpolators import IDWInterpolator
 from petres.grids import CornerPointGrid
 from petres.models import VerticalWell
 import numpy as np
@@ -30,7 +30,7 @@ well3.add_sample(name='porosity', value=50, depth=15)
 
 porosity.from_wells(
     wells=[well1, well3],
-    interpolator=UKInterpolator(),
+    interpolator=IDWInterpolator(),
     mode='xyz'
 )
-porosity.show()
+porosity.show(wells=[well1, well3])

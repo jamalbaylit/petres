@@ -2,6 +2,8 @@
 
 import numpy as np
 
+
+
 def _validate_finite_float(value: float, name: str) -> float:
     """Coerce a numeric input to ``float`` and ensure it is finite.
 
@@ -60,3 +62,5 @@ def _validate_nonempty_string(value: str, name: str) -> str:
     if value != value.strip():
         raise ValueError(f"`{name}` cannot have leading or trailing whitespace.")
     return value
+
+

@@ -11,9 +11,11 @@ from .theme import PyVista3DViewerTheme, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
 from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.surface import _add_surface
+from .layers.wells import _add_well
 from petres.grids.pillars import PillarGrid
 from ...._utils._color import Color
 from ....models.horizon import Horizon
+from ....models.wells import VerticalWell
 from .layers.zone import _add_zone
 from ....models.zone import Zone
 from .._core.base import Base3DViewer
@@ -132,8 +134,10 @@ class PyVista3DViewer(Base3DViewer):
         p.show_bounds(
             ticks='outside',
             grid='back',
-            location='outer',
             all_edges=False,
+            show_zaxis=True,
+
+            location='outer',
         )
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
 
@@ -267,6 +271,41 @@ class PyVista3DViewer(Base3DViewer):
             line_width=line_width,
             **kwargs,
         )
+        return self
+
+    def add_wells(
+        self,
+        wells: Sequence[VerticalWell] | VerticalWell,
+        *,
+        label_font_size: float=15,
+        label_color: Any='red',
+        line_color: Any='red',
+        line_width: float=2.0,
+        **kwargs: Any,
+    ) -> PyVista3DViewer:
+        
+        if isinstance(wells, VerticalWell):
+            wells = [wells]
+        elif not isinstance(wells, Sequence):
+            raise TypeError("`wells` must be a `VerticalWell` or a sequence of `VerticalWell` objects.")
+        
+        line_color = Color(line_color).as_rgb() if line_color is not None else None
+        label_color = Color(label_color).as_rgb() if label_color is not None else None
+
+        for well in wells:
+            _add_well(
+                self,
+                well_x=well.x,
+                well_y=well.y,
+                well_top=None,
+                well_bottom=None,
+                well_name=well.name,
+                label_font_size=label_font_size,
+                label_color=label_color,
+                line_color=line_color,
+                line_width=line_width,
+                **kwargs,
+            )
         return self
     
     def apply_camera(self, cam: Camera3D) -> None:

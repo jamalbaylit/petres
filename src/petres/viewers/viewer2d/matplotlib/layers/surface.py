@@ -87,17 +87,11 @@ def _add_surface(
         raise ValueError(
             f"`scalars` must have shape (len(y), len(x)) = {(len(y), len(x))}, got {scalars.shape}."
         )
-    
+
     X, Y = np.meshgrid(x, y, indexing="xy")
 
-    mesh = ax.pcolormesh(
-        X,
-        Y,
-        scalars,
-        cmap=cmap,
-        shading="auto",
-        **kwargs,
-    )
+    kwargs.setdefault("shading", "gouraud")
+    mesh = ax.pcolormesh(X, Y, scalars, cmap=cmap, **kwargs)
 
     if show_contours:
         contours = ax.contour(
@@ -115,4 +109,7 @@ def _add_surface(
     if show_colorbar:
         cbar = plt.colorbar(mesh, ax=ax, shrink=colorbar_shrink)
         # cbar.set_label(colorbar_label or f"{horizon.name} Depth")
+
+    ax.margins(x=0.0, y=0.0)
+
     return mesh
