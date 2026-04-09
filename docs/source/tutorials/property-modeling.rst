@@ -340,39 +340,80 @@ This allows each zone to be modeled independently.
 Interpolating Property Values from Wells
 ----------------------------------------
 
-Property values can also be assigned by interpolating measurements taken at
-well locations. This is useful when property data are available only at sparse
-sample points and must be distributed throughout the grid.
+Property values can also be assigned by interpolating measurements taken at well locations. 
+This is useful when property data are available only at sparse sample 
+points and need to be distributed throughout the grid.
 
-First, define the wells and add property samples:
+Defining Property Samples on Wells
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are two supported ways to assign property measurements to wells.
+
+1. Depth-Dependent Samples
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use this approach when the property varies along the well trajectory.
+Each sample is associated with a specific depth:
 
 .. code-block:: python
-
-    from petres.interpolators import UKInterpolator
-    from petres.models import VerticalWell
-
-    well1 = VerticalWell(name="Well 1", x=20, y=78)
-    well2 = VerticalWell(name="Well 2", x=32, y=55)
 
     well1.add_sample(name="porosity", value=100, depth=10)
-    well2.add_sample(name="porosity", value=50, depth=15)
+    well1.add_sample(name="porosity", value=120, depth=20)
 
-Each sample represents a known property value at a specific location in space. Next, interpolate these values across the grid with selected wells:
+    well2.add_sample(name="porosity", value=50, depth=15)
+    well2.add_sample(name="porosity", value=70, depth=25)
+
+Each `(property, depth)` pair must be unique per well.  
+In other words, you cannot assign multiple values to the 
+same property at the same depth within a well.
+
+This mode enables **3D** interpolation, where the property varies in both
+horizontal and vertical directions.
+
+
+2. Single Sample per Well
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use this approach when only one representative value per well is available:
 
 .. code-block:: python
+
+    well1.add_sample(name="porosity", value=100)
+    well2.add_sample(name="porosity", value=50)
+
+In this case, the value represents the entire well, and no depth variation
+is assumed. Interpolation will therefore be independent of depth.
+
+.. important::
+
+    - You cannot mix sampling modes for the same property on a single well — choose either depth-dependent or single sample method.
+
+    - Mixing both modes for the same property is not allowed.
+
+    - When performing interpolation, all wells must use the same sampling mode for the selected property.
+
+Interpolating to the Grid
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once samples are defined, you can interpolate them onto the grid:
+
+.. code-block:: python
+
+    from petres.interpolators import IDWInterpolator
 
     porosity.from_wells(
         wells=[well1, well2],
-        interpolator=UKInterpolator(),
+        interpolator=IDWInterpolator(),
     )
-    
-In this example, Universal Kriging (:class:`~petres.interpolators.UniversalKrigingInterpolator`) is used. 
-Different interpolators may produce different results depending on the sample
-distribution and interpolation method. Choose the interpolator that best fits
-the available data and the intended modeling workflow.
+
+If the input samples are depth-dependent, interpolation is performed in **3D**. For single value samples, 
+interpolation is performed in **2D** and applied uniformly along the vertical axis.  
 
 .. note::
-    For more details and additional interpolation options, see :doc:`/tutorials/interpolators` page.
+
+    In this example, Inverse Distance Weighting 
+    (:class:`~petres.interpolators.InverseDistanceWeightingInterpolator`) is used. 
+    For more details and additional interpolation options, see :doc:`/tutorials/interpolators`. 
 
 
 

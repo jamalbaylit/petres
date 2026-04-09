@@ -685,7 +685,6 @@ class GridProperty:
         interpolator: BaseInterpolator,
         *,
         source: str | None = None,
-        mode: Literal["xy", "xyz"] = "xy",
         zone: str | Zone | None = None,
         location: Literal["center", "top", "bottom"] = "center",
         include_inactive: bool = True,
@@ -706,8 +705,11 @@ class GridProperty:
             Restrict assignment to a zone.
         include_inactive : bool, default True
             When False, only active cells are assigned.
-        mode : {"xy", "xyz"}, default "xy"
-            If "xyz", every sample must have depth values.
+        Notes
+        -----
+        Interpolation mode is inferred from well sample storage for ``source``:
+        scalar samples are interpolated in XY (2D), depth-indexed samples are
+        interpolated in XYZ (3D).
 
         Returns
         -------
@@ -717,7 +719,8 @@ class GridProperty:
         Raises
         ------
         ValueError
-            If mode, source data, or interpolator output shape is invalid.
+            If well sample modes for ``source`` are inconsistent, source data
+            is invalid, or interpolator output shape is invalid.
         TypeError
             If ``interpolator`` is not a ``BaseInterpolator`` or wells contain
             invalid entries.
@@ -726,9 +729,6 @@ class GridProperty:
         _validate_nonempty_string(source, "source")
 
         
-        if mode not in ("xy", "xyz"):
-            raise ValueError(f"Unsupported mode {mode!r}. Supported: 'xy', 'xyz'.")
-
         if not isinstance(interpolator, BaseInterpolator):
             raise TypeError("`interpolator` must be an instance of BaseInterpolator.")
          
@@ -740,10 +740,9 @@ class GridProperty:
         
             
 
-        coords, values = self._collect_well_samples(
+        coords, values, resolved_mode = self._collect_well_samples(
             wells=wells,
             source=source,
-            mode=mode,
         )
 
         mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
@@ -757,12 +756,10 @@ class GridProperty:
 
         targets = self._interpolation_targets(location=location)
 
-        if mode == "xy":
+        if resolved_mode == "scalar":
             query = targets[..., :2][mask]
-        elif mode == "xyz":
-            query = targets[mask]
         else:
-            raise RuntimeError(f"Unexpected interpolation mode: {mode!r}")
+            query = targets[mask]
 
         interpolator.fit(coords, values)
         predicted = np.asarray(interpolator.predict(query), dtype=float)
@@ -836,8 +833,7 @@ class GridProperty:
         self,
         wells: Sequence["VerticalWell"],
         source: str,
-        mode: Literal["xy", "xyz"],
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, Literal["scalar", "depth"]]:
         """Collect interpolation coordinates and values from well samples.
 
         Parameters
@@ -846,40 +842,39 @@ class GridProperty:
             Wells providing sampled values.
         source : str
             Property key used to read values from each well.
-        mode : {"xy", "xyz"}
-            Coordinate mode for interpolation samples.
-
         Returns
         -------
-        tuple[np.ndarray, np.ndarray]
+        tuple[np.ndarray, np.ndarray, Literal["scalar", "depth"]]
             Coordinates with shape ``(n, 2)`` or ``(n, 3)`` and values with
-            shape ``(n,)``.
+            shape ``(n,)``, plus the resolved coordinate mode.
+
+        Raises
+        ------
+        ValueError
+            If wells use mixed sample modes for ``source``.
         """
         coords_list: list[list[float]] = []
         values_list: list[float] = []
-
-        require_z = mode == "xyz"
+        resolved_mode: Literal["scalar", "depth"] | None = None
 
         for well in wells:
-            depth_map = well.samples.get(source)
-            existing_mode = well._sample_modes.get(source)
+            sampling_mode = well.get_sampling_mode(source)
+            resolved_mode = resolved_mode or sampling_mode
 
-            if not depth_map:
-                continue
-
-            if require_z and existing_mode != "depth":
+            if resolved_mode != sampling_mode:
                 raise ValueError(
-                    f"Well '{well.name}' has sample '{source}' without depth values, "
-                    "try `mode='xyz'`."
+                    f"All wells must have the same sample mode for source '{source}'."
                 )
-            
-            for z, value in depth_map.items():
-                if mode == "xy":
-                    coords_list.append([well.x, well.y])
-                else:
-                    coords_list.append([well.x, well.y, z])
 
-                values_list.append(value)
+            if resolved_mode == "scalar":
+                value = well.get_sample(source)
+                coords_list.append([well.x, well.y])
+                values_list.append(float(value))
+            else:
+                depth_map = well.get_sample(source)
+                for z, value in depth_map.items():
+                    coords_list.append([well.x, well.y, z])
+                    values_list.append(value)
 
         if not coords_list:
             raise ValueError(f"No samples found for source '{source}' in given wells.")
@@ -889,9 +884,12 @@ class GridProperty:
 
         has_duplicates = np.unique(coords, axis=0).shape[0] != coords.shape[0]
         if has_duplicates:
-            raise ValueError("Duplicate sample locations detected. Please ensure each sample has a unique (x, y) for mode 'xy' or (x, y, z) coordinate for mode 'xyz'.")
-      
-        return coords, values
+            raise ValueError("Duplicate sample locations detected. Please ensure each sample has a unique (x, y) for mode 'scalar' or (x, y, z) coordinate for mode 'depth'.")
+
+        if resolved_mode is None:
+            raise RuntimeError("Failed to resolve interpolation mode from well samples.")
+
+        return coords, values, resolved_mode
 
     def _interpolation_targets(
         self,

@@ -68,8 +68,8 @@ def test_matplotlib2d_add_wells_single_and_sequence(monkeypatch):
 
     calls = []
 
-    def _fake_add_well(ax, well, **kwargs):
-        calls.append((ax, well, kwargs))
+    def _fake_add_well(ax, well_x, well_y, well_name, **kwargs):
+        calls.append((ax, well_x, well_y, well_name, kwargs))
 
     monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer._add_well", _fake_add_well)
 
@@ -82,10 +82,14 @@ def test_matplotlib2d_add_wells_single_and_sequence(monkeypatch):
     assert out_single is viewer
     assert out_many is viewer
     assert len(calls) == 3
-    assert calls[0][1] is w1
-    assert calls[0][2]["marker_color"] == "red"
-    assert calls[2][1] is w2
-    assert calls[2][2]["marker"] == "s"
+    assert calls[0][1] == w1.x
+    assert calls[0][2] == w1.y
+    assert calls[0][3] == w1.name
+    assert calls[0][4]["marker_color"] == "red"
+    assert calls[2][1] == w2.x
+    assert calls[2][2] == w2.y
+    assert calls[2][3] == w2.name
+    assert calls[2][4]["marker"] == "s"
 
 
 def test_matplotlib2d_add_wells_rejects_invalid_input():

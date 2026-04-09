@@ -189,6 +189,16 @@ For more advanced control over the visualization, Petres provides separate
 :meth:`~petres.models.Horizon.show2d` and :meth:`~petres.models.Horizon.show3d` methods,
 which offer additional customization options for 2D and 3D plots, respectively. 
 
+Wells can also be visualized alongside horizons by passing them to the ``wells`` argument:
+
+.. code-block:: python
+
+   horizon1.show(
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
+      wells=[well1, well2, well3]
+   )
+
 
 Visualizing Multiple Horizons
 -----------------------------

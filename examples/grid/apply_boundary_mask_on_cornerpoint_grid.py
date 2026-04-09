@@ -2,7 +2,7 @@ from petres.grids import CornerPointGrid
 from petres.models import BoundaryPolygon
 import numpy as np
 
-from petres.models.wells import VerticalWell
+from petres.models import VerticalWell
 
 path = "examples/data/corner_point/Norne.GRDECL"
 grid = CornerPointGrid.from_grdecl(path, use_actnum=True)
@@ -38,5 +38,5 @@ boundary = BoundaryPolygon.from_vertices(
 
 
 grid.apply_boundary(boundary)
-grid.show(wells=well)
+grid.show(wells=well1)
 

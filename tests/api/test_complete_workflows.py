@@ -267,7 +267,7 @@ class TestWellToPropertyWorkflow:
 
         # Populate property from wells
         poro = grid.properties.create("poro", eclipse_keyword="PORO")
-        poro.from_wells(wells, interpolator=IDWInterpolator(power=2.0), source="poro", mode="xy")
+        poro.from_wells(wells, interpolator=IDWInterpolator(power=2.0), source="poro")
 
         # Derive property from interpolated values
         perm = grid.properties.create("perm", eclipse_keyword="PERMX")

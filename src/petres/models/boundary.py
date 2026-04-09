@@ -9,6 +9,8 @@ from numpy.typing import ArrayLike, NDArray
 from shapely import contains, points
 from shapely.geometry import Polygon
 
+from .wells import VerticalWell, _validate_well_sequence
+
 
 @dataclass(frozen=True)
 class BoundaryPolygon:
@@ -306,6 +308,7 @@ class BoundaryPolygon:
         vertex_size: float = 24.0,
         aspect: Literal["auto", "equal"] = "auto",
         title: str | None = None,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any,
     ) -> "Matplotlib2DViewer":
         """
@@ -331,6 +334,8 @@ class BoundaryPolygon:
             Axes aspect ratio used by the viewer theme.
         title : str or None, default=None
             Title of the plot. If ``None``, no title is shown.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
         **kwargs : Any
             Additional keyword arguments passed to
             ``Matplotlib2DViewer.add_boundary_polygon``.
@@ -367,5 +372,7 @@ class BoundaryPolygon:
             **kwargs,
         )
 
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
         return viewer
