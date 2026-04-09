@@ -207,70 +207,90 @@ class VerticalWell:
 
         depth_map[depth] = value
 
+    def get_sampling_mode(self, name: str) -> Literal['scalar', 'depth']:
+        """Return the storage mode for samples of a property.
+
+        Parameters
+        ----------
+        name : str
+            Property name.
+
+        Returns
+        -------
+        'scalar' or 'depth'
+            Storage mode for samples of this property.
+
+        Raises
+        ------
+        ValueError
+            If ``name`` is not a non-empty string.
+        KeyError
+            If no samples exist for ``name``.
+        """
+        name = _validate_nonempty_string(name, "name")
+        if name not in self._sample_modes:
+            raise KeyError(f"No samples found for property '{name}' in well '{self.name}'.")
+        return self._sample_modes[name]
+
     def get_sample(
         self,
         name: str,
         depth: float | None = None,
-    ) -> float:
-        """Return one sample value for a property key.
+    ) -> dict[float, float] | float:
+        """Return one sample or all samples for a property.
 
         Parameters
         ----------
         name : str
             Property name.
         depth : float or None, default=None
-            Depth key used for lookup. Use ``None`` for scalar samples.
+            For depth-indexed properties, provide a depth to return one value.
+            If ``None``, returns all depth-indexed samples as a shallow copy.
+            Scalar properties always return their scalar value.
 
         Returns
         -------
-        float
-            Sample value stored for ``(name, depth)``.
+        dict[float, float] or float
+            For depth-indexed properties:
+            - ``depth`` provided: sample value at that depth.
+            - ``depth`` omitted: shallow copy of depth→value mapping.
+            For scalar properties: scalar sample value.
 
         Raises
         ------
         ValueError
-            If ``name`` is not a non-empty string or ``depth`` is non-finite
-            when provided.
+            If ``name`` is not a non-empty string, ``depth`` is non-finite,
+            or a depth is provided for a scalar property.
         KeyError
-            If no sample exists for ``(name, depth)``.
+            If no samples exist for ``name`` or no sample exists at ``depth``.
         """
         name = _validate_nonempty_string(name, "name")
+        depth = _validate_finite_float(depth, "depth") if depth is not None else None
+
+        try:
+            samples = self.samples[name]
+        except KeyError:
+            raise KeyError(f"No samples found for property '{name}' in well '{self.name}'.")
+
+        sampling_mode = self.get_sampling_mode(name)
+
+        if sampling_mode == 'scalar':
+            if depth is not None:
+                raise ValueError(
+                    f"Cannot query sample for '{name}' at depth={depth} because "
+                    f"this property is stored in scalar mode."
+                )
+            return samples[None]
+
         if depth is not None:
-            depth = _validate_finite_float(depth, "depth")
+            if depth not in samples:
+                raise KeyError(
+                    f"Sample for property '{name}' at depth={depth} "
+                    f"not found in well '{self.name}'."
+                )
+            return samples[depth]
 
-
-        if name not in self.samples or depth not in self.samples[name]:
-            raise KeyError(
-                f"Sample for property '{name}' at depth={depth} "
-                f"not found in well '{self.name}'."
-            )
-
-        return self.samples[name][depth]
-
-    def get_samples(
-        self,
-        name: str,
-    ) -> dict[float | None, float]:
-        """Return all samples for a property as a shallow copy.
-
-        Parameters
-        ----------
-        name : str
-            Property name.
-
-        Returns
-        -------
-        dict[float or None, float]
-            Mapping from depth keys to sample values. Returns an empty mapping
-            if the property has no samples.
-
-        Raises
-        ------
-        ValueError
-            If ``name`` is not a non-empty string.
-        """
-        name = _validate_nonempty_string(name, "name")
-        return dict(self.samples.get(name, {}))
+        return samples
 
     def remove_sample(
         self,

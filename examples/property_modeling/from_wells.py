@@ -6,7 +6,7 @@ import numpy as np
 grid = CornerPointGrid.from_regular(
     xlim=(0, 100),
     ylim=(0, 100),
-    zlim=(0, 20),
+    zlim=(0, 100),
     ni=100,
     nj=100,
     nk=10,
@@ -25,12 +25,14 @@ well3 = VerticalWell(name="Well 3", x=32, y=55)
 
 well1.add_sample(name='porosity', value=100, depth=10)
 well3.add_sample(name='porosity', value=50, depth=15)
+# well1.add_sample(name='porosity', value=100, depth=10)
+# well3.add_sample(name='porosity', value=50, depth=15)
+
 # well1.add_sample(name='porosity', value=50, depth=12)
 # well1.add_sample(name='porosity', value=25, depth=20)
 
 porosity.from_wells(
     wells=[well1, well3],
     interpolator=IDWInterpolator(),
-    mode='xyz'
 )
 porosity.show(wells=[well1, well3])

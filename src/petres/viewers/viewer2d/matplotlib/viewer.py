@@ -124,7 +124,9 @@ class Matplotlib2DViewer(Base2DViewer):
         title : str or None, default=None
             Optional title text shown above the axes.
         """
-        self.ax.relim()
+        # Avoid relim(): it can miss Collection artists (e.g. scatter/pcolormesh).
+        self.ax.margins(x=self.theme.margins, y=self.theme.margins)
+        self.ax.autoscale(enable=True, axis="both", tight=False)
         self.ax.autoscale_view()
         if title:
             self.ax.set_title(str(title), fontsize=self.theme.title_fontsize, pad=10)
@@ -309,7 +311,7 @@ class Matplotlib2DViewer(Base2DViewer):
         show_vertices: bool = False,
         vertex_color: Any | None = None,
         vertex_size: float = 24.0,
-        show_label: bool = True,
+        show_label: bool = False,
         label: str | None = None,
         label_fontsize: float = 10.0,
         label_box: bool = True,

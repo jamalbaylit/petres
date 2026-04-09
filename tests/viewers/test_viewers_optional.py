@@ -142,12 +142,20 @@ def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
 
     calls = {}
 
-    def fake_add_wells(backend, wells, **kwargs):
+    def fake_add_well(backend, *, well_x, well_y, well_top, well_bottom, well_name, **kwargs):
         calls["backend"] = backend
-        calls["wells"] = wells
+        calls.setdefault("wells", []).append(
+            {
+                "well_x": well_x,
+                "well_y": well_y,
+                "well_top": well_top,
+                "well_bottom": well_bottom,
+                "well_name": well_name,
+            }
+        )
         calls["kwargs"] = kwargs
 
-    monkeypatch.setattr(viewer_mod, "_add_wells", fake_add_wells)
+    monkeypatch.setattr(viewer_mod, "_add_well", fake_add_well)
 
     viewer = object.__new__(viewer_mod.PyVista3DViewer)
     viewer.theme = viewer_mod.PyVista3DViewerTheme(scale=(1.0, 1.0, 2.0))
@@ -167,8 +175,12 @@ def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
     )
 
     assert calls["backend"] is viewer
-    assert calls["wells"] is wells
-    assert calls["kwargs"]["color"] == "red"
+    assert len(calls["wells"]) == 2
+    assert calls["wells"][0]["well_name"] == "W1"
+    assert calls["wells"][1]["well_name"] == "W2"
+    assert calls["kwargs"]["label_font_size"] == 15
+    assert calls["kwargs"]["line_color"] == (1.0, 0.0, 0.0)
+    assert calls["kwargs"]["label_color"] == (1.0, 0.0, 0.0)
     assert calls["kwargs"]["line_width"] == 2.5
     assert calls["kwargs"]["show_tops"] is True
     assert calls["kwargs"]["label_top"] == "Top"

@@ -229,7 +229,7 @@ class TestPropertyFromWells:
         wells[2].add_sample("poro", value=0.2)
 
         poro = grid.properties.create("poro")
-        poro.from_wells(wells, interpolator=IDWInterpolator(power=2.0), source="poro", mode="xy")
+        poro.from_wells(wells, interpolator=IDWInterpolator(power=2.0), source="poro")
 
         assert np.all(np.isfinite(poro.values[grid.active]))
 

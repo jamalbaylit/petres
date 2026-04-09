@@ -1,5 +1,5 @@
 from petres.interpolators import IDWInterpolator
-from petres.models.horizon import Horizon
+from petres.models import Horizon
 import numpy as np
 
 
