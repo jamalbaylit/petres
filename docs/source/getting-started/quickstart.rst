@@ -5,7 +5,7 @@ Create a Simple Grid
 --------------------
 
 Create a basic :ref:`Rectilinear grid <rectilinear-grids>` using the
-:ref:`Corner-Point grids <corner-point-grids>` representation:
+:ref:`Corner-Point grid <corner-point-grids>` representation:
 
 .. code-block:: python
 
@@ -20,11 +20,7 @@ Create a basic :ref:`Rectilinear grid <rectilinear-grids>` using the
    # Print a summary of the grid
    print(grid.summary())
 
-This defines a grid with:
-
-- 3 cells in the x-direction
-- 2 cells in the y-direction
-- 2 layers in the z-direction
+This defines a grid consisting of 3 cells in the x-direction, 2 cells in the y-direction, and 2 layers in the z-direction.
 
 
 Visualize the Grid
@@ -34,7 +30,7 @@ Render the grid in an interactive 3D viewer:
 
 .. code-block:: python
 
-   grid.show()
+   grid.show(scalars="depth")
 
 
 Assign a Property Distribution
@@ -95,8 +91,13 @@ Export the grid and its associated properties in Eclipse
 What to Learn Next
 ------------------
 
-After this quickstart, consider exploring:
+After this quickstart, continue with the
+next tutorials:
 
-- Building Corner-Point grids from geological surfaces
-- Defining horizons and zones for stratigraphic modeling
-- Advanced property modeling and spatial distributions
+- Build geological surfaces from data picks: :doc:`/tutorials/horizon-modeling`
+   
+- Turn surfaces into stratigraphic intervals and layering: :doc:`/tutorials/zone-modeling`
+
+- Assemble a full structural grid from zones and pillars: :doc:`/tutorials/grid-modeling-from-horizons-and-zones`
+
+- Model reservoir properties: :doc:`/tutorials/property-modeling`
