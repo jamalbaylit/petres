@@ -178,8 +178,7 @@ class PyVista3DViewer(Base3DViewer):
         # Always apply an explicit scale so repeated calls are deterministic.
         self.apply_theme(self.theme)
         self._flush_deferred_point_labels()
-        # self.plotter.set_viewup((-1, 0, 0))
-        # self._set_y_front_slight_top(self.plotter, tilt=0.5)
+        self.apply_camera(self.camera)
         if title:
             self.plotter.add_text(
                 str(title),
