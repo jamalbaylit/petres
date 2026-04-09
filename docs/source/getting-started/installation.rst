@@ -7,17 +7,19 @@ Petres requires **Python ≥ 3.9** and is tested on Linux, Windows, and macOS pl
 Install from PyPI
 -----------------
 
-Install the latest released version from PyPI:
+Petres is currently in a pre-release stage,
+so installation requires enabling pre-releases:
 
 .. code-block:: bash
 
-   pip install petres
+   pip install --pre petres
+
 
 If you use ``uv``:
 
 .. code-block:: bash
 
-   uv pip install petres
+   uv pip install --pre petres
 
 
 Install from Source
@@ -31,6 +33,7 @@ Alternatively, you can install the latest development version directly from the 
    cd petres
    pip install .
 
+
 Verify Installation
 -------------------
 
@@ -38,13 +41,13 @@ Run the following command in your terminal to ensure Petres is correctly install
 
 .. code-block:: bash
 
-   python -c "import petres; print(f'Petres version: {petres.version}')"
+   python -c "import petres; print(f'Petres version: {petres.__version__}')"
 
-Once installation is complete, continue to :doc:`Quickstart <quickstart>` to create your first Petres model.
 
 Upgrade Petres
 --------------
-To upgrade to the latest version, run:
+
+To upgrade to the latest version:
 
 .. code-block:: bash
 
@@ -55,4 +58,3 @@ Or with ``uv``:
 .. code-block:: bash
 
    uv pip install --upgrade petres
-
