@@ -21,7 +21,7 @@ from ..eclipse.grids.read import GRDECLReader
 from .pillars import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
-from ..models.wells import VerticalWell
+from ..models.wells import VerticalWell, _validate_well_sequence
 from ..grids.properties import GridProperties, GridProperty
 
 from .._validation import _validate_finite_float
@@ -681,6 +681,7 @@ class CornerPointGrid:
         cmap: str | None = 'turbo', 
         title: str | None = None,
         z_scale: float = 1.0,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any,
     ) -> None:
         """Render the grid in 3D PyVista viewer.
@@ -699,6 +700,8 @@ class CornerPointGrid:
             Figure title.
         z_scale : float, default 1.0
             Scale factor for the z-axis.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
         **kwargs
             Forwarded to viewer ``add_grid``.
         """
@@ -706,11 +709,16 @@ class CornerPointGrid:
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         if not np.isfinite(z_scale) or z_scale <= 0:
             raise ValueError("z_scale must be a positive finite value.")
+        
+            
         theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
         viewer = PyVista3DViewer(theme=theme)
         scalars = self._resolve_source(scalars) if scalars is not None else None
         color = None if scalars is not None else color
         viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)
+        
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
     
     @classmethod

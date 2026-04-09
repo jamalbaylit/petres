@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -9,7 +9,7 @@ from numpy.typing import ArrayLike
 
 
 from ..interpolators.base import BaseInterpolator
-from ..models.wells import VerticalWell
+from ..models.wells import VerticalWell, _validate_well_sequence
 from .zone import Zone
 
 
@@ -279,6 +279,7 @@ class Horizon:
         dx: float | None = None,
         dy: float | None = None,
         view: Literal["3d", "2d"] = "3d",
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
     ) -> None:
         """Render the horizon in either 3D or 2D.
 
@@ -305,6 +306,8 @@ class Horizon:
             Cell size along y when using `ylim`. Mutually exclusive with `nj`.
         view : {'3d', '2d'}, default '3d'
             Target visualization backend. Use '3d' for PyVista, '2d' for Matplotlib.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
 
         Raises
         ------
@@ -318,9 +321,9 @@ class Horizon:
         """
         view = view.strip().lower()
         if view == "3d":
-            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
         elif view == "2d":
-            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
         else:
             raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
         
@@ -340,6 +343,7 @@ class Horizon:
         cmap: str | None = "turbo",
         title: str | Literal["auto"] | None = "auto", 
         z_scale: float = 1.0,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
     ) -> None:
         """Render the horizon in an interactive 3D PyVista scene.
 
@@ -367,6 +371,8 @@ class Horizon:
             Window title; ``'auto'`` uses the property name.
         z_scale : float, default 1.0
             Scale factor for the z-axis to exaggerate vertical relief.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
 
         Examples
         --------
@@ -387,6 +393,8 @@ class Horizon:
             colorbar_title='Depth',
         )
         title = f"Horizon: {self.name}" if title == 'auto' else str(title)
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
 
     def show2d(
@@ -405,6 +413,7 @@ class Horizon:
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
         title: str | Literal["auto"] | None = "auto",
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any,
     ) -> None:
         """Render the horizon as a 2D Matplotlib map.
@@ -432,6 +441,8 @@ class Horizon:
             Axes aspect ratio.
         title : str or 'auto', default 'auto'
             Window title; ``'auto'`` uses the property name.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
         **kwargs
             Additional keyword arguments forwarded to the Matplotlib surface helper.
 
@@ -443,6 +454,7 @@ class Horizon:
         from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
         
         viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
+        
         viewer.add_horizon(
             self, 
             x=x, y=y, 
@@ -455,6 +467,8 @@ class Horizon:
             **kwargs
         )
         title = f"Horizon: {self.name}" if title == 'auto' else str(title)
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
 
     def _validate_interpolator(self, interpolator: Any) -> BaseInterpolator:

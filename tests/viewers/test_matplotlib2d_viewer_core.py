@@ -6,6 +6,7 @@ import pytest
 
 matplotlib.use("Agg")
 
+from petres.models import VerticalWell
 from petres.viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
 from petres.viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
 
@@ -60,3 +61,35 @@ def test_matplotlib2d_add_zone_returns_self(monkeypatch, horizon_plane_top, hori
 
     assert out is viewer
     assert called["ok"]
+
+
+def test_matplotlib2d_add_wells_single_and_sequence(monkeypatch):
+    viewer = Matplotlib2DViewer(theme=Matplotlib2DViewerTheme())
+
+    calls = []
+
+    def _fake_add_well(ax, well, **kwargs):
+        calls.append((ax, well, kwargs))
+
+    monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer._add_well", _fake_add_well)
+
+    w1 = VerticalWell(name="W1", x=10.0, y=20.0)
+    w2 = VerticalWell(name="W2", x=30.0, y=40.0)
+
+    out_single = viewer.add_wells(w1, marker_color="red")
+    out_many = viewer.add_wells([w1, w2], marker="s")
+
+    assert out_single is viewer
+    assert out_many is viewer
+    assert len(calls) == 3
+    assert calls[0][1] is w1
+    assert calls[0][2]["marker_color"] == "red"
+    assert calls[2][1] is w2
+    assert calls[2][2]["marker"] == "s"
+
+
+def test_matplotlib2d_add_wells_rejects_invalid_input():
+    viewer = Matplotlib2DViewer(theme=Matplotlib2DViewerTheme())
+
+    with pytest.raises(TypeError):
+        viewer.add_wells(123)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, Sequence
 
 from .._validation import _validate_finite_float, _validate_nonempty_string
 
@@ -309,3 +309,22 @@ class VerticalWell:
         if not self.samples[name]:
             del self.samples[name]
             del self._sample_modes[name]
+
+
+
+
+
+def _validate_well_sequence(wells: VerticalWell | Sequence[VerticalWell] | None) -> tuple[VerticalWell]:
+    """Validate that the input is a VerticalWell or a sequence of VerticalWells."""
+
+    if wells is not None:
+        if isinstance(wells, VerticalWell):
+            wells = (wells,)
+        elif isinstance(wells, Sequence):
+            if not all(isinstance(w, VerticalWell) for w in wells):
+                raise TypeError("All items in `wells` must be instances of `VerticalWell`.")
+            wells = tuple(wells)
+        else:
+            raise TypeError("`wells` must be a VerticalWell or a sequence of VerticalWells.")
+
+    return wells
