@@ -28,7 +28,6 @@ pillars = PillarGrid.from_regular(
     ni=50,
     nj=50,
 )
-print('asdasd')
 pillars.show()  # Visualize the grid
 
 # ---------------------------------------------------------------------
