@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*"
+    branches:
+      - dev
   workflow_dispatch:
     inputs:
       target:
@@ -27,37 +29,11 @@ jobs:
     name: Build distributions
     runs-on: ubuntu-latest
 
-    outputs:
-      is_main: ${{ steps.branch_check.outputs.is_main }}
-      is_develop: ${{ steps.branch_check.outputs.is_develop }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Detect branch from tag
-        id: branch_check
-        run: |
-          git fetch origin main develop
-
-          BRANCHES=$(git branch -r --contains $GITHUB_SHA)
-
-          echo "Branches containing commit:"
-          echo "$BRANCHES"
-
-          if echo "$BRANCHES" | grep -q "origin/main"; then
-            echo "is_main=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_main=false" >> $GITHUB_OUTPUT
-          fi
-
-          if echo "$BRANCHES" | grep -q "origin/develop"; then
-            echo "is_develop=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_develop=false" >> $GITHUB_OUTPUT
-          fi
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -67,9 +43,11 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
 
+      - name: Install build tools
+        run: uv pip install --system build twine setuptools-scm
+
       - name: Build distributions
         run: |
-          uv pip install --system build twine
           python -m build
           twine check dist/*
 
@@ -87,9 +65,9 @@ jobs:
       id-token: write
     environment:
       name: testpypi
-    if: >
-      (github.event_name == 'push' && needs.build.outputs.is_develop == 'true') ||
-      (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi')
+
+    # Only dev branch builds go to TestPyPI
+    if: github.ref == 'refs/heads/dev'
 
     steps:
       - name: Download built distributions
@@ -112,9 +90,9 @@ jobs:
       id-token: write
     environment:
       name: pypi
-    if: >
-      (github.event_name == 'push' && needs.build.outputs.is_main == 'true') ||
-      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+
+    # Publish ONLY on version tags (v1.2.3, v1.2.3rc1, etc.)
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Download built distributions

@@ -290,7 +290,7 @@ class VerticalWell:
                 )
             return samples[depth]
 
-        return samples
+        return dict(samples)
 
     def remove_sample(
         self,
@@ -334,17 +334,18 @@ class VerticalWell:
 
 
 
-def _validate_well_sequence(wells: VerticalWell | Sequence[VerticalWell] | None) -> tuple[VerticalWell]:
+def _validate_well_sequence(
+    wells: VerticalWell | list[VerticalWell] | tuple[VerticalWell, ...]
+) -> tuple[VerticalWell]:
     """Validate that the input is a VerticalWell or a sequence of VerticalWells."""
 
-    if wells is not None:
-        if isinstance(wells, VerticalWell):
-            wells = (wells,)
-        elif isinstance(wells, Sequence):
-            if not all(isinstance(w, VerticalWell) for w in wells):
-                raise TypeError("All items in `wells` must be instances of `VerticalWell`.")
-            wells = tuple(wells)
-        else:
-            raise TypeError("`wells` must be a VerticalWell or a sequence of VerticalWells.")
+    if isinstance(wells, VerticalWell):
+        wells = (wells,)
+    elif isinstance(wells, (list, tuple)):
+        if not all(isinstance(w, VerticalWell) for w in wells):
+            raise TypeError("All items in `wells` must be instances of `VerticalWell`.")
+        wells = tuple(wells)
+    else:
+        raise TypeError("`wells` must be a VerticalWell or a sequence of VerticalWells.")
 
     return wells

@@ -879,7 +879,7 @@ class CornerPointGrid:
     
 
     def _surface_cell_at_xy(self, x: float, y: float, surface: Literal["top", "bottom"]) -> tuple[int, int] | None:
-        """Find the (j, i) column index whose surface quad contains point (x, y).
+        """Find the (i, j) column index whose surface quad contains point (x, y).
 
         Uses a cross-product sign test on all cells simultaneously — no loops.
 
@@ -893,7 +893,7 @@ class CornerPointGrid:
         Returns
         -------
         tuple[int, int] or None
-            ``(j, i)`` of the containing column, or ``None`` if outside the grid.
+            Zero-based ``(i, j)`` indices of the containing column, or ``None`` if outside the grid.
         """
         if surface == "top":
             pt = self.pillars.pillar_top  # (nj+1, ni+1, 3)
@@ -951,7 +951,7 @@ class CornerPointGrid:
         if hits.size == 0:
             return None
 
-        return (int(hits[0, 0]), int(hits[0, 1]))
+        return (int(hits[0, 1]), int(hits[0, 0]))  # (i, j)
 
     def well_indices(self, well: VerticalWell | tuple[float, float]) -> tuple[int, int] | None:
         """Locate the surface grid column indices intersected by a vertical well.
@@ -964,7 +964,7 @@ class CornerPointGrid:
         Returns
         -------
         tuple[int, int] or None
-            ``(j, i)`` index of the top-surface column containing the well
+            Zero-based ``(i, j)`` indices of the top-surface column containing the well
             head location. Returns ``None`` when the well lies outside the
             grid footprint.
 

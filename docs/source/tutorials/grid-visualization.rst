@@ -103,7 +103,7 @@ to the grid’s :meth:`~petres.grids.CornerPointGrid.show` method:
 .. code-block:: python
 
     from petres.grids import CornerPointGrid
-    from petres.wells import VerticalWell
+    from petres.models import VerticalWell
 
     grid = CornerPointGrid.from_grdecl("path/to/your/grid.GRDECL")
 

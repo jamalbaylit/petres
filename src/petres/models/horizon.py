@@ -392,7 +392,8 @@ class Horizon:
             show_colorbar=True,
             colorbar_title='Depth',
         )
-        title = f"Horizon: {self.name}" if title == 'auto' else str(title)
+        title = self._get_plot_title(title)
+
         if wells is not None:
             viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
@@ -466,10 +467,18 @@ class Horizon:
             contour_levels=contour_levels,
             **kwargs
         )
-        title = f"Horizon: {self.name}" if title == 'auto' else str(title)
+        title = self._get_plot_title(title)
         if wells is not None:
             viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
+
+    def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
+        if title == 'auto':
+            return f"Horizon: {self.name}"
+        elif title is not None:
+            return str(title)
+        else:
+            return None
 
     def _validate_interpolator(self, interpolator: Any) -> BaseInterpolator:
         """Validate interpolator type and dimensional support.

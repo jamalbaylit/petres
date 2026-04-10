@@ -7,7 +7,6 @@ import numpy as np
 
 from .wells import VerticalWell, _validate_well_sequence
 
-
 @dataclass(frozen=True)
 class Zone:
     """A stratigraphic interval bounded by a top and base horizon.
@@ -167,7 +166,8 @@ class Zone:
         theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
         viewer = PyVista3DViewer(theme=theme)
         
-        title = f"Zone: {self.name}" if title == 'auto' else str(title)
+        title = self._get_plot_title(title)
+
         viewer.add_zone(
             self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
             color=color,
@@ -239,8 +239,8 @@ class Zone:
         from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
         from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
         
-        if title == 'auto':
-            title = "Zone: " + self.name
+        title = self._get_plot_title(title)
+        
         viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
         viewer.add_zone(
             self, 
@@ -258,6 +258,15 @@ class Zone:
             viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
 
+    def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
+        if title == 'auto':
+            return f"Zone: {self.name}"
+        elif title is not None:
+            return str(title)
+        else:
+            return None
+        
+        
     def divide(
         self,
         *,

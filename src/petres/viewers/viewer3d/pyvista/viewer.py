@@ -2,24 +2,23 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any
+import pyvista as pv
 import numpy as np
 
-import pyvista as pv
+from ....models.wells import VerticalWell, _validate_well_sequence
+from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.cornerpoint import _add_corner_point_grid
-from .layers.pillars import _add_pillars
 from .theme import PyVista3DViewerTheme, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
-from ....grids.sampling._vertices import _resolve_xy_vertices
+from ....grids.pillars import PillarGrid
+from .layers.pillars import _add_pillars
 from .layers.surface import _add_surface
-from .layers.wells import _add_well
-from petres.grids.pillars import PillarGrid
-from ...._utils._color import Color
 from ....models.horizon import Horizon
-from ....models.wells import VerticalWell
+from .._core.base import Base3DViewer
+from .layers.wells import _add_well
+from ...._utils._color import Color
 from .layers.zone import _add_zone
 from ....models.zone import Zone
-from .._core.base import Base3DViewer
-import vtk
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -136,9 +135,8 @@ class PyVista3DViewer(Base3DViewer):
             grid='back',
             all_edges=False,
             show_zaxis=True,
-
             location='outer',
-        )
+        ) if theme.show_coordinate_axes else p.hide_bounds()
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
 
     def _defer_point_labels(
@@ -171,8 +169,6 @@ class PyVista3DViewer(Base3DViewer):
         ----------
         title : str or None, default=None
             Optional scene title text displayed at the configured theme position.
-        z_scale : float, default=1.0
-            Vertical scale factor applied to the full scene.
         """
 
         # Always apply an explicit scale so repeated calls are deterministic.
@@ -283,11 +279,7 @@ class PyVista3DViewer(Base3DViewer):
         **kwargs: Any,
     ) -> PyVista3DViewer:
         
-        if isinstance(wells, VerticalWell):
-            wells = [wells]
-        elif not isinstance(wells, Sequence):
-            raise TypeError("`wells` must be a `VerticalWell` or a sequence of `VerticalWell` objects.")
-        
+        wells = _validate_well_sequence(wells)
         line_color = Color(line_color).as_rgb() if line_color is not None else None
         label_color = Color(label_color).as_rgb() if label_color is not None else None
 
