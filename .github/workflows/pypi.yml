@@ -2,8 +2,9 @@ name: Publish package
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+      - develop
   workflow_dispatch:
     inputs:
       target:
@@ -62,12 +63,8 @@ jobs:
     environment:
       name: testpypi
     if: >
-      (github.event_name == 'push' &&
-       (contains(github.ref_name, 'rc') ||
-        contains(github.ref_name, 'a') ||
-        contains(github.ref_name, 'b'))) ||
-      (github.event_name == 'workflow_dispatch' &&
-       inputs.target == 'testpypi')
+      (github.event_name == 'push' && github.ref_name == 'develop') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi')
 
     steps:
       - name: Download built distributions
@@ -91,12 +88,8 @@ jobs:
     environment:
       name: pypi
     if: >
-      (github.event_name == 'push' &&
-       !contains(github.ref_name, 'rc') &&
-       !contains(github.ref_name, 'a') &&
-       !contains(github.ref_name, 'b')) ||
-      (github.event_name == 'workflow_dispatch' &&
-       inputs.target == 'pypi')
+      (github.event_name == 'push' && github.ref_name == 'main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
 
     steps:
       - name: Download built distributions
@@ -104,6 +97,18 @@ jobs:
         with:
           name: python-dist
           path: dist/
+
+      # Optional but recommended: prevent duplicate version upload
+      - name: Check if version exists on PyPI
+        run: |
+          pip install requests
+          VERSION=$(python -c "import petres; print(petres.__version__)")
+          python - <<EOF
+import requests
+url = f"https://pypi.org/pypi/petres/{VERSION}/json"
+if requests.get(url).status_code == 200:
+    raise SystemExit(f"Version {VERSION} already exists on PyPI")
+EOF
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
