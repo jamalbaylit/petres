@@ -42,14 +42,14 @@ def _add_well(
         from plot bounds.
     well_name : str
         Label text displayed at the well top location.
-    label_font_size : float, default=12
+    label_font_size : float, default=15
         Font size used for the well label.
     label_color : Any, default='black'
         Text color for the well label.
     line_color : Any, default='black'
-        Color used to render the well tube.
-    line_width : float, default=1.0
-        Tube radius used when rendering the well line.
+        Color used to render the well line.
+    line_width : float, default=3.0
+        Line width used when rendering the well line.
     """
     p = backend.plotter
 

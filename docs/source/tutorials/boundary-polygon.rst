@@ -62,7 +62,7 @@ Once the boundary polygon is defined, you can apply it to a :class:`~petres.grid
 
 .. code-block:: python
 
-    from petres.models import CornerPointGrid
+    from petres.grids import CornerPointGrid
 
     # Load grid from a grdecl file
     grid = CornerPointGrid.from_grdecl("path_to_file.GRDECL")
