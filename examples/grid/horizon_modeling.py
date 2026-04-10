@@ -59,10 +59,10 @@ horizon1 = Horizon.from_wells(
     wells=[well1, well2, well3],
     interpolator=IDWInterpolator(),
 )
-
 horizon1.show(
     x=np.linspace(0, 100, 100),
     y=np.linspace(0, 100, 100),
+    wells=[well1, well2, well3],  # Optionally show wells on top of the horizon
 )
 
 # Compute the intersection depth of the horizon with a well
@@ -92,6 +92,7 @@ horizon1.show(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50),
     view="2d",  # or "3d"
+    wells=[well1, well2, well3],  # Optionally show wells on top of the horizon
 )
 
 # Option 2: Define limits and number of samples

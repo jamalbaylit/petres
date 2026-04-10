@@ -20,6 +20,7 @@ These grid types are illustrated in :numref:`fig-structured-grid-hierarchy`.
 
 
 .. _rectilinear-grids:
+
 Rectilinear Grid
 ----------------
 
@@ -36,6 +37,7 @@ This allows non-uniform discretization, enabling local grid refinement
 in regions of interest while preserving a structured topology.
 
 .. _regular-grids:
+
 Regular Grid
 ------------
 
@@ -53,6 +55,7 @@ This structure simplifies numerical implementation while still allowing
 anisotropic resolution.
 
 .. _cartesian-grids:
+
 Cartesian Grid
 --------------
 

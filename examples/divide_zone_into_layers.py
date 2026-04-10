@@ -1,5 +1,5 @@
 from petres.interpolators import IDWInterpolator
-from petres.models.horizon import Horizon
+from petres.models import Horizon
 import numpy as np
 
 
@@ -10,7 +10,9 @@ import numpy as np
 xy = np.array([[0, 0], [1, 5], [2, 1], [1, 1]])
 z = np.array([0, 1, 1, 0])
 horizon = Horizon(name="Horizon", interpolator=IDWInterpolator(), xy=xy, depth=z)
+horizon.show3d(z_scale=3, x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50), title="Horizon")
 zone = horizon.to_zone(name="Zone", depth=2)  # creates a Zone with base shifted 2 units deeper than horizon
+zone.show3d(z_scale=3, x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50), title="Zone")
 zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50))
 
 # Divide the zone into 4 equal layers:
@@ -21,3 +23,5 @@ zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50))
 # Divide the zone into 3 layers with specified thickness fractions in increasing depth order: 
 zone.divide(fractions=[0.15, 0.5, 0.35])
 zone.show(x=np.linspace(0, 5, 50), y=np.linspace(0, 5, 50))
+
+

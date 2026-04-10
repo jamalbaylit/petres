@@ -76,7 +76,7 @@ class Matplotlib2DViewerTheme:
     margins: float = 0.03
 
     # Grid
-    grid: bool = True
+    grid: bool = False
     grid_alpha: float = 0.18
     grid_linestyle: str = "--"
     grid_linewidth: float = 0.6

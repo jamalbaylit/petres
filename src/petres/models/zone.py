@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 import numpy as np
 
+from .wells import VerticalWell, _validate_well_sequence
 
 @dataclass(frozen=True)
 class Zone:
@@ -67,6 +68,8 @@ class Zone:
         dx: float | None = None,
         dy: float | None = None,
         view: Literal["3d", "2d"] = "3d",
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
+
     ) -> None:
         """
         Render the zone in 3D or 2D.
@@ -99,9 +102,9 @@ class Zone:
         """
         view = view.strip().lower()
         if view == "3d":
-            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
         elif view == "2d":
-            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
         else:
             raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
 
@@ -116,10 +119,12 @@ class Zone:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-
+        z_scale: float = 1.0,
+        title: str | Literal["auto"] | None = "auto",
         color: Any | None = 'gray',
         show_layers: bool = True,
         show_edges: bool = True,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
     ) -> None:
         """
         Render the zone in an interactive 3D PyVista scene.
@@ -143,20 +148,34 @@ class Zone:
             Whether to render internal layers derived from `levels`.
         show_edges : bool, default True
             Whether to draw mesh edges.
+        title : str or 'auto', default 'auto'
+            Window title; ``'auto'`` uses the property name.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
 
         Examples
         --------
         >>> zone.show3d(x=[0, 100], y=[0, 50], ni=50, nj=25, color="lightgray")
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        title="Zone: " + self.name
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
+        
+        title = self._get_plot_title(title)
+
         viewer.add_zone(
             self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
             color=color,
             show_layers=show_layers,
             show_edges=show_edges,
         )
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
 
     def show2d(
@@ -176,6 +195,7 @@ class Zone:
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
         title: str | None = 'auto',
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -206,6 +226,9 @@ class Zone:
             Axes aspect ratio.
         title : str or None, default 'auto'
             Plot title; when 'auto' uses the zone name.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
+
         **kwargs
             Additional keyword arguments forwarded to the Matplotlib surface helper.
 
@@ -216,8 +239,8 @@ class Zone:
         from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
         from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
         
-        if title == 'auto':
-            title = "Zone: " + self.name
+        title = self._get_plot_title(title)
+        
         viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
         viewer.add_zone(
             self, 
@@ -231,8 +254,19 @@ class Zone:
             contour_levels=contour_levels,
             **kwargs
         )
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
 
+    def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
+        if title == 'auto':
+            return f"Zone: {self.name}"
+        elif title is not None:
+            return str(title)
+        else:
+            return None
+        
+        
     def divide(
         self,
         *,

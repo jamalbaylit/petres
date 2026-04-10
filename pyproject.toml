@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68", "wheel", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "petres"
-version = "0.1.0rc5"
+dynamic = ["version"]
 description = "Petres: lightweight Python library for reservoir grid modeling and visualization"
 readme = { file = "README.md", content-type = "text/markdown" }
 
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
     { name = "Tayfun Jamalbayli", email = "jamalbaylit@gmail.com"  }
@@ -38,8 +38,6 @@ classifiers = [
 
     # Python versions you officially support/test
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3 :: Only",
@@ -107,6 +105,9 @@ llm = [
     "tqdm>=4.67.3",
 ]
 
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
 
 [tool.uv.dependency-groups]
 docs = {requires-python = ">=3.11"}

@@ -1,22 +1,24 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Self
+from typing import Any
+import pyvista as pv
 import numpy as np
 
-import pyvista as pv
+from ....models.wells import VerticalWell, _validate_well_sequence
+from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.cornerpoint import _add_corner_point_grid
-from .layers.pillars import _add_pillars
 from .theme import PyVista3DViewerTheme, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
-from ....grids.sampling._vertices import _resolve_xy_vertices
+from ....grids.pillars import PillarGrid
+from .layers.pillars import _add_pillars
 from .layers.surface import _add_surface
-from petres.grids.pillars import PillarGrid
-from ...._utils._color import Color
 from ....models.horizon import Horizon
+from .._core.base import Base3DViewer
+from .layers.wells import _add_well
+from ...._utils._color import Color
 from .layers.zone import _add_zone
 from ....models.zone import Zone
-from .._core.base import Base3DViewer
 
 
 class PyVista3DViewer(Base3DViewer):
@@ -40,6 +42,7 @@ class PyVista3DViewer(Base3DViewer):
     theme: PyVista3DViewerTheme
     camera: Camera3D
     plotter: pv.Plotter
+    _deferred_point_labels: list[tuple[np.ndarray, list[str], dict[str, Any]]]
 
     def __init__(
         self, 
@@ -63,6 +66,9 @@ class PyVista3DViewer(Base3DViewer):
             depth_down=True
         ))
         self.set_plotter(plotter or pv.Plotter())  
+        self._deferred_point_labels = []
+
+
 
     def set_plotter(self, plotter: pv.Plotter) -> None:
         """Assign the underlying PyVista plotter.
@@ -121,16 +127,35 @@ class PyVista3DViewer(Base3DViewer):
             Theme values controlling background color and axes visibility.
         """
         p = self.plotter
+        p.set_scale(*theme.scale)
         p.set_background(theme.background, top=theme.background)
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
         p.show_bounds(
+            ticks='outside',
             grid='back',
+            all_edges=False,
+            show_zaxis=True,
             location='outer',
-            all_edges=True,
-        ) if theme.show_coordinate_axes else p.remove_bounds_axes()
-        # p.set_scale(*theme.scale)
-        # p.camera.up = theme.camera_up
+        ) if theme.show_coordinate_axes else p.hide_bounds()
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
+
+    def _defer_point_labels(
+        self,
+        points: np.ndarray,
+        labels: list[str],
+        **kwargs: Any,
+    ) -> None:
+        self._deferred_point_labels.append((np.asarray(points, dtype=float), labels, kwargs))
+
+    def _flush_deferred_point_labels(self) -> None:
+        if not self._deferred_point_labels:
+            return
+
+        scale = np.asarray(self.theme.scale, dtype=float)
+        for points, labels, kwargs in self._deferred_point_labels:
+            self.plotter.add_point_labels(points * scale, labels, **kwargs)
+
+        self._deferred_point_labels.clear()
 
     def reset_camera(self) -> None:
         """Reset camera position and clipping range to defaults."""
@@ -145,9 +170,11 @@ class PyVista3DViewer(Base3DViewer):
         title : str or None, default=None
             Optional scene title text displayed at the configured theme position.
         """
+
+        # Always apply an explicit scale so repeated calls are deterministic.
         self.apply_theme(self.theme)
-        # self.plotter.set_viewup((-1, 0, 0))
-        # self._set_y_front_slight_top(self.plotter, tilt=0.5)
+        self._flush_deferred_point_labels()
+        self.apply_camera(self.camera)
         if title:
             self.plotter.add_text(
                 str(title),
@@ -155,9 +182,11 @@ class PyVista3DViewer(Base3DViewer):
                 font_size=self.theme.title_fontsize,
                 color=self.theme.title_color,
             )
-        self.apply_camera(self.camera)
+
         self.plotter.show()
+        self.plotter.close()
         self.plotter = pv.Plotter()
+
         
     def add_grid(
         self, 
@@ -168,7 +197,7 @@ class PyVista3DViewer(Base3DViewer):
         scalars: np.ndarray | None = None,
         cmap: str | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a supported grid to the current 3D scene.
 
         Parameters
@@ -188,7 +217,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
 
         Raises
@@ -197,12 +226,11 @@ class PyVista3DViewer(Base3DViewer):
             If ``grid`` is not a supported grid type.
         """
 
-        match grid:
-            case CornerPointGrid():
-                self._add_corner_point_grid(grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color,**kwargs)
-            case _:
-                raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
-        return self
+        if isinstance(grid, CornerPointGrid): 
+            self._add_corner_point_grid(grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color,**kwargs)
+            return self
+        
+        raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
 
     def add_pillars(
         self,
@@ -211,7 +239,7 @@ class PyVista3DViewer(Base3DViewer):
         color: Any = "black",
         line_width: float = 2.5,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a pillar grid to the current 3D scene.
 
         Parameters
@@ -227,7 +255,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         _add_pillars(
@@ -238,6 +266,37 @@ class PyVista3DViewer(Base3DViewer):
             line_width=line_width,
             **kwargs,
         )
+        return self
+
+    def add_wells(
+        self,
+        wells: Sequence[VerticalWell] | VerticalWell,
+        *,
+        label_font_size: float=15,
+        label_color: Any='red',
+        line_color: Any='red',
+        line_width: float=2.0,
+        **kwargs: Any,
+    ) -> PyVista3DViewer:
+        
+        wells = _validate_well_sequence(wells)
+        line_color = Color(line_color).as_rgb() if line_color is not None else None
+        label_color = Color(label_color).as_rgb() if label_color is not None else None
+
+        for well in wells:
+            _add_well(
+                self,
+                well_x=well.x,
+                well_y=well.y,
+                well_top=None,
+                well_bottom=None,
+                well_name=well.name,
+                label_font_size=label_font_size,
+                label_color=label_color,
+                line_color=line_color,
+                line_width=line_width,
+                **kwargs,
+            )
         return self
     
     def apply_camera(self, cam: Camera3D) -> None:
@@ -336,7 +395,7 @@ class PyVista3DViewer(Base3DViewer):
         show_layers: bool = True,
         cmap: str = "gist_rainbow",
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add multiple zones to the scene using a discrete colormap.
 
         Parameters
@@ -368,7 +427,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(
@@ -397,7 +456,7 @@ class PyVista3DViewer(Base3DViewer):
         color: Any | None = None,
         show_layers: bool = True,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a single zone to the scene.
 
         Parameters
@@ -429,7 +488,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(
@@ -459,7 +518,7 @@ class PyVista3DViewer(Base3DViewer):
         scalars: bool = True,
         cmap: str | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add a single horizon surface to the scene.
 
         Parameters
@@ -493,7 +552,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(
@@ -520,7 +579,7 @@ class PyVista3DViewer(Base3DViewer):
         dy: float | None = None,
         cmap: str = "turbo",
         **kwargs: Any,
-    ) -> Self:
+    ) -> PyVista3DViewer:
         """Add multiple horizons to the scene with distinct colors.
 
         Parameters
@@ -550,7 +609,7 @@ class PyVista3DViewer(Base3DViewer):
 
         Returns
         -------
-        Self
+        PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
         x, y = _resolve_xy_vertices(

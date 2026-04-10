@@ -7,5 +7,6 @@ Public API for viewers.
    :maxdepth: 1
 
    Matplotlib2DViewer <petres-viewers-matplotlib2dviewer>
+   Matplotlib2DViewerTheme <petres-viewers-matplotlib2dviewertheme>
    PyVista3DViewer <petres-viewers-pyvista3dviewer>
-   Viewer2DTheme <petres-viewers-viewer2dtheme>
+   PyVista3DViewerTheme <petres-viewers-pyvista3dviewertheme>

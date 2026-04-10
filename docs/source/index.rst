@@ -2,8 +2,7 @@ Welcome to Petres
 =================
 
 Petres is a lightweight, open-source Python library for reservoir grid modeling, 
-providing a fully programmatic approach to constructing :ref:`Corner-Point grid <corner-point-grid>` models. 
-
+providing a fully programmatic approach to constructing :ref:`Corner-Point grid <corner-point-grids>` models. 
 
 .. important::
    
@@ -115,7 +114,7 @@ Technical Architecture
    * - 3D Visualization
      - Interactive 3D rendering and mesh visualization via *PyVista*.
    * - Kriging Interpolation
-     - :ref:`Ordinary and Universal Kriging <kriging-interpolation>` implemented via *PyKrige*.
+     - :ref:`Ordinary <ok-interpolation>` and :ref:`Universal <uk-interpolation>` Kriging implemented via *PyKrige*.
    * - RBF Interpolation
      - Multi-dimensional :ref:`Radial Basis Function <rbf-interpolation>` interpolation utilizing *SciPy*.
    * - IDW Interpolation
@@ -127,7 +126,7 @@ Getting Started
 ---------------
 Start modeling with Petres by following the :doc:`Installation Guide <getting-started/installation>` 
 and the :doc:`Quickstart Tutorial <getting-started/quickstart>`.
-The source code is also available on GitHub: `Petres Repository <https://github.com/jamalbaylit/petres>`_.
+The source code is also available on `GitHub <https://github.com/jamalbaylit/petres>`_.
 
 Contact
 -------
