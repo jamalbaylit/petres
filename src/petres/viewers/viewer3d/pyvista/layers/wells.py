@@ -77,7 +77,7 @@ def _add_well(
         
 
     # label_pos = (well_x * t.xscale, well_y * t.yscale, (well_top - z_offset) * t.zscale)
-    label_pos = (well_x, well_y, well_top)
+    label_pos = (well_x, well_y, well_bottom)
     point_labels = np.asarray([label_pos])
     labels = [well_name]
     label_kwargs = dict(
