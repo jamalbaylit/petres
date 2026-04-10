@@ -336,7 +336,7 @@ class VerticalWell:
 
 def _validate_well_sequence(
     wells: VerticalWell | list[VerticalWell] | tuple[VerticalWell, ...]
-) -> tuple[VerticalWell]:
+) -> tuple[VerticalWell, ...]:
     """Validate that the input is a VerticalWell or a sequence of VerticalWells."""
 
     if isinstance(wells, VerticalWell):

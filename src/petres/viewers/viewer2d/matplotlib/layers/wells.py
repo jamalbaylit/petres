@@ -6,7 +6,6 @@ from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
 from matplotlib import patheffects
 
-from .....models.wells import VerticalWell
 
 
 def _add_well(
