@@ -20,6 +20,34 @@ A grid can be imported directly from a ``.GRDECL`` file using the :meth:`~petres
    grid = CornerPointGrid.from_grdecl("model.grdecl")
    grid.show()
 
+Interactive Example (Norne)
+---------------------------
+
+This page can also include a browser-based interactive 3D rendering exported as HTML.
+The interactive file below is generated from the Norne grid in ``examples/data/corner_point/Norne.GRDECL``.
+
+To regenerate the interactive HTML:
+
+.. code-block:: bash
+
+   python docs/scripts/generate_importing_grid_interactive.py
+
+.. raw:: html
+
+   <iframe
+     src="../_static/tutorials/importing-grid-norne-interactive.html"
+     width="100%"
+     height="560"
+     style="border: 1px solid #d9d9d9; border-radius: 8px;"
+     loading="lazy"
+     title="Interactive Norne grid viewer">
+   </iframe>
+
+.. note::
+
+   If your browser blocks local iframe content when previewing docs directly from files,
+   run Sphinx and open the served HTML output instead.
+
 By default, this method automatically reads:
 
 - Grid geometry (``COORD``, ``ZCORN``, ``SPECGRID``, or ``DIMENS``)
