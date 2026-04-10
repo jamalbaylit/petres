@@ -87,4 +87,6 @@ Next Steps
 
 - :doc:`grid-visualization`
 - :doc:`property-modeling`
+- :doc:`boundary-polygon`
+- :doc:`mapping-wells-to-grid-cells`
 - :doc:`exporting-grid`

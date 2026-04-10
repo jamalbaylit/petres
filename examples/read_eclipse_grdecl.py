@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # grid = CornerPointGrid.from_grdecl(path, properties=["PORO", "PERMX"])
     grid = CornerPointGrid.from_grdecl(path)
     # Visualize grid in 3D viewer
-    grid.show(show_inactive=True, scalars="top")
+    grid.show(show_inactive=False, scalars="depth", z_scale=5)
 
 
 

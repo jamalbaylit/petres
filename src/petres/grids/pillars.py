@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any
 
 import numpy as np
 
@@ -152,7 +152,7 @@ class PillarGrid:
         )
     
     @classmethod
-    def from_eclipse_coord(cls, coord: np.ndarray) -> Self:
+    def from_eclipse_coord(cls, coord: np.ndarray) -> PillarGrid:
         """Create PillarGrid from Eclipse COORD array.
 
         Parameters
@@ -262,7 +262,7 @@ class PillarGrid:
         dy: float | None = None,
         top: float = 0.0,
         base: float = 1.0,
-    ) -> Self:
+    ) -> PillarGrid:
         """Construct a vertical pillar grid from bounding box and resolution.
 
         Parameters
@@ -317,6 +317,7 @@ class PillarGrid:
         title: str | None = None,
         color: Any = "black",
         line_width: float = 6.0,
+        z_scale: float = 1.0,
         **kwargs: Any,
     ) -> None:
         """Render the pillar grid in the 3D PyVista viewer.
@@ -329,6 +330,8 @@ class PillarGrid:
             Color used for the pillar lines and direction arrows.
         line_width : float, default=6.0
             Width used for the rendered pillar lines.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis.
         **kwargs
             Forwarded to the viewer's pillar layer renderer.
 
@@ -337,9 +340,14 @@ class PillarGrid:
         None
             Opens an interactive 3D rendering window.
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
 
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
         viewer.add_pillars(self, color=color, line_width=line_width, **kwargs)
         viewer.show(title=title)
 

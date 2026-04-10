@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from petres.grids import PillarGrid
-from petres.models import Horizon, Zone
+from petres.models import Horizon, VerticalWell, Zone
 from petres.viewers import Viewer2D, Viewer2DTheme
 
 
@@ -90,6 +90,9 @@ def test_pillar_grid_show_delegates_to_pyvista_viewer(monkeypatch, simple_pillar
     calls = {"added": False, "shown": False, "pillars": None}
 
     class DummyViewer:
+        def __init__(self, *args, **kwargs):
+            pass
+
         def add_pillars(self, pillars, *args, **kwargs):
             calls["added"] = True
             calls["pillars"] = pillars
@@ -130,3 +133,54 @@ def test_add_pillars_forwards_raw_arrays(monkeypatch, simple_pillar_grid):
     assert calls["pillar_bottom"] is simple_pillar_grid.pillar_bottom
     assert calls["kwargs"]["color"] == "red"
     assert calls["kwargs"]["line_width"] == 4.0
+
+
+def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    calls = {}
+
+    def fake_add_well(backend, *, well_x, well_y, well_top, well_bottom, well_name, **kwargs):
+        calls["backend"] = backend
+        calls.setdefault("wells", []).append(
+            {
+                "well_x": well_x,
+                "well_y": well_y,
+                "well_top": well_top,
+                "well_bottom": well_bottom,
+                "well_name": well_name,
+            }
+        )
+        calls["kwargs"] = kwargs
+
+    monkeypatch.setattr(viewer_mod, "_add_well", fake_add_well)
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.theme = viewer_mod.PyVista3DViewerTheme(scale=(1.0, 1.0, 2.0))
+    viewer.plotter = None
+
+    wells = [
+        VerticalWell(name="W1", x=0.0, y=0.0, tops={"Top": 10.0, "Base": 20.0}),
+        VerticalWell(name="W2", x=50.0, y=25.0, tops={"Top": 12.0, "Base": 22.0}),
+    ]
+
+    viewer.add_wells(
+        wells,
+        color="red",
+        line_width=2.5,
+        show_tops=True,
+        label_top="Top",
+    )
+
+    assert calls["backend"] is viewer
+    assert len(calls["wells"]) == 2
+    assert calls["wells"][0]["well_name"] == "W1"
+    assert calls["wells"][1]["well_name"] == "W2"
+    assert calls["kwargs"]["label_font_size"] == 15
+    assert calls["kwargs"]["line_color"] == (1.0, 0.0, 0.0)
+    assert calls["kwargs"]["label_color"] == (1.0, 0.0, 0.0)
+    assert calls["kwargs"]["line_width"] == 2.5
+    assert calls["kwargs"]["show_tops"] is True
+    assert calls["kwargs"]["label_top"] == "Top"

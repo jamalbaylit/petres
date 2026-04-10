@@ -1,27 +1,26 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Self
 
+from typing import Any, Literal, Sequence
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 
-from .layers.boundary import _add_boundary_polygon
-from .layers.surface import _add_surface
-from .theme import Matplotlib2DViewerTheme
-from .._core.base import Base2DViewer
+
+from ....models.wells import VerticalWell, _validate_well_sequence
 from ....grids.sampling._vertices import _resolve_xy_vertices
+from .layers.boundary import _add_boundary_polygon
 from ....models.boundary import BoundaryPolygon
+from .theme import Matplotlib2DViewerTheme
+from .layers.surface import _add_surface
 from ....models.horizon import Horizon
+from .._core.base import Base2DViewer
+from .layers.wells import _add_well
 from ....models.zone import Zone
 
 
-ColorLike = (
-    str
-    | tuple[float, float, float]
-    | tuple[float, float, float, float]
-)
+
 
 
 class Matplotlib2DViewer(Base2DViewer):
@@ -125,7 +124,9 @@ class Matplotlib2DViewer(Base2DViewer):
         title : str or None, default=None
             Optional title text shown above the axes.
         """
-        self.ax.relim()
+        # Avoid relim(): it can miss Collection artists (e.g. scatter/pcolormesh).
+        self.ax.margins(x=self.theme.margins, y=self.theme.margins)
+        self.ax.autoscale(enable=True, axis="both", tight=False)
         self.ax.autoscale_view()
         if title:
             self.ax.set_title(str(title), fontsize=self.theme.title_fontsize, pad=10)
@@ -145,7 +146,7 @@ class Matplotlib2DViewer(Base2DViewer):
         dx: float | None = None,
         dy: float | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> Matplotlib2DViewer:
         """Add a horizon map to the 2D axes.
 
         The method resolves/derives 1D vertex coordinates, samples the horizon on
@@ -223,7 +224,7 @@ class Matplotlib2DViewer(Base2DViewer):
         dy: float | None = None,
         mode: Literal["top", "base", "thickness"] = "thickness",
         **kwargs: Any,
-    ) -> Self:
+    ) -> Matplotlib2DViewer:
         """Add a zone scalar map to the 2D axes.
 
         The method samples the zone top/base surfaces on a resolved grid and plots
@@ -302,21 +303,21 @@ class Matplotlib2DViewer(Base2DViewer):
         self,
         boundary: BoundaryPolygon,
         *,
-        facecolor: ColorLike = "#7ec8e3",
-        edgecolor: ColorLike = "#1f2937",
+        facecolor: Any = "#7ec8e3",
+        edgecolor: Any = "#1f2937",
         linewidth: float = 1.8,
         alpha: float = 0.30,
         show_fill: bool = True,
         show_vertices: bool = False,
-        vertex_color: ColorLike | None = None,
+        vertex_color: Any | None = None,
         vertex_size: float = 24.0,
-        show_label: bool = True,
+        show_label: bool = False,
         label: str | None = None,
         label_fontsize: float = 10.0,
         label_box: bool = True,
         pad_ratio: float | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> Matplotlib2DViewer:
         """
         Add a boundary polygon overlay to the 2D axes.
 
@@ -381,4 +382,87 @@ class Matplotlib2DViewer(Base2DViewer):
             pad_ratio=self.theme.margins if pad_ratio is None else pad_ratio,
             **kwargs,
         )
+        return self
+    
+    def add_wells(
+        self,
+        wells: VerticalWell | Sequence[VerticalWell],
+        *,
+        marker: str = "o",
+        marker_size: float = 56.0,
+        marker_color: Any = "#b91c1c",
+        marker_edgecolor: Any = "white",
+        marker_edgewidth: float = 0.9,
+        show_label: bool = True,
+        label: str | None = None,
+        label_fontsize: float = 9.5,
+        label_color: Any = "#111827",
+        label_offset: tuple[float, float] = (6.0, 6.0),
+        zorder: float = 5.0,
+        **kwargs: Any,
+    ) -> Matplotlib2DViewer:
+        """
+        Add vertical wells to the 2D axes as markers with optional labels.
+
+        Parameters
+        ----------
+        wells : VerticalWell or Sequence[VerticalWell]
+            Single well or sequence of wells to plot.
+        marker : str, default='o'
+            Marker style used for each well.
+        marker_size : float, default=56.0
+            Marker size in points^2.
+        marker_color : Any, default='#b91c1c'
+            Marker face color.
+        marker_edgecolor : Any, default='white'
+            Marker edge color.
+        marker_edgewidth : float, default=0.9
+            Marker edge line width.
+        show_label : bool, default=True
+            Whether to render labels for wells.
+        label : str or None, default=None
+            Optional fixed label text for all wells; defaults to each well name.
+        label_fontsize : float, default=9.5
+            Label text size.
+        label_color : Any, default='#111827'
+            Label color.
+        label_offset : tuple[float, float], default=(6.0, 6.0)
+            Label offset in points from marker center.
+        zorder : float, default=5.0
+            Base drawing order for well marker/label.
+        **kwargs : Any
+            Extra keyword arguments forwarded to Matplotlib ``Axes.scatter``.
+
+        Returns
+        -------
+        Matplotlib2DViewer
+            The viewer instance (for chaining).
+
+        Raises
+        ------
+        TypeError
+            If ``wells`` is not a ``VerticalWell`` or a sequence of them.
+        """
+        wells = _validate_well_sequence(wells)
+
+        for well in wells:
+            _add_well(
+                self.ax,
+                well.x,
+                well.y,
+                well.name,
+                marker=marker,
+                marker_size=marker_size,
+                marker_color=marker_color,
+                marker_edgecolor=marker_edgecolor,
+                marker_edgewidth=marker_edgewidth,
+                show_label=show_label,
+                label=label,
+                label_fontsize=label_fontsize,
+                label_color=label_color,
+                label_offset=label_offset,
+                zorder=zorder,
+                **kwargs,
+            )
+
         return self

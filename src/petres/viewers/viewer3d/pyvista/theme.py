@@ -48,8 +48,8 @@ class Camera3D:
     depth_down: bool = True
 
 Color = str | tuple[float, float, float] 
-@dataclass(frozen=True)
 
+@dataclass(frozen=True)
 class PyVista3DViewerTheme(Base3DViewerTheme):
     """Configure visual theme and camera settings for a 3D scene.
 
@@ -71,6 +71,7 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
         Viewer-specific anchor position for title placement.
     camera : Camera3D, default=Camera3D()
         Camera configuration applied to the scene.
+    
     """
 
     background: Color = "white"

@@ -16,7 +16,7 @@ Boundary polygons can be defined by specifying the vertices of the polygon in :m
 
 .. code-block:: python
 
-    from petres.models.boundary import BoundaryPolygon
+    from petres.models import BoundaryPolygon
 
     boundary = BoundaryPolygon(
         name="Boundary", 
@@ -28,6 +28,19 @@ Boundary polygons can be defined by specifying the vertices of the polygon in :m
 
 Here, the ``vertices`` parameter defines the coordinates of the polygon corners. The ``name`` parameter is optional and can be used to label the polygon.  
 The :meth:`~petres.models.BoundaryPolygon.show` method visualizes the polygon in 2D space.
+
+You can also overlay wells on the boundary visualization:
+
+.. code-block:: python
+
+    from petres.models import VerticalWell
+
+    well1 = VerticalWell(name="Well 1", x=0.5, y=2.5)
+    well2 = VerticalWell(name="Well 2", x=1.5, y=3.5)
+
+    boundary.show(wells=[well1, well2])
+
+
 
 Using a Bounding Box
 ~~~~~~~~~~~~~~~~~~~~
@@ -49,7 +62,7 @@ Once the boundary polygon is defined, you can apply it to a :class:`~petres.grid
 
 .. code-block:: python
 
-    from petres.models.grid import CornerPointGrid
+    from petres.grids import CornerPointGrid
 
     # Load grid from a grdecl file
     grid = CornerPointGrid.from_grdecl("path_to_file.GRDECL")

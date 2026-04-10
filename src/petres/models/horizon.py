@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -9,7 +9,7 @@ from numpy.typing import ArrayLike
 
 
 from ..interpolators.base import BaseInterpolator
-from ..models.wells import VerticalWell
+from ..models.wells import VerticalWell, _validate_well_sequence
 from .zone import Zone
 
 
@@ -24,10 +24,10 @@ class Horizon:
     interpolator : BaseInterpolator
         Fitted in ``__post_init__`` on the provided ``xy``/``depth`` picks.
         Must accept 2D inputs.
-    xy : ndarray of shape (n, 2)
+    xy : ndarray with dimensions (n, 2)
         XY coordinates for the picked horizon points.
-    depth : ndarray of shape (n,)
-        Depth values for each pick. Must align with ``xy`` rows.
+    depth : ndarray with dimensions (n,)
+        Depth values for each pick. Must align with the rows of ``xy``.
     store_picks : bool, default True
         Whether to retain the raw picks after fitting. Set to ``False`` to
         minimize memory once the interpolator is trained.
@@ -49,8 +49,8 @@ class Horizon:
         Raises
         ------
         ValueError
-            If ``xy`` is not shape ``(n, 2)`` or ``depth`` does not match
-            ``xy`` length.
+            If ``xy`` does not have dimensions ``(n, 2)`` or ``depth`` does
+            not match the number of picks.
         TypeError
             If the interpolator is not a ``BaseInterpolator`` instance or does
             not support 2D coordinates.
@@ -194,13 +194,13 @@ class Horizon:
 
         Parameters
         ----------
-        xy : array-like of shape (n, 2)
+        xy : array-like with dimensions (n, 2)
             Points containing x and y coordinates.
 
         Returns
         -------
         ndarray
-            Depth values of shape (n,).
+            Depth values with length ``n``.
 
         Raises
         ------
@@ -231,7 +231,8 @@ class Horizon:
         Returns
         -------
         ndarray
-            Depth array of shape (len(y), len(x)) matching meshgrid (y, x) order.
+            Depth array with dimensions ``(len(y), len(x))`` matching
+            ``meshgrid(y, x)`` order.
 
         Examples
         --------
@@ -278,6 +279,7 @@ class Horizon:
         dx: float | None = None,
         dy: float | None = None,
         view: Literal["3d", "2d"] = "3d",
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
     ) -> None:
         """Render the horizon in either 3D or 2D.
 
@@ -304,6 +306,8 @@ class Horizon:
             Cell size along y when using `ylim`. Mutually exclusive with `nj`.
         view : {'3d', '2d'}, default '3d'
             Target visualization backend. Use '3d' for PyVista, '2d' for Matplotlib.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
 
         Raises
         ------
@@ -317,9 +321,9 @@ class Horizon:
         """
         view = view.strip().lower()
         if view == "3d":
-            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
         elif view == "2d":
-            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy)
+            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
         else:
             raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
         
@@ -337,7 +341,9 @@ class Horizon:
         color: Any | None = "tan",
         scalars: bool = True,
         cmap: str | None = "turbo",
-        title: str | None = "auto",
+        title: str | Literal["auto"] | None = "auto", 
+        z_scale: float = 1.0,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
     ) -> None:
         """Render the horizon in an interactive 3D PyVista scene.
 
@@ -361,15 +367,23 @@ class Horizon:
             Whether to color by depth values.
         cmap : str or None, default 'turbo'
             Colormap name applied when `scalars` is True.
-        title : str or None, default 'auto'
-            Figure title; when 'auto' uses the horizon name.
+        title : str or 'auto', default 'auto'
+            Window title; ``'auto'`` uses the property name.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis to exaggerate vertical relief.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
 
         Examples
         --------
         >>> horizon.show3d(x=[0, 100], y=[0, 100], ni=50, nj=50, cmap="viridis")
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
         viewer.add_horizon(
             self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
             color=color, 
@@ -378,8 +392,10 @@ class Horizon:
             show_colorbar=True,
             colorbar_title='Depth',
         )
-        if title == 'auto':
-            title = "Horizon: " + self.name
+        title = self._get_plot_title(title)
+
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
 
     def show2d(
@@ -397,6 +413,8 @@ class Horizon:
         show_contours: bool = True,
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
+        title: str | Literal["auto"] | None = "auto",
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any,
     ) -> None:
         """Render the horizon as a 2D Matplotlib map.
@@ -422,6 +440,10 @@ class Horizon:
             Number of contour levels.
         aspect : {'auto', 'equal'}, default 'auto'
             Axes aspect ratio.
+        title : str or 'auto', default 'auto'
+            Window title; ``'auto'`` uses the property name.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
         **kwargs
             Additional keyword arguments forwarded to the Matplotlib surface helper.
 
@@ -431,9 +453,9 @@ class Horizon:
         """
         from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
         from ..viewers.viewer2d.matplotlib.theme import Matplotlib2DViewerTheme
-
-        title="Horizon: " + self.name
+        
         viewer = Matplotlib2DViewer(theme = Matplotlib2DViewerTheme(aspect=aspect))
+        
         viewer.add_horizon(
             self, 
             x=x, y=y, 
@@ -445,7 +467,18 @@ class Horizon:
             contour_levels=contour_levels,
             **kwargs
         )
+        title = self._get_plot_title(title)
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
+
+    def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
+        if title == 'auto':
+            return f"Horizon: {self.name}"
+        elif title is not None:
+            return str(title)
+        else:
+            return None
 
     def _validate_interpolator(self, interpolator: Any) -> BaseInterpolator:
         """Validate interpolator type and dimensional support.

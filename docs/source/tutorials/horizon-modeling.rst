@@ -52,7 +52,7 @@ and interpolator controls how the continuous surface is reconstructed from these
 .. note::
 
    The choice of interpolator affects the geometry of the surface.  
-   See :doc:`/tutorials/interpolators` for more details and available options.
+   See :doc:`/tutorials/interpolators` page for more details and available options.
 
 .. _horizon-from-wells:
 
@@ -110,6 +110,7 @@ After the horizon is created, you can find the depth where it intersects **any w
 
 
 .. _horizon-visualization:
+
 Visualizing a Horizon
 ---------------------
 
@@ -187,6 +188,16 @@ To visualize the horizon in 2D, set ``view="2d"``:
 For more advanced control over the visualization, Petres provides separate
 :meth:`~petres.models.Horizon.show2d` and :meth:`~petres.models.Horizon.show3d` methods,
 which offer additional customization options for 2D and 3D plots, respectively. 
+
+Wells can also be visualized alongside horizons by passing them to the ``wells`` argument:
+
+.. code-block:: python
+
+   horizon1.show(
+      x=np.linspace(0, 100, 50),
+      y=np.linspace(0, 100, 50),
+      wells=[well1, well2, well3]
+   )
 
 
 Visualizing Multiple Horizons

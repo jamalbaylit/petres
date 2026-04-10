@@ -14,7 +14,8 @@ __all__ = [
     "PyVista3DViewer",
     "Viewer2D",
     "Matplotlib2DViewer",
+    "Matplotlib2DViewerTheme",
     "Viewer2DTheme",
-    "Viewer3DTheme"
-    "PyVista3DViewerTheme"
+    "Viewer3DTheme",
+    "PyVista3DViewerTheme",
 ]

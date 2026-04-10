@@ -47,7 +47,7 @@ def test_property_from_wells_then_apply_transform(simple_cornerpoint_grid):
     poro = simple_cornerpoint_grid.properties.create("poro")
     perm = simple_cornerpoint_grid.properties.create("perm")
 
-    poro.from_wells(wells, interpolator=IDWInterpolator(power=2.0), source="poro", mode="xy")
+    poro.from_wells(wells, interpolator=IDWInterpolator(power=2.0), source="poro")
     perm.apply(lambda p: 1000.0 * p**3, source=poro)
 
     assert np.all(np.isfinite(perm.values[simple_cornerpoint_grid.active]))

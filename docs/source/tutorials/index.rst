@@ -9,8 +9,13 @@ The tutorials present Petres through practical workflows, beginning with direct 
 #. :doc:`zone-modeling`
 #. :doc:`pillar-gridding`
 #. :doc:`grid-modeling-from-horizons-and-zones`
+#. :doc:`grid-visualization`
 #. :doc:`property-modeling`
+#. :doc:`boundary-polygon`
+#. :doc:`mapping-wells-to-grid-cells`
+#. :doc:`interpolators`
 #. :doc:`exporting-grid`
+#. :doc:`importing-grid`
 
 .. toctree::
    :maxdepth: 1
@@ -24,6 +29,8 @@ The tutorials present Petres through practical workflows, beginning with direct 
    grid-visualization
    property-modeling
    boundary-polygon
+   mapping-wells-to-grid-cells
+   interpolators
    exporting-grid
    importing-grid
    

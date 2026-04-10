@@ -63,7 +63,7 @@ You are an expert Python developer and type system reviewer. Your task is to **a
 9. **Special considerations:**  
    - Include `__post_init__` in classes if it affects instance attributes.  
    - Handle default values correctly in type hints.  
-   - Ensure that type hints are fully compatible with Python 3.9+ type annotations.
+   - Ensure that type hints are fully compatible with Python 3.10+ type annotations.
 
 ---
 

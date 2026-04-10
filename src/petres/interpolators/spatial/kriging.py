@@ -8,16 +8,12 @@ import numpy as np
 
 from ..base import BaseInterpolator
 
-try:
-    from pykrige.ok import OrdinaryKriging
-    from pykrige.ok3d import OrdinaryKriging3D
-    from pykrige.uk import UniversalKriging
-    from pykrige.uk3d import UniversalKriging3D
-except ImportError:  # pragma: no cover
-    OrdinaryKriging = None
-    OrdinaryKriging3D = None
-    UniversalKriging = None
-    UniversalKriging3D = None
+
+from pykrige.ok import OrdinaryKriging
+from pykrige.ok3d import OrdinaryKriging3D
+from pykrige.uk import UniversalKriging
+from pykrige.uk3d import UniversalKriging3D
+
 
 
 VariogramModel = Literal[
@@ -135,8 +131,6 @@ class BasePyKrigeInterpolator(BaseInterpolator):
         values : numpy.ndarray
             Training target values with shape ``(n_samples,)``.
         """
-        self._ensure_pykrige_installed()
-
         self._fit_coordinates = np.asarray(coordinates, dtype=float)
         self._fit_values = np.asarray(values, dtype=float)
         self._model = self._build_model(self._fit_coordinates, self._fit_values)
@@ -340,26 +334,6 @@ class BasePyKrigeInterpolator(BaseInterpolator):
             )
 
         return float(value[0]), float(value[1]), float(value[2])
-
-    @staticmethod
-    def _ensure_pykrige_installed() -> None:
-        """Validate that PyKrige optional dependencies are available.
-
-        Raises
-        ------
-        ImportError
-            If any required PyKrige class is unavailable.
-        """
-        if (
-            OrdinaryKriging is None
-            or OrdinaryKriging3D is None
-            or UniversalKriging is None
-            or UniversalKriging3D is None
-        ):
-            raise ImportError(
-                "PyKrige is required for kriging interpolators. "
-                "Install it with: pip install pykrige"
-            )
 
 
 class OrdinaryKrigingInterpolator(BasePyKrigeInterpolator):
@@ -650,7 +624,6 @@ class UniversalKrigingInterpolator(BasePyKrigeInterpolator):
         values : numpy.ndarray
             Training values with shape ``(n_samples,)``.
         """
-        self._ensure_pykrige_installed()
         self._validate_universal_kriging_args(coordinates, values)
 
         self._fit_coordinates = np.asarray(coordinates, dtype=float)

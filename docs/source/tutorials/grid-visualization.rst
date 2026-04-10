@@ -18,6 +18,26 @@ You can call the ``show()`` method to display the grid in an interactive 3D view
     )
     grid.show()
 
+
+Adjusting Z-Scale
+-----------------
+
+You can exaggerate or compress the vertical dimension of the grid using the ``z_scale`` parameter: 
+
+.. code-block:: python
+
+    grid.show(z_scale=3)
+
+
+``z_scale=1`` represents the default scaling with no change applied, 
+while values greater than 1 stretch the grid vertically to enhance 
+height differences, and values less than 1 compress the grid vertically.
+This is especially useful when your data has small variations in vertical 
+axis compared to horizontal axes, making features hard to see.
+
+.. note::
+    This only affects visualization and does not modify the original data.
+
 Visualizing Inactive Cells
 --------------------------
 
@@ -37,7 +57,7 @@ Petres includes several built-in grid attributes, such as ``top`` and ``active``
     grid.show(scalars="top")
     grid.show(scalars="active")
 
-You can find a full list of available grid attributes in the :ref:`<grid-attributes>` section.
+You can find a full list of available grid attributes in the :ref:`grid-attributes` section.
 
 Visualizing Grid Properties
 ---------------------------
@@ -71,3 +91,31 @@ Colors and titles can be customized for better presentation:
 .. note::
 
    For more color options, see the `Matplotlib named colors gallery <https://matplotlib.org/stable/gallery/color/named_colors.html>`_.
+
+
+Visualizing Wells
+-----------------
+
+Petres allows you to visualize vertical wells directly on top of your Corner-Point grid.
+Create one or more vertical wells using the :class:`~petres.models.VerticalWell` class and pass them
+to the grid’s :meth:`~petres.grids.CornerPointGrid.show` method:
+
+.. code-block:: python
+
+    from petres.grids import CornerPointGrid
+    from petres.models import VerticalWell
+
+    grid = CornerPointGrid.from_grdecl("path/to/your/grid.GRDECL")
+
+    # Define wells
+    well1 = VerticalWell("Well-1", x=100, y=200)
+    well2 = VerticalWell("Well-2", x=120, y=220)
+
+    # Visualize wells on the grid
+    grid.show(wells=[well1, well2])
+
+You can also pass a single well directly without wrapping it in a list:
+
+.. code-block:: python
+
+    grid.show(wells=well1)

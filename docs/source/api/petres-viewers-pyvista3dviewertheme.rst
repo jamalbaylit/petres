@@ -1,7 +1,13 @@
-UnitConverter
+PyVista3DViewerTheme
 ================================================================================
 
-.. autoclass:: petres.eclipse.UnitConverter
+**Aliases:**
+
+- ``petres.viewers.Viewer3DTheme``
+
+----
+
+.. autoclass:: petres.viewers.PyVista3DViewerTheme
    :members:
    :undoc-members:
    :show-inheritance:

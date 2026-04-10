@@ -298,7 +298,7 @@ class APIGenerator:
         if level == 0:
             lines.append(".. toctree::")
             lines.append("   :maxdepth: 2")
-            lines.append("   :caption: Categories")
+            # lines.append("   :caption: Categories")
             lines.append("")
         
         for key in sorted(tree.keys()):
@@ -435,13 +435,14 @@ class APIGenerator:
             
             # Add autodoc directive
             if obj_type == 'class':
+                exclude_members = ["__weakref__"]
                 lines.extend([
                     f".. autoclass:: {full_name}",
                     "   :members:",
                     "   :undoc-members:",
                     "   :show-inheritance:",
                     "   :special-members: __init__",
-                    "   :exclude-members: __weakref__",
+                    f"   :exclude-members: {', '.join(exclude_members)}",
                 ])
             elif obj_type == 'function':
                 lines.extend([

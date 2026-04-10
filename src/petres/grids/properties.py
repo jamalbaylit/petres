@@ -13,8 +13,9 @@ from ..interpolators.base import BaseInterpolator
 from ..errors.property import ExistingPropertyNameError, MissingEclipseKeywordError, MissingPropertyValueError, ReservedPropertyNameError
 from ..errors.eclipse import GRDECLMissingValueError
 from ..eclipse.grids.write import GRDECLWriter
-from ..models.wells import VerticalWell
+from ..models.wells import VerticalWell, _validate_well_sequence
 from ..models.zone import Zone
+
 
 if TYPE_CHECKING:
     from .cornerpoint import CornerPointGrid
@@ -126,6 +127,8 @@ class GridProperty:
         show_inactive: bool = False, 
         cmap: str | None = "turbo",
         title: str | Literal["auto"] | None = "auto", 
+        z_scale: float = 1.0,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any
     ) -> None:
         """Visualize the property in 3D using the grid viewer.
@@ -138,6 +141,10 @@ class GridProperty:
             Colormap used for rendering.
         title : str or 'auto', default 'auto'
             Window title; ``'auto'`` uses the property name.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
         **kwargs
             Forwarded to viewer ``add_grid``.
 
@@ -145,13 +152,31 @@ class GridProperty:
         -----
         ``title='auto'`` expands to ``Property: <name>``.
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        
+        
+            
+        title = self._get_plot_title(title)
+
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
         viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
-        if title == 'auto':
-            title = f"Property: {self.name}"
+        
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
-                          
+    
+    def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
+        if title == 'auto':
+            return f"Property: {self.name}"
+        elif title is not None:
+            return str(title)
+        else:
+            return None
+                     
     @property
     def shape(self) -> tuple[int, int, int]:
         """Return property array shape.
@@ -331,9 +356,7 @@ class GridProperty:
         zone: str | Zone | None = None,
         include_inactive: bool = True,
     ) -> GridProperty:
-        """
-        Apply a function to geometric sources and/or existing properties,
-        then assign the result into this property.
+        """Apply a function to one or more source arrays and store the result.
 
         Parameters
         ----------
@@ -365,15 +388,15 @@ class GridProperty:
 
         Examples
         --------
-        poro.apply(lambda z: 0.32 - 0.00015 * z, source="depth")
+        >>> poro.apply(lambda z: 0.32 - 0.00015 * z, source="depth")
 
-        perm.apply(lambda p: 1000 * p**3, source=poro)
+        >>> perm.apply(lambda p: 1000 * p**3, source=poro)
 
-        perm.apply(
-            lambda z, p: (1000 * p**3) * np.exp(-z / 3000.0),
-            source=("depth", poro),
-        )
-
+        >>> perm.apply(
+        ...     lambda z, p: (1000 * p**3) * np.exp(-z / 3000.0),
+        ...     source=("depth", poro),
+        ... )
+        
         Raises
         ------
         TypeError
@@ -670,7 +693,6 @@ class GridProperty:
         interpolator: BaseInterpolator,
         *,
         source: str | None = None,
-        mode: Literal["xy", "xyz"] = "xy",
         zone: str | Zone | None = None,
         location: Literal["center", "top", "bottom"] = "center",
         include_inactive: bool = True,
@@ -691,8 +713,11 @@ class GridProperty:
             Restrict assignment to a zone.
         include_inactive : bool, default True
             When False, only active cells are assigned.
-        mode : {"xy", "xyz"}, default "xy"
-            If "xyz", every sample must have depth values.
+        Notes
+        -----
+        Interpolation mode is inferred from well sample storage for ``source``:
+        scalar samples are interpolated in XY (2D), depth-indexed samples are
+        interpolated in XYZ (3D).
 
         Returns
         -------
@@ -702,7 +727,8 @@ class GridProperty:
         Raises
         ------
         ValueError
-            If mode, source data, or interpolator output shape is invalid.
+            If well sample modes for ``source`` are inconsistent, source data
+            is invalid, or interpolator output shape is invalid.
         TypeError
             If ``interpolator`` is not a ``BaseInterpolator`` or wells contain
             invalid entries.
@@ -711,9 +737,6 @@ class GridProperty:
         _validate_nonempty_string(source, "source")
 
         
-        if mode not in ("xy", "xyz"):
-            raise ValueError(f"Unsupported mode {mode!r}. Supported: 'xy', 'xyz'.")
-
         if not isinstance(interpolator, BaseInterpolator):
             raise TypeError("`interpolator` must be an instance of BaseInterpolator.")
          
@@ -725,10 +748,9 @@ class GridProperty:
         
             
 
-        coords, values = self._collect_well_samples(
+        coords, values, resolved_mode = self._collect_well_samples(
             wells=wells,
             source=source,
-            mode=mode,
         )
 
         mask = self.grid._target_mask(zone=zone, include_inactive=include_inactive)
@@ -742,12 +764,10 @@ class GridProperty:
 
         targets = self._interpolation_targets(location=location)
 
-        if mode == "xy":
+        if resolved_mode == "scalar":
             query = targets[..., :2][mask]
-        elif mode == "xyz":
-            query = targets[mask]
         else:
-            raise RuntimeError(f"Unexpected interpolation mode: {mode!r}")
+            query = targets[mask]
 
         interpolator.fit(coords, values)
         predicted = np.asarray(interpolator.predict(query), dtype=float)
@@ -821,8 +841,7 @@ class GridProperty:
         self,
         wells: Sequence["VerticalWell"],
         source: str,
-        mode: Literal["xy", "xyz"],
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, Literal["scalar", "depth"]]:
         """Collect interpolation coordinates and values from well samples.
 
         Parameters
@@ -831,40 +850,52 @@ class GridProperty:
             Wells providing sampled values.
         source : str
             Property key used to read values from each well.
-        mode : {"xy", "xyz"}
-            Coordinate mode for interpolation samples.
-
         Returns
         -------
-        tuple[np.ndarray, np.ndarray]
+        tuple[np.ndarray, np.ndarray, Literal["scalar", "depth"]]
             Coordinates with shape ``(n, 2)`` or ``(n, 3)`` and values with
-            shape ``(n,)``.
+            shape ``(n,)``, plus the resolved coordinate mode.
+
+        Raises
+        ------
+        ValueError
+            If wells use mixed sample modes for ``source`` or one or more
+            wells do not have samples for ``source``.
         """
         coords_list: list[list[float]] = []
         values_list: list[float] = []
-
-        require_z = mode == "xyz"
+        resolved_mode: Literal["scalar", "depth"] | None = None
+        missing_source_wells: list[str] = []
 
         for well in wells:
-            depth_map = well.samples.get(source)
-            existing_mode = well._sample_modes.get(source)
-
-            if not depth_map:
+            try:
+                sampling_mode = well.get_sampling_mode(source)
+            except KeyError:
+                missing_source_wells.append(well.name)
                 continue
 
-            if require_z and existing_mode != "depth":
-                raise ValueError(
-                    f"Well '{well.name}' has sample '{source}' without depth values, "
-                    "try `mode='xyz'`."
-                )
-            
-            for z, value in depth_map.items():
-                if mode == "xy":
-                    coords_list.append([well.x, well.y])
-                else:
-                    coords_list.append([well.x, well.y, z])
+            resolved_mode = resolved_mode or sampling_mode
 
-                values_list.append(value)
+            if resolved_mode != sampling_mode:
+                raise ValueError(
+                    f"All wells must have the same sample mode for source '{source}'."
+                )
+
+            if resolved_mode == "scalar":
+                value = well.get_sample(source)
+                coords_list.append([well.x, well.y])
+                values_list.append(float(value))
+            else:
+                depth_map = well.get_sample(source)
+                for z, value in depth_map.items():
+                    coords_list.append([well.x, well.y, z])
+                    values_list.append(value)
+
+        if missing_source_wells:
+            names = ", ".join(repr(name) for name in missing_source_wells)
+            raise ValueError(
+                f"Missing samples for source '{source}' in wells: {names}."
+            )
 
         if not coords_list:
             raise ValueError(f"No samples found for source '{source}' in given wells.")
@@ -874,9 +905,12 @@ class GridProperty:
 
         has_duplicates = np.unique(coords, axis=0).shape[0] != coords.shape[0]
         if has_duplicates:
-            raise ValueError("Duplicate sample locations detected. Please ensure each sample has a unique (x, y) for mode 'xy' or (x, y, z) coordinate for mode 'xyz'.")
-      
-        return coords, values
+            raise ValueError("Duplicate sample locations detected. Please ensure each sample has a unique (x, y) for mode 'scalar' or (x, y, z) coordinate for mode 'depth'.")
+
+        if resolved_mode is None:
+            raise RuntimeError("Failed to resolve interpolation mode from well samples.")
+
+        return coords, values, resolved_mode
 
     def _interpolation_targets(
         self,
@@ -894,26 +928,24 @@ class GridProperty:
         np.ndarray
             Target coordinates in XYZ order.
         """
-        match location:
-            case "center":
-                return self.grid.cell_centers
+        if location == "center":
+            return self.grid.cell_centers
 
-            case "top" | "bottom":
-                corners = self.grid._compute_cell_corners()   # (nk, nj, ni, 8, 3)
-                xy = np.mean(corners[..., :, :2], axis=-2)   # (nk, nj, ni, 2)
+        elif location in ("top", "bottom"):
+            corners = self.grid._compute_cell_corners()   # (nk, nj, ni, 8, 3)
+            xy = np.mean(corners[..., :, :2], axis=-2)   # (nk, nj, ni, 2)
 
-                zcorn = corners[..., 2]                      # (nk, nj, ni, 8)
-                z_top = np.min(zcorn[..., :4], axis=-1)
-                z_bottom = np.max(zcorn[..., 4:], axis=-1)
-                z = z_top if location == "top" else z_bottom
+            zcorn = corners[..., 2]                      # (nk, nj, ni, 8)
+            z_top = np.min(zcorn[..., :4], axis=-1)
+            z_bottom = np.max(zcorn[..., 4:], axis=-1)
+            z = z_top if location == "top" else z_bottom
 
-                return np.concatenate([xy, z[..., np.newaxis]], axis=-1)
-
-            case _:
-                raise ValueError(
-                    f"Unsupported location {location!r}. "
-                    "Supported values are: 'center', 'top', 'bottom'."
-                )
+            return np.concatenate([xy, z[..., np.newaxis]], axis=-1)
+        else:
+            raise ValueError(
+                f"Unsupported location {location!r}. "
+                "Supported values are: 'center', 'top', 'bottom'."
+            )
     
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name!r}, eclipse_keyword={self.eclipse_keyword!r}, description={self.description!r})"

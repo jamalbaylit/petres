@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Literal
 
 import numpy as np
 
@@ -21,9 +21,10 @@ from ..eclipse.grids.read import GRDECLReader
 from .pillars import PillarGrid
 from ..models.zone import Zone
 from ..models.boundary import BoundaryPolygon
+from ..models.wells import VerticalWell, _validate_well_sequence
 from ..grids.properties import GridProperties, GridProperty
 
-
+from .._validation import _validate_finite_float
 
 @dataclass(frozen=True)
 class GridAttributeSpec:
@@ -298,10 +299,11 @@ class CornerPointGrid:
         Parameters
         ----------
         zone_index : np.ndarray
-            Integer array of shape (nk, nj, ni) assigning each cell to a zone.
-            Convention:
-                0  -> gap / undefined / unassigned
-                >0 -> valid zone id
+            Integer array of shape ``(nk, nj, ni)`` assigning each cell to a
+            zone. Values use this convention:
+
+            - ``0`` means gap, undefined, or unassigned.
+            - ``> 0`` means a valid zone id.
         zone_names : dict[int, str], optional
             Mapping from zone id to zone name.
             If not provided, names will be auto-generated as "Zone {id}".
@@ -314,7 +316,6 @@ class CornerPointGrid:
             If ``zone_index`` cannot be converted to an integer ndarray.
         """
 
-        
         # ----------------------------
         # 1. Validate zone_index
         # ----------------------------
@@ -328,7 +329,7 @@ class CornerPointGrid:
                 zone_index = np.asarray(zone_index, dtype=np.int32)
             except Exception as e:
                 raise TypeError(f"Failed to convert `zone_index` to numpy array: {e}") from e
-            
+
             if zone_index.shape != self.shape:
                 raise ValueError(
                     f"`zone_index` shape {zone_index.shape} != expected {self.shape}"
@@ -337,11 +338,9 @@ class CornerPointGrid:
             if np.any(zone_index < 0):
                 raise ValueError("`zone_index` cannot contain negative values.")
 
-
             # Extract used zone IDs (exclude 0 = gap)
             unique_ids = np.unique(zone_index)
             unique_ids = unique_ids[unique_ids != 0]
-
 
             # ----------------------------
             # 2. Handle zone_names
@@ -681,6 +680,8 @@ class CornerPointGrid:
         color: Any = 'tan', 
         cmap: str | None = 'turbo', 
         title: str | None = None,
+        z_scale: float = 1.0,
+        wells: Sequence[VerticalWell] | VerticalWell | None = None,
         **kwargs: Any,
     ) -> None:
         """Render the grid in 3D PyVista viewer.
@@ -697,14 +698,27 @@ class CornerPointGrid:
             Colormap applied when ``scalars`` is provided.
         title : str or None, optional
             Figure title.
+        z_scale : float, default 1.0
+            Scale factor for the z-axis.
+        wells : VerticalWell or Sequence[VerticalWell] or None, optional
+            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
         **kwargs
             Forwarded to viewer ``add_grid``.
         """
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        viewer = PyVista3DViewer()
+        if not np.isfinite(z_scale) or z_scale <= 0:
+            raise ValueError("z_scale must be a positive finite value.")
+        
+            
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        viewer = PyVista3DViewer(theme=theme)
         scalars = self._resolve_source(scalars) if scalars is not None else None
         color = None if scalars is not None else color
         viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)
+        
+        if wells is not None:
+            viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
     
     @classmethod
@@ -713,7 +727,7 @@ class CornerPointGrid:
         x: np.ndarray,
         y: np.ndarray,
         z: np.ndarray
-    ) -> Self:
+    ) -> CornerPointGrid:
         """Create a corner-point grid from rectilinear coordinate vertices.
 
         Parameters
@@ -727,7 +741,7 @@ class CornerPointGrid:
 
         Returns
         -------
-        Self
+        CornerPointGrid
             Grid with vertical pillars and broadcasted layer surfaces.
         """
         
@@ -769,7 +783,7 @@ class CornerPointGrid:
         dx: float | None = None,
         dy: float | None = None,
         dz: float | None = None,
-        ) -> Self:
+        ) -> CornerPointGrid:
         """Build a rectilinear corner-point grid from limits or spacings.
 
         Parameters
@@ -795,7 +809,7 @@ class CornerPointGrid:
 
         Returns
         -------
-        Self
+        CornerPointGrid
             Corner-point grid resolved from the provided geometric constraints.
         """
         x, y, z = _resolve_xyz_vertices(
@@ -804,7 +818,7 @@ class CornerPointGrid:
         return cls.from_rectilinear(x=x, y=y, z=z)
 
     @classmethod
-    def from_zones(cls, *, pillars: PillarGrid, zones: Sequence[Zone]) -> Self:
+    def from_zones(cls, *, pillars: PillarGrid, zones: Sequence[Zone]) -> CornerPointGrid:
         """Create CornerPointGrid from zones with gap detection.
         
         Parameters
@@ -822,7 +836,7 @@ class CornerPointGrid:
         zcorn, actnum, zone_index, zone_names = _build_zcorn_from_zones(pillars=pillars, zones=zones)
         return cls(pillars=pillars, zcorn=zcorn, active=actnum, zone_index=zone_index, zone_names=zone_names)
     
-    def apply_boundary(self, boundary: BoundaryPolygon) -> None:
+    def apply_boundary(self, boundary: BoundaryPolygon) -> CornerPointGrid:
         """Mask grid activity using a boundary polygon.
 
         Cells whose centers fall outside the polygon become inactive (ACTNUM=0).
@@ -832,9 +846,15 @@ class CornerPointGrid:
         boundary : BoundaryPolygon
             XY boundary polygon used to clip the grid.
 
+        Returns
+        -------
+        CornerPointGrid
+            Updated grid with activity masked by the boundary.
+            
         Notes
         -----
         Updates ``active`` in place; cached property masks may become stale.
+        
         """
         # Get cell centers (nk, nj, ni, 3)
         centers = self.cell_centers
@@ -855,7 +875,118 @@ class CornerPointGrid:
             self.active = np.array(self.active, dtype=bool)
         
         self.active &= inside_mask
-        
+        return self
+    
+
+    def _surface_cell_at_xy(self, x: float, y: float, surface: Literal["top", "bottom"]) -> tuple[int, int] | None:
+        """Find the (i, j) column index whose surface quad contains point (x, y).
+
+        Uses a cross-product sign test on all cells simultaneously — no loops.
+
+        Parameters
+        ----------
+        x, y : float
+            Query point in grid XY coordinates.
+        surface : Literal["top", "bottom"]
+            The surface to check.
+
+        Returns
+        -------
+        tuple[int, int] or None
+            Zero-based ``(i, j)`` indices of the containing column, or ``None`` if outside the grid.
+        """
+        if surface == "top":
+            pt = self.pillars.pillar_top  # (nj+1, ni+1, 3)
+        elif surface == "bottom":
+            pt = self.pillars.pillar_bottom  # (nj+1, ni+1, 3)
+        else:
+            raise ValueError("`surface` must be 'top' or 'bottom'.")
+
+        # Each cell (j, i) is bounded by 4 pillars at corners:
+        #   (j,   i  ) = "00"    (j,   i+1) = "10"
+        #   (j+1, i+1) = "11"    (j+1, i  ) = "01"
+        #
+        # Slicing off-by-one gives us (nj, ni) arrays — one value per cell.
+        x00 = pt[:-1, :-1, 0];  y00 = pt[:-1, :-1, 1]
+        x10 = pt[:-1,  1:, 0];  y10 = pt[:-1,  1:, 1]
+        x11 = pt[ 1:,  1:, 0];  y11 = pt[ 1:,  1:, 1]
+        x01 = pt[ 1:, :-1, 0];  y01 = pt[ 1:, :-1, 1]
+
+        # ----------------------------------------------------------------
+        # Cross product sign test (how it works)
+        # ----------------------------------------------------------------
+        # For two points A and B defining a directed edge, the 2D cross product
+        # of (B - A) and (P - A) tells you which *side* of that edge point P is on:
+        #
+        #   cross = (B.x - A.x) * (P.y - A.y) - (B.y - A.y) * (P.x - A.x)
+        #
+        #   cross > 0  →  P is to the LEFT  of edge A→B
+        #   cross < 0  →  P is to the RIGHT of edge A→B
+        #   cross = 0  →  P is exactly ON   edge A→B
+        #
+        # If we walk around the quad in order 00→10→11→01→(back to 00),
+        # a point INSIDE the quad will be on the SAME side of all 4 edges.
+        # A point OUTSIDE will be on the wrong side of at least one edge.
+        #
+        # Because pillar grids can be wound either CW or CCW depending on
+        # coordinate system, we accept both "all positive" and "all negative".
+        # ----------------------------------------------------------------
+
+        def _cross(ax, ay, bx, by):
+            # All inputs are (nj, ni) arrays; x and y are scalars.
+            # Result is (nj, ni) — one signed area value per cell.
+            return (bx - ax) * (y - ay) - (by - ay) * (x - ax)
+
+        d0 = _cross(x00, y00, x10, y10)  # edge 00 → 10  (bottom edge)
+        d1 = _cross(x10, y10, x11, y11)  # edge 10 → 11  (right edge)
+        d2 = _cross(x11, y11, x01, y01)  # edge 11 → 01  (top edge)
+        d3 = _cross(x01, y01, x00, y00)  # edge 01 → 00  (left edge)
+
+        inside = (
+            ((d0 >= 0) & (d1 >= 0) & (d2 >= 0) & (d3 >= 0)) |  # CCW winding
+            ((d0 <= 0) & (d1 <= 0) & (d2 <= 0) & (d3 <= 0))    # CW  winding
+        )  # (nj, ni) bool
+
+        hits = np.argwhere(inside)
+        if hits.size == 0:
+            return None
+
+        return (int(hits[0, 1]), int(hits[0, 0]))  # (i, j)
+
+    def well_indices(self, well: VerticalWell | tuple[float, float]) -> tuple[int, int] | None:
+        """Locate the surface grid column indices intersected by a vertical well.
+
+        Parameters
+        ----------
+        well : VerticalWell or tuple[float, float]
+            Well object providing ``x`` and ``y`` map coordinates, or a tuple of coordinates.
+
+        Returns
+        -------
+        tuple[int, int] or None
+            Zero-based ``(i, j)`` indices of the top-surface column containing the well
+            head location. Returns ``None`` when the well lies outside the
+            grid footprint.
+
+        Notes
+        -----
+        This method performs a geometric XY containment lookup on the grid top
+        surface only. It does not evaluate completion intervals or active-cell
+        status.
+        """
+        if isinstance(well, VerticalWell):
+            x, y = well.x, well.y
+        elif isinstance(well, tuple) and len(well) == 2:
+            x, y = well
+            try:
+                x = _validate_finite_float(x, "well x-coordinate")
+                y = _validate_finite_float(y, "well y-coordinate")
+            except (TypeError, ValueError) as e:
+                raise TypeError("`well` coordinates must be finite numbers.") from e
+        else:
+            raise TypeError("`well` must be an instance of VerticalWell or a tuple of coordinates (x, y).")
+        return self._surface_cell_at_xy(x, y, surface="top")
+
     def _compute_cell_corners(self) -> np.ndarray:
         """Compute 3D coordinates of all 8 corners for each cell.
 
@@ -1100,6 +1231,15 @@ class CornerPointGrid:
             f"n_active={self.n_active}/{self.n_cells}, "
             f"properties={list(self._properties.keys())})"
         )
+
+
+
+
+
+
+
+
+
     # # ----------------------------
     # # Cell geometry
     # # ----------------------------
