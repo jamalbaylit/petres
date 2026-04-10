@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Sequence
+from typing import Literal
 
 from .._validation import _validate_finite_float, _validate_nonempty_string
 
@@ -337,7 +337,7 @@ class VerticalWell:
 def _validate_well_sequence(
     wells: VerticalWell | list[VerticalWell] | tuple[VerticalWell, ...]
 ) -> tuple[VerticalWell, ...]:
-    """Validate that the input is a VerticalWell or a sequence of VerticalWells."""
+    """Validate that input is a VerticalWell, list, or tuple of VerticalWells."""
 
     if isinstance(wells, VerticalWell):
         wells = (wells,)
@@ -346,6 +346,6 @@ def _validate_well_sequence(
             raise TypeError("All items in `wells` must be instances of `VerticalWell`.")
         wells = tuple(wells)
     else:
-        raise TypeError("`wells` must be a VerticalWell or a sequence of VerticalWells.")
+        raise TypeError("`wells` must be a VerticalWell, list, or tuple of VerticalWells.")
 
     return wells

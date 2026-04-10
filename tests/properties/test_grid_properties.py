@@ -88,3 +88,16 @@ def test_from_wells_rejects_duplicate_xy_samples(simple_cornerpoint_grid):
     poro = simple_cornerpoint_grid.properties.create("poro")
     with pytest.raises(ValueError, match="Duplicate sample locations"):
         poro.from_wells([w1, w2], interpolator=IDWInterpolator(), source="poro")
+
+
+def test_from_wells_raises_explicit_error_for_wells_missing_source(simple_cornerpoint_grid):
+    w1 = VerticalWell(name="W1", x=0.0, y=0.0)
+    w2 = VerticalWell(name="W2", x=100.0, y=100.0)
+    w3 = VerticalWell(name="W3", x=50.0, y=50.0)
+
+    w1.add_sample("poro", value=0.2)
+    w3.add_sample("poro", value=0.25)
+
+    poro = simple_cornerpoint_grid.properties.create("poro")
+    with pytest.raises(ValueError, match="Missing samples for source 'poro' in wells: 'W2'"):
+        poro.from_wells([w1, w2, w3], interpolator=IDWInterpolator(), source="poro")
