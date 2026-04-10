@@ -2,9 +2,8 @@ name: Publish package
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       target:
@@ -28,11 +27,37 @@ jobs:
     name: Build distributions
     runs-on: ubuntu-latest
 
+    outputs:
+      is_main: ${{ steps.branch_check.outputs.is_main }}
+      is_develop: ${{ steps.branch_check.outputs.is_develop }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Detect branch from tag
+        id: branch_check
+        run: |
+          git fetch origin main develop
+
+          BRANCHES=$(git branch -r --contains $GITHUB_SHA)
+
+          echo "Branches containing commit:"
+          echo "$BRANCHES"
+
+          if echo "$BRANCHES" | grep -q "origin/main"; then
+            echo "is_main=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_main=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$BRANCHES" | grep -q "origin/develop"; then
+            echo "is_develop=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_develop=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -63,7 +88,7 @@ jobs:
     environment:
       name: testpypi
     if: >
-      (github.event_name == 'push' && github.ref_name == 'develop') ||
+      (github.event_name == 'push' && needs.build.outputs.is_develop == 'true') ||
       (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi')
 
     steps:
@@ -88,7 +113,7 @@ jobs:
     environment:
       name: pypi
     if: >
-      (github.event_name == 'push' && github.ref_name == 'main') ||
+      (github.event_name == 'push' && needs.build.outputs.is_main == 'true') ||
       (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
 
     steps:
@@ -97,18 +122,6 @@ jobs:
         with:
           name: python-dist
           path: dist/
-
-      # Optional but recommended: prevent duplicate version upload
-      - name: Check if version exists on PyPI
-        run: |
-          pip install requests
-          VERSION=$(python -c "import petres; print(petres.__version__)")
-          python - <<EOF
-import requests
-url = f"https://pypi.org/pypi/petres/{VERSION}/json"
-if requests.get(url).status_code == 200:
-    raise SystemExit(f"Version {VERSION} already exists on PyPI")
-EOF
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
