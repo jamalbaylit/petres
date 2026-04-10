@@ -1,4 +1,4 @@
-"""API Tests for Petres - Summary and Guide
+API Tests for Petres - Summary and Guide
 
 This document describes the comprehensive API test suite created based on your tutorials. The tests validate that all Petres APIs work as documented and don't crash, organized by user workflow categories with examples from each tutorial.
 
@@ -148,4 +148,3 @@ Potential additions for more complete coverage:
 - Custom interpolator implementations
 - Grid fault/skew scenarios
 - Performance benchmarks
-"""

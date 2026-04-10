@@ -859,14 +859,21 @@ class GridProperty:
         Raises
         ------
         ValueError
-            If wells use mixed sample modes for ``source``.
+            If wells use mixed sample modes for ``source`` or one or more
+            wells do not have samples for ``source``.
         """
         coords_list: list[list[float]] = []
         values_list: list[float] = []
         resolved_mode: Literal["scalar", "depth"] | None = None
+        missing_source_wells: list[str] = []
 
         for well in wells:
-            sampling_mode = well.get_sampling_mode(source)
+            try:
+                sampling_mode = well.get_sampling_mode(source)
+            except KeyError:
+                missing_source_wells.append(well.name)
+                continue
+
             resolved_mode = resolved_mode or sampling_mode
 
             if resolved_mode != sampling_mode:
@@ -883,6 +890,12 @@ class GridProperty:
                 for z, value in depth_map.items():
                     coords_list.append([well.x, well.y, z])
                     values_list.append(value)
+
+        if missing_source_wells:
+            names = ", ".join(repr(name) for name in missing_source_wells)
+            raise ValueError(
+                f"Missing samples for source '{source}' in wells: {names}."
+            )
 
         if not coords_list:
             raise ValueError(f"No samples found for source '{source}' in given wells.")
