@@ -195,3 +195,32 @@ article table.align-default{
     background-color: #3a3f58;
     color: #cfd3ff;
 } */
+
+/* Interactive Viewer Theme Styles */
+.petres-interactive-viewer {
+    position: relative;
+}
+
+.petres-interactive-viewer iframe {
+    width: 100%;
+    height: 560px;
+    border-radius: 10px;
+    border: 1px solid var(--petres-iframe-border, #d9d9d9);
+    background: var(--petres-iframe-bg, #ffffff);
+}
+
+.petres-interactive-viewer iframe[hidden] {
+    display: none;
+}
+
+body[data-theme="dark"] .petres-interactive-viewer,
+html[data-theme="dark"] .petres-interactive-viewer {
+    --petres-iframe-border: #2f3a4d;
+    --petres-iframe-bg: #0b1220;
+}
+
+body[data-theme="light"] .petres-interactive-viewer,
+html[data-theme="light"] .petres-interactive-viewer {
+    --petres-iframe-border: #d9d9d9;
+    --petres-iframe-bg: #ffffff;
+}

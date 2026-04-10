@@ -24,7 +24,8 @@ Interactive Example (Norne)
 ---------------------------
 
 This page can also include a browser-based interactive 3D rendering exported as HTML.
-The interactive file below is generated from the Norne grid in ``examples/data/corner_point/Norne.GRDECL``.
+Two variants are generated from the Norne grid in ``examples/data/corner_point/Norne.GRDECL``:
+one optimized for light docs theme and one for dark docs theme.
 
 To regenerate the interactive HTML:
 
@@ -34,14 +35,74 @@ To regenerate the interactive HTML:
 
 .. raw:: html
 
-   <iframe
-     src="../_static/tutorials/importing-grid-norne-interactive.html"
-     width="100%"
-     height="560"
-     style="border: 1px solid #d9d9d9; border-radius: 8px;"
-     loading="lazy"
-     title="Interactive Norne grid viewer">
-   </iframe>
+    <div class="petres-interactive-viewer" id="petres-importing-grid-viewer">
+       <iframe
+          id="petres-importing-grid-viewer-light"
+          src="../_static/tutorials/importing-grid-norne-interactive-light.html"
+          loading="lazy"
+          title="Interactive Norne grid viewer (light theme)">
+       </iframe>
+       <iframe
+          id="petres-importing-grid-viewer-dark"
+          src="../_static/tutorials/importing-grid-norne-interactive-dark.html"
+          loading="lazy"
+          title="Interactive Norne grid viewer (dark theme)">
+       </iframe>
+    </div>
+
+    <script>
+       (function () {
+          const root = document.documentElement;
+          const body = document.body;
+          const lightFrame = document.getElementById("petres-importing-grid-viewer-light");
+          const darkFrame = document.getElementById("petres-importing-grid-viewer-dark");
+          if (!lightFrame || !darkFrame) {
+             return;
+          }
+
+          const prefersDark = () => {
+             return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          };
+
+          const updateViewerTheme = () => {
+             const bodyTheme = body ? (body.getAttribute("data-theme") || "") : "";
+             const htmlTheme = root.getAttribute("data-theme") || "";
+             const dataTheme = (bodyTheme || htmlTheme).toLowerCase();
+             const classTheme = root.className || "";
+             const isDark =
+                dataTheme === "dark" ||
+                (dataTheme === "auto" && prefersDark()) ||
+                classTheme.toLowerCase().includes("theme-dark") ||
+                (!dataTheme && prefersDark());
+
+             lightFrame.hidden = isDark;
+             darkFrame.hidden = !isDark;
+          };
+
+          updateViewerTheme();
+
+          if (window.matchMedia) {
+             const mq = window.matchMedia("(prefers-color-scheme: dark)");
+             if (mq.addEventListener) {
+                mq.addEventListener("change", updateViewerTheme);
+             } else if (mq.addListener) {
+                mq.addListener(updateViewerTheme);
+             }
+          }
+
+          const observer = new MutationObserver(updateViewerTheme);
+          observer.observe(root, {
+             attributes: true,
+             attributeFilter: ["data-theme", "class"],
+          });
+          if (body) {
+             observer.observe(body, {
+                attributes: true,
+                attributeFilter: ["data-theme", "class"],
+             });
+          }
+       })();
+    </script>
 
 .. note::
 
