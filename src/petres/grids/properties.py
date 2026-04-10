@@ -159,16 +159,24 @@ class GridProperty:
         
         
             
+        title = self._get_plot_title(title)
 
         theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
         viewer = PyVista3DViewer(theme=theme)
-        title = f"Property: {self.name}" if title == 'auto' else str(title)
         viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
         
         if wells is not None:
             viewer.add_wells(_validate_well_sequence(wells))
         viewer.show(title=title)
-                          
+    
+    def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
+        if title == 'auto':
+            return f"Property: {self.name}"
+        elif title is not None:
+            return str(title)
+        else:
+            return None
+                     
     @property
     def shape(self) -> tuple[int, int, int]:
         """Return property array shape.

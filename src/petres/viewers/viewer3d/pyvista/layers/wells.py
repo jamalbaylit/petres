@@ -15,8 +15,8 @@ def _add_well(
     *,
     well_x: float,
     well_y: float,
-    well_top: float,
-    well_bottom: float,
+    well_top: float | None,
+    well_bottom: float | None,
     well_name: str,
     label_font_size: float=15,
     label_color: Any='black',
@@ -34,10 +34,10 @@ def _add_well(
         Well x-coordinate in scene units.
     well_y : float
         Well y-coordinate in scene units.
-    well_top : float
+    well_top : float | None
         Top z-coordinate of the well. If ``None``, a fallback is inferred
         from plot bounds.
-    well_bottom : float
+    well_bottom : float | None
         Bottom z-coordinate of the well. If ``None``, a fallback is inferred
         from plot bounds.
     well_name : str

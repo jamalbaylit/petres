@@ -16,5 +16,5 @@ ignored. If the well lies outside the grid, the method returns ``None``.
     i, j = grid.well_indices((100, 200))
 
 You can pass either a :class:`~petres.models.VerticalWell` object or an ``(x, y)`` tuple.
-The returned ``(i, j)`` indicates the grid column where the well 
-intersects the top surface.
+The returned ``(i, j)`` are zero-based grid indices. ``i`` is the x-direction index,
+``j`` is the y-direction index, and both start from 0.
