@@ -124,9 +124,22 @@ class PyVista3DViewer(Base3DViewer):
         Parameters
         ----------
         theme : PyVista3DViewerTheme
-            Theme values controlling background color and axes visibility.
+            Theme values controlling background color, font color, and axes
+            visibility.
+
+        Notes
+        -----
+        This method sets ``pv.global_theme.font.color`` so that scalar bars
+        and other auto-generated text inherit the theme font color.  The
+        global state is intentionally modified because PyVista reads it at
+        mesh-add time; restoring it would defeat the purpose.
         """
         p = self.plotter
+
+        # Set the global PyVista font color so that scalar bars, labels,
+        # and any other auto-generated text inherit the theme color.
+        pv.global_theme.font.color = theme.font_color
+
         p.set_scale(*theme.scale)
         p.set_background(theme.background, top=theme.background)
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
@@ -136,6 +149,7 @@ class PyVista3DViewer(Base3DViewer):
             all_edges=False,
             show_zaxis=True,
             location='outer',
+            color=theme.font_color,
         ) if theme.show_coordinate_axes else p.hide_bounds()
         # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
 
@@ -180,7 +194,7 @@ class PyVista3DViewer(Base3DViewer):
                 str(title),
                 position=self.theme.title_position,
                 font_size=self.theme.title_fontsize,
-                color=self.theme.title_color,
+                color=self.theme.title_color or self.theme.font_color,
             )
 
         self.plotter.show()

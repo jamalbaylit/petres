@@ -57,6 +57,10 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     ----------
     background : str | tuple[float, float, float], default="white"
         Scene background color.
+    font_color : str | tuple[float, float, float], default="black"
+        Default text color used for axis labels, tick marks, scalar-bar
+        annotations, and any other scene text that does not have an
+        explicit override.
     show_orientation_widget : bool, default=True
         Display the orientation widget in the viewer.
     show_coordinate_axes : bool, default=True
@@ -65,8 +69,8 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
         Per-axis scale multipliers for rendering.
     title_fontsize : int, default=12
         Font size for the scene title.
-    title_color : str | tuple[float, float, float], default="black"
-        Title text color.
+    title_color : str | tuple[float, float, float] | None, default=None
+        Title text color.  When ``None``, ``font_color`` is used.
     title_position : str, default="upper_edge"
         Viewer-specific anchor position for title placement.
     camera : Camera3D, default=Camera3D()
@@ -75,6 +79,7 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     """
 
     background: Color = "white"
+    font_color: Color = "black"
     show_orientation_widget: bool = True
     show_coordinate_axes: bool = True
     # show_grid: bool = True
@@ -82,7 +87,7 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
 
     title_fontsize: int = 12
-    title_color: Color = "black"
+    title_color: Color | None = None
     title_position: str = "upper_edge"
 
     camera: Camera3D = Camera3D()

@@ -24,8 +24,6 @@ DARK_OUTPUT_PATH = OUTPUT_DIR / "importing-grid-norne-interactive-dark.html"
 
 def _background_to_css(background: str | tuple[float, float, float]) -> str:
     """Convert a theme background value to a CSS hex color string."""
-    if isinstance(background, str):
-        return to_hex(background)
     return to_hex(background)
 
 
@@ -74,15 +72,15 @@ def main() -> None:
 
     light_theme = Viewer3DTheme(
         background="white",
+        font_color="black",
         show_orientation_widget=True,
         show_coordinate_axes=True,
-        title_color="black",
     )
     dark_theme = Viewer3DTheme(
         background="#0f172a",
+        font_color="#e5e7eb",
         show_orientation_widget=True,
         show_coordinate_axes=True,
-        title_color="#e5e7eb",
     )
 
     _export_interactive_html(grid=grid, theme=light_theme, output_path=LIGHT_OUTPUT_PATH)
