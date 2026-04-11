@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pyvista as pv
+from matplotlib.colors import to_hex
 
 from petres.grids import CornerPointGrid
 from petres.viewers import Viewer3D, Viewer3DTheme
@@ -21,6 +22,28 @@ LIGHT_OUTPUT_PATH = OUTPUT_DIR / "importing-grid-norne-interactive-light.html"
 DARK_OUTPUT_PATH = OUTPUT_DIR / "importing-grid-norne-interactive-dark.html"
 
 
+def _background_to_css(background: str | tuple[float, float, float]) -> str:
+    """Convert a theme background value to a CSS hex color string."""
+    if isinstance(background, str):
+        return to_hex(background)
+    return to_hex(background)
+
+
+def _patch_html_background(html_path: Path, css_color: str) -> None:
+    """Inject a matching background-color into the exported HTML body.
+
+    PyVista's ``export_html`` produces a VTK.js viewer whose HTML body has no
+    background-color.  This causes a white flash before the WebGL canvas
+    renders — especially jarring in dark-themed docs.
+    """
+    text = html_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "html, body { margin: 0; padding: 0; height: 100%; }",
+        f"html, body {{ margin: 0; padding: 0; height: 100%; background: {css_color}; }}",
+    )
+    html_path.write_text(text, encoding="utf-8")
+
+
 def _export_interactive_html(
     *,
     grid: CornerPointGrid,
@@ -37,6 +60,8 @@ def _export_interactive_html(
 
     plotter.export_html(str(output_path))
     plotter.close()
+
+    _patch_html_background(output_path, _background_to_css(theme.background))
 
 
 def main() -> None:

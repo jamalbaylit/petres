@@ -216,13 +216,13 @@ article table.align-default{
 body[data-theme="dark"] .petres-interactive-viewer,
 html[data-theme="dark"] .petres-interactive-viewer {
     --petres-iframe-border: #2f3a4d;
-    --petres-iframe-bg: #0b1220;
+    --petres-iframe-bg: #0f172a;
 }
 
 @media (prefers-color-scheme: dark) {
     body:not([data-theme="light"]) .petres-interactive-viewer {
         --petres-iframe-border: #2f3a4d;
-        --petres-iframe-bg: #0b1220;
+        --petres-iframe-bg: #0f172a;
     }
 }
 
