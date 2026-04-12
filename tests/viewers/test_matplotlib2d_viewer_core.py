@@ -18,6 +18,23 @@ def test_matplotlib2d_set_theme_requires_correct_type():
     assert viewer.theme is obj
 
 
+def test_matplotlib2d_show_sets_window_title(monkeypatch):
+    viewer = Matplotlib2DViewer()
+
+    calls = {"title": None}
+
+    class DummyManager:
+        def set_window_title(self, title):
+            calls["title"] = title
+
+    monkeypatch.setattr(viewer.fig.canvas, "manager", DummyManager(), raising=False)
+    monkeypatch.setattr("petres.viewers.viewer2d.matplotlib.viewer.plt.show", lambda: None)
+
+    viewer.show()
+
+    assert calls["title"] == "Petres 2D Viewer"
+
+
 def test_matplotlib2d_add_horizon_returns_self(monkeypatch, horizon_plane_top):
     viewer = Matplotlib2DViewer(theme=Matplotlib2DViewerTheme())
 

@@ -92,7 +92,9 @@ a{
     margin-left: 0;
 }
 
-
+.highlight button.copybtn:hover, .highlight button.copybtn, .highlight button.copybtn:focus {
+    background-color: transparent;
+}
 
 .highlight, body:not([data-theme="light"]) .highlight {
     background-color: var(--color-sidebar-background);
