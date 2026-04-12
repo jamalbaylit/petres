@@ -71,7 +71,7 @@ def main() -> None:
     grid = CornerPointGrid.from_grdecl(DATA_PATH)
 
     light_theme = Viewer3DTheme(
-        background="white",
+        background="#f8fafc",
         font_color="black",
         show_orientation_widget=True,
         show_coordinate_axes=True,

@@ -229,5 +229,5 @@ html[data-theme="dark"] .petres-interactive-viewer {
 body[data-theme="light"] .petres-interactive-viewer,
 html[data-theme="light"] .petres-interactive-viewer {
     --petres-iframe-border: #d9d9d9;
-    --petres-iframe-bg: #ffffff;
+    --petres-iframe-bg: #f8fafc;
 }
