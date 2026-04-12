@@ -12,14 +12,14 @@ so installation requires enabling pre-releases:
 
 .. code-block:: bash
 
-   pip install --pre petres
+   pip install petres
 
 
 If you use ``uv``:
 
 .. code-block:: bash
 
-   uv pip install --pre petres
+   uv pip install petres
 
 
 Install from Source
