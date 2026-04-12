@@ -41,7 +41,9 @@ class Matplotlib2DViewer(Base2DViewer):
     theme : Matplotlib2DViewerTheme or None, default=None
         Theme configuration controlling layout and styling. When ``None``, the
         default ``Matplotlib2DViewerTheme`` is used.
-
+    window_title : str, default='Petres 2D Viewer'
+        Window title shown in the figure manager (if supported by the Matplotlib backend).
+        
     Raises
     ------
     ValueError
@@ -54,9 +56,11 @@ class Matplotlib2DViewer(Base2DViewer):
         fig: Figure | None = None,
         ax: Axes | None = None,
         theme: Matplotlib2DViewerTheme | None = None,
+        window_title: str = "Petres 2D Viewer",
     ) -> None:
         """Initialize a Matplotlib 2D viewer."""
         self.set_theme(theme or Matplotlib2DViewerTheme())
+        self.window_title = window_title
 
         if fig is not None and ax is not None:
             if ax.figure is not fig:
@@ -116,6 +120,20 @@ class Matplotlib2DViewer(Base2DViewer):
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
 
+    def set_window_title(self, title: str) -> None:
+        """Set the window title shown in the figure manager (if supported by the Matplotlib backend).
+
+        Parameters
+        ----------
+        title : str
+            Title text to set for the figure window.
+        """
+        self.window_title = title
+        manager = getattr(self.fig.canvas, "manager", None)
+        if manager is not None and hasattr(manager, "set_window_title"):
+            manager.set_window_title(title)
+
+
     def show(self, *, title: str | None = None) -> None:
         """Autoscale, style, and display the current figure.
 
@@ -125,10 +143,11 @@ class Matplotlib2DViewer(Base2DViewer):
             Optional title text shown above the axes.
         """
         # Avoid relim(): it can miss Collection artists (e.g. scatter/pcolormesh).
+        self.set_window_title(self.window_title)
         self.ax.margins(x=self.theme.margins, y=self.theme.margins)
         self.ax.autoscale(enable=True, axis="both", tight=False)
         self.ax.autoscale_view()
-        if title:
+        if title is not None:
             self.ax.set_title(str(title), fontsize=self.theme.title_fontsize, pad=10)
         self.apply_theme()
         plt.show()
