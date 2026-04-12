@@ -4,7 +4,7 @@ import numpy as np
 
 from petres.models import VerticalWell
 
-path = "examples/data/corner_point/Norne.GRDECL"
+path = "data/opm/norne/grdecl/norne.grdecl"
 grid = CornerPointGrid.from_grdecl(path, use_actnum=True)
 
 well1 = VerticalWell("Well-1", x=456000, y=7320000)

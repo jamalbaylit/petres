@@ -37,6 +37,8 @@ class PyVista3DViewer(Base3DViewer):
     camera : Camera3D or None, default=None
         Camera configuration. If ``None``, an isometric default camera setup
         is used.
+    title : str, default="Petres 3D Viewer"
+        Optional title text shown in the viewer window.
     """
 
     theme: PyVista3DViewerTheme
@@ -49,6 +51,7 @@ class PyVista3DViewer(Base3DViewer):
         plotter: pv.Plotter | None = None,
         theme: PyVista3DViewerTheme | None = None,
         camera: Camera3D | None = None,
+        title: str = "Petres 3D Viewer",
     ) -> None:
         """Initialize viewer state with plotter, theme, and camera defaults.
 
@@ -65,7 +68,8 @@ class PyVista3DViewer(Base3DViewer):
             zoom=1.0,
             depth_down=True
         ))
-        self.set_plotter(plotter or pv.Plotter())  
+        self.set_plotter(plotter or pv.Plotter())
+        self.title = title
         self._deferred_point_labels = []
 
 
@@ -183,7 +187,7 @@ class PyVista3DViewer(Base3DViewer):
                 color=self.theme.title_color,
             )
 
-        self.plotter.show()
+        self.plotter.show(title=self.title)
         self.plotter.close()
         self.plotter = pv.Plotter()
 

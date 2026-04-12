@@ -9,9 +9,8 @@ if __name__ == "__main__":
     
     # You can use either a string path or a Path object
     path = "projects/SGF/eclipse/include/SGF_R2_1a.GRDECL"  
-    path = "examples/data/corner_point/SNARK.GRDECL"
-    # path = "examples/data/corner_point/Norne.GRDECL"
-    # path = "examples/data/corner_point/Norne_with_props.GRDECL"
+    path = "data/opm/norne/grdecl/norne.grdecl"  
+    # path = "data/opm/norne/grdecl/norne_with_props.grdecl"
     # or
     path = Path(path)  
     # Read the GRDECL file and create a CornerPointGrid

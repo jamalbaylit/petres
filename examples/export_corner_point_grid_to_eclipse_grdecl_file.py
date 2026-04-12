@@ -6,7 +6,7 @@ from petres.viewers import Viewer3D
 
 
 if __name__ == "__main__":
-    path = "examples/data/corner_point/SNARK.GRDECL"  
+    path = "data/opm/norne/grdecl/norne.grdecl"  
     # path = "projects/SGF/eclipse/include/SGF_R2_1a.GRDECL"  
 
     # Read the GRDECL file and create a CornerPointGrid
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     grid.show() 
 
 
-    save_path = "examples/data/corner_point/EXPORT_TEST.GRDECL"
+    save_path = "data/opm/norne/grdecl/export_test.grdecl"
     grid.to_grdecl(save_path)
     grid = CornerPointGrid.from_grdecl(save_path)  # Read back to verify
 

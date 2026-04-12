@@ -9,8 +9,7 @@ if __name__ == "__main__":
     
     # You can use either a string path or a Path object
     path = "projects/SGF/eclipse/include/SGF_R2_1a.GRDECL"  
-    path = "examples/data/corner_point/SNARK.GRDECL"
-    path = "examples/data/corner_point/Norne.GRDECL"
+    path = "data/opm/norne/grdecl/norne.grdecl"
     # or
     path = Path(path)  
 
@@ -37,7 +36,7 @@ if __name__ == "__main__":
         source = poro
     )
     print(grid.properties)
-    grid.to_grdecl("examples/data/corner_point/Norne_with_props.GRDECL")
+    grid.to_grdecl("data/opm/norne/grdecl/norne_with_props.grdecl")
     # Alternatively, you can use the Viewer3D directly to also add other features like wells, zones, etc.
     # viewer = Viewer3D()
     # viewer.add_grid(grid).show()
