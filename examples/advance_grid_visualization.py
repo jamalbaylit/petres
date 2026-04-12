@@ -17,7 +17,7 @@ from petres.grids import CornerPointGrid
 # Step 1: Load the grid from a GRDECL file
 # ---------------------------------------------------------------------
 grid = CornerPointGrid.from_grdecl(
-    "examples/data/corner_point/Norne_with_props.GRDECL",
+    "data/opm/norne/grdecl/norne_with_props.grdecl",
     properties=["PORO", "PERMX"]  # Only import selected properties
 )
 
