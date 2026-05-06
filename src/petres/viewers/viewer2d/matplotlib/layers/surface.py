@@ -9,6 +9,8 @@ from matplotlib.axes import Axes
 from matplotlib.collections import QuadMesh
 from numpy.typing import NDArray
 
+from .....config.colors import DEFAULT_CMAP
+
 def _add_surface(
     ax: Axes,
     scalars: NDArray[Any],
@@ -16,7 +18,7 @@ def _add_surface(
     x: NDArray[Any],
     y: NDArray[Any],
 
-    cmap: str = "viridis",
+    cmap: str = DEFAULT_CMAP,
     # Colorbar Options
     show_colorbar: bool = True,
     colorbar_shrink: float = 0.95,
@@ -43,7 +45,7 @@ def _add_surface(
         X coordinates convertible to a one-dimensional float array.
     y : NDArray[Any]
         Y coordinates convertible to a one-dimensional float array.
-    cmap : str, default="viridis"
+    cmap : str, default=DEFAULT_CMAP
         Colormap name used for the surface.
     show_colorbar : bool, default=True
         Whether to draw a colorbar for the generated mesh.

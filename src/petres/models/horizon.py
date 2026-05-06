@@ -8,6 +8,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
+from ..config.colors import DEFAULT_CMAP
 from ..interpolators.base import BaseInterpolator
 from ..models.wells import VerticalWell, _validate_well_sequence
 from .zone import Zone
@@ -340,8 +341,8 @@ class Horizon:
         dy: float | None = None,
         color: Any | None = "tan",
         scalars: bool = True,
-        cmap: str | None = "turbo",
-        title: str | Literal["auto"] | None = "auto", 
+        cmap: str | None = DEFAULT_CMAP,
+        title: str | Literal["auto"] | None = "auto",
         z_scale: float = 1.0,
         wells: Sequence[VerticalWell] | VerticalWell | None = None,
     ) -> None:
@@ -365,7 +366,7 @@ class Horizon:
             edge/mesh color by the backend.
         scalars : bool, default True
             Whether to color by depth values.
-        cmap : str or None, default 'turbo'
+        cmap : str or None, default DEFAULT_CMAP
             Colormap name applied when `scalars` is True.
         title : str or 'auto', default 'auto'
             Window title; ``'auto'`` uses the property name.
@@ -380,17 +381,27 @@ class Horizon:
         """
         from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
+
         if not np.isfinite(z_scale) or z_scale <= 0:
             raise ValueError("z_scale must be a positive finite value.")
+
         theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
         viewer = PyVista3DViewer(theme=theme)
         viewer.add_horizon(
-            self, x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, 
-            color=color, 
-            scalars=scalars, 
+            self,
+            x=x,
+            y=y,
+            xlim=xlim,
+            ylim=ylim,
+            ni=ni,
+            nj=nj,
+            dx=dx,
+            dy=dy,
+            color=color,
+            scalars=scalars,
             cmap=cmap,
             show_colorbar=True,
-            colorbar_title='Depth',
+            colorbar_title="Depth",
         )
         title = self._get_plot_title(title)
 
@@ -409,7 +420,7 @@ class Horizon:
         nj: int | None = None,
         dx: float | None = None,
         dy: float | None = None,
-        cmap: str = "turbo",
+        cmap: str = DEFAULT_CMAP,
         show_contours: bool = True,
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
@@ -432,7 +443,7 @@ class Horizon:
             Number of cells along x/y when using bounds. Must be >= 1.
         dx, dy : float or None, optional
             Cell size along x/y when using bounds. Mutually exclusive with `ni`/`nj`.
-        cmap : str, default "turbo"
+        cmap : str, default DEFAULT_CMAP
             Colormap used for the surface.
         show_contours : bool, default True
             Whether to overlay contour lines.
@@ -508,7 +519,8 @@ class Horizon:
         if interpolator.is_allowed_dim(2) is False:
             raise TypeError(
                 f"Horizon interpolator must support 2D coordinates (x,y). "
-                f"But {interpolator.allowed_dims} were allowed.")
+                f"Got allowed_dims={getattr(interpolator, 'allowed_dims', None)}"
+            )
         return interpolator
     
     def _validate_name(self, name: Any) -> str:

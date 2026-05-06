@@ -5,151 +5,7 @@ import numpy as np
 import pyvista as pv
 
 from .....models.zone import Zone
-from ....._utils._color import Color
-
-
-# def _add_zone(
-#     backend,
-#     zone: Zone,
-#     *,
-#     x: np.ndarray,
-#     y: np.ndarray,
-#     name: str | None = None,
-#     color: tuple[float, float, float] | None = None,       # str ("tan"), RGB tuple, hex, etc.
-#     opacity: float | None = None,
-#     show_edges: bool | None = None,
-#     show_layers: bool = True,
-#     **mesh_kwargs: Any,             # forward all other PyVista kwargs
-# ) -> pv.StructuredGrid:
-#     """
-#     Add a Zone as a thin 3D volume (top & base) using StructuredGrid.
-
-#     Users can control styling via:
-#       - color / opacity / show_edges (common)
-#       - **mesh_kwargs (any pv.add_mesh kwargs)
-#     """
-#     x = np.asarray(x, dtype=float).ravel()
-#     y = np.asarray(y, dtype=float).ravel()
-#     if x.ndim != 1 or y.ndim != 1:
-#         raise ValueError("x and y must be 1D arrays.")
-
-#     z_top = zone.top.to_grid(x, y)    # (ny, nx)
-#     z_base = zone.base.to_grid(x, y)  # (ny, nx)
-
-#     xx2, yy2 = np.meshgrid(x, y)
-
-#     X = np.dstack([xx2, xx2])
-#     Y = np.dstack([yy2, yy2])
-#     Z = np.dstack([z_top, z_base])
-
-#     grid = pv.StructuredGrid(X, Y, Z)
-
-#     actor_name = name or f"zone:{zone.name}"
-
-#     # Provide sane defaults *only if user didn't specify scalars or color*
-    
-#     color = Color(color).as_rgb()
-
-#     # Apply common knobs (but do not override if user already set them in mesh_kwargs)
-#     if color is not None and "color" not in mesh_kwargs:
-#         mesh_kwargs["color"] = color
-#     if opacity is not None and "opacity" not in mesh_kwargs:
-#         mesh_kwargs["opacity"] = opacity
-#     if show_edges is not None and "show_edges" not in mesh_kwargs:
-#         mesh_kwargs["show_edges"] = show_edges
-
-#     backend.plotter.add_mesh(grid, name=actor_name, **mesh_kwargs)
-#     return grid
-
-
-
-
-
-# def _add_zone(
-#     backend,
-#     zone: Zone,
-#     *,
-#     x: np.ndarray,
-#     y: np.ndarray,
-#     name: str | None = None,
-#     color: tuple[float, float, float] | None = None,  # can also be str/hex/etc
-#     opacity: float | None = None,
-#     show_edges: bool | None = None,
-#     show_layers: bool = True,
-#     **mesh_kwargs: Any,
-# ) -> pv.StructuredGrid | list[pv.StructuredGrid]:
-#     """
-#     Add a Zone as a thin 3D volume (top & base). If show_layers=True and the Zone
-#     has internal levels, render each layer as a separate thin volume so the layer
-#     boundaries are visible.
-#     """
-#     x = np.asarray(x, dtype=float).ravel()
-#     y = np.asarray(y, dtype=float).ravel()
-#     if x.ndim != 1 or y.ndim != 1:
-#         raise ValueError("x and y must be 1D arrays.")
-
-#     z_top = zone.top.to_grid(x, y)    # (ny, nx)
-#     z_base = zone.base.to_grid(x, y)  # (ny, nx)
-
-#     xx2, yy2 = np.meshgrid(x, y)      # (ny, nx)
-
-#     actor_name = name or f"zone:{zone.name}"
-
-#     # Provide sane defaults *only if user didn't specify scalars or color*
-#     if "scalars" not in mesh_kwargs and color is None and "color" not in mesh_kwargs:
-#         color = "tan"
-
-#     # Apply common knobs (but do not override if user already set them in mesh_kwargs)
-#     if color is not None and "color" not in mesh_kwargs:
-#         mesh_kwargs["color"] = color
-#     if opacity is not None and "opacity" not in mesh_kwargs:
-#         mesh_kwargs["opacity"] = opacity
-#     if show_edges is not None and "show_edges" not in mesh_kwargs:
-#         mesh_kwargs["show_edges"] = show_edges
-
-#     # Helper: z at normalized level t in [0, 1]
-#     # (linear interpolation between top and base)
-#     dz = (z_base - z_top)
-#     def z_at(t: float) -> np.ndarray:
-#         return z_top + float(t) * dz
-
-#     # --- Case 1: show as one volume (existing behavior) ---
-#     if (not show_layers) or zone.n_layers <= 1:
-#         X = np.dstack([xx2, xx2])
-#         Y = np.dstack([yy2, yy2])
-#         Z = np.dstack([z_top, z_base])
-#         grid = pv.StructuredGrid(X, Y, Z)
-#         backend.plotter.add_mesh(grid, name=actor_name, **mesh_kwargs)
-#         return grid
-
-#     # --- Case 2: show each layer as its own thin volume (visible interfaces) ---
-#     grids: list[pv.StructuredGrid] = []
-
-#     # Small convenience: if user did not provide opacity at all, layered rendering
-#     # tends to look nicer with some transparency.
-#     local_kwargs = dict(mesh_kwargs)
-#     if opacity is None and "opacity" not in local_kwargs:
-#         local_kwargs["opacity"] = 0.5
-
-#     levels = zone.levels  # tuple[float,...], starts 0 ends 1
-#     for i in range(zone.n_layers):
-#         t0 = levels[i]
-#         t1 = levels[i + 1]
-
-#         z0 = z_at(t0)
-#         z1 = z_at(t1)
-
-#         X = np.dstack([xx2, xx2])
-#         Y = np.dstack([yy2, yy2])
-#         Z = np.dstack([z0, z1])
-
-#         grid_i = pv.StructuredGrid(X, Y, Z)
-#         layer_name = f"{actor_name}:layer:{i+1}"
-
-#         backend.plotter.add_mesh(grid_i, name=layer_name, **local_kwargs)
-#         grids.append(grid_i)
-
-#     return grids
+from ....._utils._colors import Color
 
 
 def _add_zone(
@@ -270,8 +126,8 @@ def _add_zone(
             name=outline_name,
             color=outline_color,
             line_width=outline_width,
-            lighting=False,
             render_lines_as_tubes=True,  # nicer outline
+            **mesh_kwargs
         )
 
     # z at normalized level t in [0,1]

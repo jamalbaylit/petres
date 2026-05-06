@@ -8,6 +8,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
+from ..config.colors import DEFAULT_CMAP
 from .._validation import _validate_nonempty_string
 from ..interpolators.base import BaseInterpolator
 from ..errors.property import ExistingPropertyNameError, MissingEclipseKeywordError, MissingPropertyValueError, ReservedPropertyNameError
@@ -125,7 +126,7 @@ class GridProperty:
         self,
         *, 
         show_inactive: bool = False, 
-        cmap: str | None = "turbo",
+        cmap: str | None = DEFAULT_CMAP,
         title: str | Literal["auto"] | None = "auto", 
         z_scale: float = 1.0,
         wells: Sequence[VerticalWell] | VerticalWell | None = None,
@@ -137,7 +138,7 @@ class GridProperty:
         ----------
         show_inactive : bool, default False
             Whether to display inactive cells.
-        cmap : str or None, default 'turbo'
+        cmap : str or None, default DEFAULT_CMAP
             Colormap used for rendering.
         title : str or 'auto', default 'auto'
             Window title; ``'auto'`` uses the property name.

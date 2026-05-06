@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 
+from ..config.colors import DEFAULT_CMAP
 from .wells import VerticalWell, _validate_well_sequence
+
+if TYPE_CHECKING:
+    from .horizon import Horizon
 
 @dataclass(frozen=True)
 class Zone:
@@ -190,7 +194,7 @@ class Zone:
         dx: float | None = None,
         dy: float | None = None,
         mode: Literal["top", "base", "thickness"] = "thickness",
-        cmap: str = "turbo",
+        cmap: str = DEFAULT_CMAP,
         show_contours: bool = True,
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
@@ -216,7 +220,7 @@ class Zone:
             Cell size along x/y when using bounds. Mutually exclusive with `ni`/`nj`.
         mode : {'top', 'base', 'thickness'}, default 'thickness'
             Which scalar to plot.
-        cmap : str, default 'turbo'
+        cmap : str, default DEFAULT_CMAP
             Colormap used for the surface.
         show_contours : bool, default True
             Whether to overlay contour lines.

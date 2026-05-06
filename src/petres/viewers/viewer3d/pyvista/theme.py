@@ -61,6 +61,8 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
         Display the orientation widget in the viewer.
     show_coordinate_axes : bool, default=True
         Display coordinate axes in the scene.
+    lighting : bool, default=True
+        Enable lighting when adding shaded meshes to the scene.
     scale : tuple[float, float, float], default=(1.0, 1.0, 1.0)
         Per-axis scale multipliers for rendering.
     title_fontsize : int, default=12
@@ -80,6 +82,7 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     background: Color = "white"
     show_orientation_widget: bool = True
     show_coordinate_axes: bool = True
+    lighting: bool = True
     # show_grid: bool = True
     # camera_up: tuple[float, float, float] = (1, 1, -1)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)

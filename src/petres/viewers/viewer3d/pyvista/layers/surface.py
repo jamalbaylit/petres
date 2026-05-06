@@ -5,7 +5,8 @@ from typing import Any
 import numpy as np
 import pyvista as pv
 
-from ....._utils._color import Color
+from .....config.colors import DEFAULT_CMAP
+from ....._utils._colors import Color
 
 
 def _add_surface(
@@ -51,7 +52,7 @@ def _add_surface(
         Solid surface color when scalar coloring is disabled.
     scalars : bool | None, default=True
         Whether to color the surface with depth-derived scalar values.
-    cmap : str | None, default=None
+    cmap : str | None, default=DEFAULT_CMAP
         Colormap used when scalar coloring is enabled.
     show_colorbar : bool, default=True
         Whether to display the scalar bar.
@@ -112,7 +113,7 @@ def _add_surface(
 
     if scalars:
         color = None
-        cmap = cmap or "viridis"
+        cmap = cmap or DEFAULT_CMAP
         backend.plotter.add_mesh(
             grid,
             name=name,

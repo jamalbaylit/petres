@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-
+from ..config.colors import DEFAULT_CMAP
 
 
 
@@ -678,7 +678,7 @@ class CornerPointGrid:
         show_inactive: bool = False, 
         scalars: str | None = None,
         color: Any = 'tan', 
-        cmap: str | None = 'turbo', 
+        cmap: str | None = DEFAULT_CMAP, 
         title: str | None = None,
         z_scale: float = 1.0,
         wells: Sequence[VerticalWell] | VerticalWell | None = None,
@@ -694,7 +694,7 @@ class CornerPointGrid:
             Property name to color by; if ``None`` uses solid color.
         color : Any, default 'tan'
             Solid color when ``scalars`` is not provided.
-        cmap : str or None, default 'turbo'
+        cmap : str or None, default DEFAULT_CMAP
             Colormap applied when ``scalars`` is provided.
         title : str or None, optional
             Figure title.
@@ -711,7 +711,7 @@ class CornerPointGrid:
             raise ValueError("z_scale must be a positive finite value.")
         
             
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
+        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)), lighting=False)
         viewer = PyVista3DViewer(theme=theme)
         scalars = self._resolve_source(scalars) if scalars is not None else None
         color = None if scalars is not None else color
