@@ -1,0 +1,2 @@
+PETRES_COLORS = ["#000096", "#BFFF00"]
+DEFAULT_CMAP = "petres"

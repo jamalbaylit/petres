@@ -4,7 +4,8 @@ from typing import Any
 import pyvista as pv
 import numpy as np
 
-from ....._utils._color import Color
+from .....config.colors import DEFAULT_CMAP
+from ....._utils._colors import Color
 from .....grids import CornerPointGrid
 
 def _add_corner_point_grid(
@@ -101,7 +102,7 @@ def _add_corner_point_grid(
         backend.plotter.add_mesh(
             mesh,
             scalars="values",
-            cmap=cmap or "turbo",   # default fallback
+            cmap=cmap or DEFAULT_CMAP,
             show_edges=True,
             **kwargs
         )
