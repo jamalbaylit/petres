@@ -88,6 +88,7 @@ class PyVista3DViewer(Base3DViewer):
             If ``plotter`` is not a ``pyvista.Plotter`` instance.
         """
         assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
+        plotter.theme.allow_empty_mesh = self.theme.allow_empty_mesh
         self.plotter = plotter
 
     def set_theme(self, theme: PyVista3DViewerTheme) -> None:
@@ -134,6 +135,7 @@ class PyVista3DViewer(Base3DViewer):
         p.set_scale(*theme.scale)
         p.set_background(theme.background, top=theme.background)
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
+        
         p.show_bounds(
             ticks='outside',
             grid='back',

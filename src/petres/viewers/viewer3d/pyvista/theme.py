@@ -71,9 +71,12 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
         Viewer-specific anchor position for title placement.
     camera : Camera3D, default=Camera3D()
         Camera configuration applied to the scene.
-    
+    allow_empty_mesh : bool, default=True
+        Allow rendering of meshes with no faces.
     """
 
+    # Core theme parameters
+    # =====================
     background: Color = "white"
     show_orientation_widget: bool = True
     show_coordinate_axes: bool = True
@@ -86,3 +89,8 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     title_position: str = "upper_edge"
 
     camera: Camera3D = Camera3D()
+
+
+    # Additional theme parameters
+    # ===========================
+    allow_empty_mesh: bool = True
