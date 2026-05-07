@@ -126,6 +126,8 @@ class GRDECLWriter:
             f.write(f"{ni} {nj} {nk}  1  F /\n")
             
             # COORD
+            coord[:, :, 1] *= -1
+            coord[:, :, 4] *= -1
             f = GRDECLWriter._write_array(f, "COORD", coord, rle=rle)
             
             # ZCORN

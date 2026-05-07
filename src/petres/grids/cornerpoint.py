@@ -600,8 +600,9 @@ class CornerPointGrid:
         coord = data.coord
         zcorn = data.zcorn
         actnum = data.actnum
-        # For properties, we need to convert raw arrays into GridProperty instances
+
         
+
         pillars = PillarGrid.from_eclipse_coord(coord)
         grid = cls(pillars=pillars, zcorn=zcorn, active=actnum)
         
@@ -615,6 +616,8 @@ class CornerPointGrid:
                 eclipse_keyword=kw
             )
             prop.from_array(val)
+
+        
         return grid
 
     def to_grdecl(
@@ -710,8 +713,11 @@ class CornerPointGrid:
         if not np.isfinite(z_scale) or z_scale <= 0:
             raise ValueError("z_scale must be a positive finite value.")
         
-            
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)), lighting=False)
+
+        # get direction of the default z-axis -1 or 1 
+        scale = (PyVista3DViewerTheme.scale[0], PyVista3DViewerTheme.scale[1], float(z_scale))
+        theme = PyVista3DViewerTheme(scale=scale, lighting=False)
+        # theme = PyVista3DViewerTheme(lighting=False)
         viewer = PyVista3DViewer(theme=theme)
         scalars = self._resolve_source(scalars) if scalars is not None else None
         color = None if scalars is not None else color

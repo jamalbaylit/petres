@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import Any
 import pyvista as pv
 import numpy as np
+import vtk
 
 from ....models.wells import VerticalWell, _validate_well_sequence
 from ....grids.sampling._vertices import _resolve_xy_vertices
@@ -67,7 +68,6 @@ class PyVista3DViewer(Base3DViewer):
             turn=-45,
             tilt=50,
             zoom=1.0,
-            depth_down=True
         ))
         self.set_plotter(plotter or pv.Plotter())
         self.title = title
@@ -89,13 +89,22 @@ class PyVista3DViewer(Base3DViewer):
             If ``plotter`` is not a ``pyvista.Plotter`` instance.
         """
         assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
-        self.plotter = plotter
         # Patch add_mesh to always disable lighting
         _original_add_mesh = plotter.add_mesh
         def _add_mesh_no_lighting(*args, **kwargs):
             kwargs.setdefault('lighting', self.theme.lighting)
-            return _original_add_mesh(*args, **kwargs)
-        self.plotter.add_mesh = _add_mesh_no_lighting
+            actor = _original_add_mesh(*args, **kwargs)
+            # Apply global visual Z exaggeration
+            scale = tuple(
+                s * d for s, d in zip(self.theme.scale, self.theme.direction)
+            )
+
+            actor.SetScale(*scale)
+
+            return actor
+        plotter.add_mesh = _add_mesh_no_lighting
+
+        self.plotter = plotter
 
     def set_theme(self, theme: PyVista3DViewerTheme) -> None:
         """Assign the active scene theme.
@@ -129,6 +138,7 @@ class PyVista3DViewer(Base3DViewer):
         assert isinstance(camera, Camera3D), "`camera` must be a Camera3D instance or None."
         self.camera = camera
 
+
     def apply_theme(self, theme: PyVista3DViewerTheme) -> None:
         """Apply scene styling options to the active plotter.
 
@@ -137,18 +147,35 @@ class PyVista3DViewer(Base3DViewer):
         theme : PyVista3DViewerTheme
             Theme values controlling background color and axes visibility.
         """
+
         p = self.plotter
-        p.set_scale(*theme.scale)
-        p.set_background(theme.background, top=theme.background)
-        p.show_axes() if theme.show_orientation_widget else p.hide_axes()
+
+        x_scale, y_scale, z_scale = theme.scale
+        axes_ranges = [
+            p.bounds[0] / x_scale,
+            p.bounds[1] / x_scale,
+            p.bounds[2] / y_scale,
+            p.bounds[3] / y_scale,
+            p.bounds[4] / z_scale,
+            p.bounds[5] / z_scale,
+        ]
+
         p.show_bounds(
-            ticks='outside',
             grid='back',
-            all_edges=False,
-            show_zaxis=True,
             location='outer',
-        ) if theme.show_coordinate_axes else p.hide_bounds()
-        # p.show_grid() if theme.show_grid else p.remove_bounds_axes()
+            ticks='outside',
+            minor_ticks=True,
+            fmt="%.0f",
+            use_2d=False,
+            
+            axes_ranges=axes_ranges,
+            xtitle='X',
+            ytitle='Y',
+            ztitle='Z',
+        )
+        p.show_axes() if theme.show_orientation_widget else p.hide_axes()
+        p.set_background(theme.background, top=theme.background)
+
 
     def _defer_point_labels(
         self,
@@ -183,9 +210,7 @@ class PyVista3DViewer(Base3DViewer):
         """
 
         # Always apply an explicit scale so repeated calls are deterministic.
-        self.apply_theme(self.theme)
         self._flush_deferred_point_labels()
-        self.apply_camera(self.camera)
         if title:
             self.plotter.add_text(
                 str(title),
@@ -194,7 +219,11 @@ class PyVista3DViewer(Base3DViewer):
                 color=self.theme.title_color,
             )
 
+            
+        self.apply_camera(self.camera)
+        self.apply_theme(self.theme)
         self.plotter.show(title=self.title)
+        
         self.plotter.close()
         self.set_plotter(pv.Plotter())
 
@@ -345,8 +374,10 @@ class PyVista3DViewer(Base3DViewer):
             raise ValueError(f"Unknown view: {cam.view}")
 
         # Depth down on screen (optional)
-        if getattr(cam, "depth_down", False):
-            p.camera.up = (0.0, 0.0, -1.0)
+        # if getattr(cam, "depth_down", False):
+        p.camera.position = cam.position
+        # p.camera.focal_point = cam.focal_point
+        # p.camera.up = cam.up
 
         # Apply intuitive tweaks as RELATIVE offsets
         if cam.turn:
@@ -359,7 +390,8 @@ class PyVista3DViewer(Base3DViewer):
         if cam.zoom and cam.zoom != 1.0:
             p.camera.zoom(cam.zoom)
 
-        p.reset_camera_clipping_range()
+        # p.reset_camera_clipping_range()
+        self.reset_camera()
 
 
     def _add_corner_point_grid(

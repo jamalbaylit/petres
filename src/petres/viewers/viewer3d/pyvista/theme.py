@@ -32,8 +32,8 @@ class Camera3D:
     zoom : float, default=1.0
         Zoom factor where ``1.0`` is neutral, values above ``1.0`` zoom in,
         and values below ``1.0`` zoom out.
-    depth_down : bool, default=True
-        Keep depth (Z) visually oriented downward on screen.
+    position : tuple[float, float, float], default=(0, 0, -1)
+        Absolute camera position in 3D space. Default looks towards the origin from the negative Z direction.
     """
 
     view: CameraView = "iso"
@@ -45,7 +45,9 @@ class Camera3D:
     zoom: float = 1.0     # 1.0 = normal, 1.2 = closer, 0.8 = farther
 
     # optional: keep depth (Z) visually downward on screen
-    depth_down: bool = True
+    position = (0, 0, 0)   # flip Z direction
+    # focal_point = (0, 0, 0)
+    # up = (0, 1, 0)
 
 Color = str | tuple[float, float, float] 
 
@@ -83,9 +85,58 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     # show_grid: bool = True
     # camera_up: tuple[float, float, float] = (1, 1, -1)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+    direction: tuple[float, float, float] = (1, 1, -1)
 
     title_fontsize: int = 12
     title_color: Color = "black"
     title_position: str = "upper_edge"
 
     camera: Camera3D = Camera3D()
+
+    def __post_init__(self):
+        self._validate_scale(self.scale)
+        self._validate_direction(self.direction)
+
+    @classmethod
+    def _validate_scale(cls, scale):
+        if not isinstance(scale, (tuple, list)):
+            raise TypeError(
+                "`scale` must be a tuple or list of 3 numeric values."
+            )
+
+        if len(scale) != 3:
+            raise ValueError(
+                "`scale` must contain exactly 3 values (x_scale, y_scale, z_scale)."
+            )
+
+        if not all(isinstance(v, (int, float)) for v in scale):
+            raise TypeError(
+                "All `scale` values must be numeric."
+            )
+
+        if any(v == 0 for v in scale):
+            raise ValueError(
+                "`scale` values cannot be zero."
+            )
+        
+    @classmethod
+    def _validate_direction(cls, direction):
+        if not isinstance(direction, (tuple, list)):
+            raise TypeError(
+                "`direction` must be a tuple or list of 3 direction values."
+            )
+
+        if len(direction) != 3:
+            raise ValueError(
+                "`direction` must contain exactly 3 values (x_dir, y_dir, z_dir)."
+            )
+
+        if not all(isinstance(v, (int, float)) for v in direction):
+            raise TypeError(
+                "All `direction` values must be numeric."
+            )
+
+        if any(v != 1 and v != -1 for v in direction):
+            raise ValueError(
+                "`direction` values must be either 1 or -1."
+            )
