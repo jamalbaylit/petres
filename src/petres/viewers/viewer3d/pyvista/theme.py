@@ -72,9 +72,12 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
         Viewer-specific anchor position for title placement.
     camera : Camera3D, default=Camera3D()
         Camera configuration applied to the scene.
-    
+    allow_empty_mesh : bool, default=True
+        Allow rendering of meshes with no faces.
     """
 
+    # Core theme parameters
+    # =====================
     background: Color = "white"
     show_orientation_widget: bool = True
     show_coordinate_axes: bool = True
@@ -87,6 +90,11 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     title_fontsize: int = 12
     title_color: Color = "black"
     title_position: str = "upper_edge"
+
+    # Additional theme parameters
+    # ===========================
+    allow_empty_mesh: bool = True
+
 
     def __post_init__(self):
         self._validate_scale(self.scale)
@@ -135,6 +143,8 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
             raise ValueError(
                 "`direction` values must be either 1 or -1."
             )
+        
+    
         
 
 
@@ -306,3 +316,6 @@ class Camera3D:
         return cls(position=(x, y, z),
                    focal_point=(0.0, 0.0, 0.0),
                    view_up=(0.0, 0.0, 1.0))
+
+
+

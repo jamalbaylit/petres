@@ -84,6 +84,8 @@ class PyVista3DViewer(Base3DViewer):
             If ``plotter`` is not a ``pyvista.Plotter`` instance.
         """
         assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
+        plotter.theme.allow_empty_mesh = self.theme.allow_empty_mesh
+        self.plotter = plotter
         # Patch add_mesh to always disable lighting
         _original_add_mesh = plotter.add_mesh
         def _add_mesh_no_lighting(*args, **kwargs):
