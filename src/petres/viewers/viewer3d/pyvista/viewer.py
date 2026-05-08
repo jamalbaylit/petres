@@ -63,12 +63,7 @@ class PyVista3DViewer(Base3DViewer):
             If resolved ``plotter``, ``theme``, or ``camera`` has an invalid type.
         """
         self.set_theme(theme or PyVista3DViewerTheme())
-        self.set_camera(camera or Camera3D(
-            view="iso",
-            turn=-45,
-            tilt=50,
-            zoom=1.0,
-        ))
+        self.set_camera(camera or Camera3D.isometric_se())
         self.set_plotter(plotter or pv.Plotter())
         self.title = title
         self._deferred_point_labels = []
@@ -138,7 +133,6 @@ class PyVista3DViewer(Base3DViewer):
         assert isinstance(camera, Camera3D), "`camera` must be a Camera3D instance or None."
         self.camera = camera
 
-
     def apply_theme(self, theme: PyVista3DViewerTheme) -> None:
         """Apply scene styling options to the active plotter.
 
@@ -190,8 +184,9 @@ class PyVista3DViewer(Base3DViewer):
             return
 
         scale = np.asarray(self.theme.scale, dtype=float)
+        direction = np.asarray(self.theme.direction, dtype=float)
         for points, labels, kwargs in self._deferred_point_labels:
-            self.plotter.add_point_labels(points * scale, labels, **kwargs)
+            self.plotter.add_point_labels(points * scale * direction, labels, **kwargs)
 
         self._deferred_point_labels.clear()
 
@@ -220,8 +215,8 @@ class PyVista3DViewer(Base3DViewer):
             )
 
             
-        self.apply_camera(self.camera)
         self.apply_theme(self.theme)
+        self.apply_camera(self.camera)
         self.plotter.show(title=self.title)
         
         self.plotter.close()
@@ -236,6 +231,7 @@ class PyVista3DViewer(Base3DViewer):
         color: Any = None,
         scalars: np.ndarray | None = None,
         cmap: str | None = None,
+        colorbar_title: str | None = None,
         **kwargs: Any,
     ) -> PyVista3DViewer:
         """Add a supported grid to the current 3D scene.
@@ -252,6 +248,8 @@ class PyVista3DViewer(Base3DViewer):
             Optional scalar values for per-cell or per-point colormapping.
         cmap : str or None, default=None
             Matplotlib-compatible colormap name used when ``scalars`` is provided.
+        colorbar_title : str or None, default=None
+            Optional title for the scalar bar when ``scalars`` are provided.
         **kwargs : Any
             Additional keyword arguments forwarded to the grid layer renderer.
 
@@ -267,7 +265,15 @@ class PyVista3DViewer(Base3DViewer):
         """
 
         if isinstance(grid, CornerPointGrid): 
-            self._add_corner_point_grid(grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color,**kwargs)
+            self._add_corner_point_grid(
+                grid, 
+                show_inactive=show_inactive, 
+                scalars=scalars, 
+                cmap=cmap, 
+                color=color, 
+                colorbar_title=colorbar_title, 
+                **kwargs
+            )
             return self
         
         raise TypeError(f"Unsupported grid type: {type(grid).__name__}")
@@ -339,59 +345,116 @@ class PyVista3DViewer(Base3DViewer):
             )
         return self
     
+    # def apply_camera(self, cam: Camera3D) -> None:
+    #     """Apply a camera preset and relative camera adjustments.
+
+    #     Parameters
+    #     ----------
+    #     cam : Camera3D
+    #         Camera configuration containing a view preset and optional turn,
+    #         tilt, roll, zoom, and depth orientation adjustments.
+
+    #     Raises
+    #     ------
+    #     ValueError
+    #         If ``cam.view`` is not a recognized view preset.
+    #     """
+    #     p = self.plotter
+    #     # Base view preset
+    #     if cam.view == "iso":
+    #         p.view_isometric()
+    #     elif cam.view == "top":
+    #         p.view_xy(negative=False)
+    #     elif cam.view == "bottom":
+    #         p.view_xy(negative=True)
+    #     elif cam.view == "front":
+    #         # front = "Y toward us" is easier with explicit camera, but keep preset for now
+    #         p.view_yz(negative=False)
+    #     elif cam.view == "back":
+    #         p.view_yz(negative=True)
+    #     elif cam.view == "right":
+    #         p.view_xz(negative=False)
+    #     elif cam.view == "left":
+    #         p.view_xz(negative=True)
+    #     else:
+    #         raise ValueError(f"Unknown view: {cam.view}")
+
+    #     # Depth down on screen (optional)
+    #     # if getattr(cam, "depth_down", False):
+    #     p.camera.position = cam.position
+    #     # p.camera.focal_point = cam.focal_point
+    #     # p.camera.up = cam.up
+
+    #     # Apply intuitive tweaks as RELATIVE offsets
+    #     if cam.turn:
+    #         p.camera.azimuth = p.camera.azimuth + cam.turn
+    #     if cam.tilt:
+    #         p.camera.elevation = p.camera.elevation + cam.tilt
+    #     if cam.roll:
+    #         p.camera.roll = p.camera.roll + cam.roll
+
+    #     if cam.zoom and cam.zoom != 1.0:
+    #         p.camera.zoom(cam.zoom)
+
+    #     self.reset_camera()
+
+
+    # def apply_camera(self, cam: Camera3D) -> None:
+    #     p = self.plotter
+
+    #     # Reset once up front so the preset starts from a clean camera state.
+    #     self.reset_camera()
+
+    #     # 1. Apply base view preset
+    #     if cam.view == "iso":
+    #         p.view_isometric()
+    #     elif cam.view == "top":
+    #         p.view_xy(negative=False)
+    #     elif cam.view == "bottom":
+    #         p.view_xy(negative=True)
+    #     elif cam.view == "front":
+    #         # front = "Y toward us" is easier with explicit camera, but keep preset for now
+    #         p.view_yz(negative=False)
+    #     elif cam.view == "back":
+    #         p.view_yz(negative=True)
+    #     elif cam.view == "right":
+    #         p.view_xz(negative=False)
+    #     elif cam.view == "left":
+    #         p.view_xz(negative=True)
+    #     else:
+    #         raise ValueError(f"Unknown view: {cam.view}")
+
+    #     # 2. Apply the absolute camera placement before the relative tweaks.
+    #     p.camera.position = (0, 0, 0)
+
+    #     # 3. Apply relative tweaks after the base placement.
+    #     p.camera.azimuth += cam.turn
+    #     p.camera.elevation += cam.tilt
+    #     p.camera.roll += cam.roll
+
+    #     # 4. Reset clipping range only — keeps position, fixes near/far planes
+    #     p.reset_camera_clipping_range()
+
+    #     # 5. Apply zoom AFTER reset so it isn't overridden
+    #     if cam.zoom and cam.zoom != 1.0:
+    #         p.camera.zoom(cam.zoom)
+
+    #     self.reset_camera()
+
     def apply_camera(self, cam: Camera3D) -> None:
-        """Apply a camera preset and relative camera adjustments.
+        """Apply camera configuration to the active plotter.
 
         Parameters
         ----------
         cam : Camera3D
-            Camera configuration containing a view preset and optional turn,
-            tilt, roll, zoom, and depth orientation adjustments.
-
-        Raises
-        ------
-        ValueError
-            If ``cam.view`` is not a recognized view preset.
+            Camera configuration with position, focal point, and view settings.
         """
-        p = self.plotter
-        # Base view preset
-        if cam.view == "iso":
-            p.view_isometric()
-        elif cam.view == "top":
-            p.view_xy(negative=False)
-        elif cam.view == "bottom":
-            p.view_xy(negative=True)
-        elif cam.view == "front":
-            # front = "Y toward us" is easier with explicit camera, but keep preset for now
-            p.view_yz(negative=False)
-        elif cam.view == "back":
-            p.view_yz(negative=True)
-        elif cam.view == "right":
-            p.view_xz(negative=False)
-        elif cam.view == "left":
-            p.view_xz(negative=True)
-        else:
-            raise ValueError(f"Unknown view: {cam.view}")
-
-        # Depth down on screen (optional)
-        # if getattr(cam, "depth_down", False):
-        p.camera.position = cam.position
-        # p.camera.focal_point = cam.focal_point
-        # p.camera.up = cam.up
-
-        # Apply intuitive tweaks as RELATIVE offsets
-        if cam.turn:
-            p.camera.azimuth = p.camera.azimuth + cam.turn
-        if cam.tilt:
-            p.camera.elevation = p.camera.elevation + cam.tilt
-        if cam.roll:
-            p.camera.roll = p.camera.roll + cam.roll
-
-        if cam.zoom and cam.zoom != 1.0:
-            p.camera.zoom(cam.zoom)
-
-        # p.reset_camera_clipping_range()
+        # Auto-fit camera to scene bounds first
+        # self.plotter.view_isometric()
         self.reset_camera()
+        cam.apply(self.plotter)
+        self.reset_camera()
+        
 
 
     def _add_corner_point_grid(
@@ -401,6 +464,7 @@ class PyVista3DViewer(Base3DViewer):
         scalars: np.ndarray | None = None,
         cmap: str | None = None,
         color: Color | None = None,
+        colorbar_title: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Add a corner-point grid layer.
@@ -417,10 +481,21 @@ class PyVista3DViewer(Base3DViewer):
             Colormap name for scalar coloring.
         color : Color or None, default=None
             Fixed color when scalar coloring is not used.
+        colorbar_title : str or None, default=None
+            Optional title for the scalar bar when ``scalars`` are provided.
         **kwargs : Any
             Extra keyword arguments forwarded to the layer renderer.
         """
-        return _add_corner_point_grid(self, grid, show_inactive=show_inactive, scalars=scalars, cmap=cmap, color=color, **kwargs)
+        return _add_corner_point_grid(
+            self, 
+            grid, 
+            show_inactive=show_inactive, 
+            scalars=scalars, 
+            cmap=cmap, 
+            color=color, 
+            colorbar_title=colorbar_title, 
+            **kwargs
+        )
 
 
     def add_zones(
@@ -560,6 +635,7 @@ class PyVista3DViewer(Base3DViewer):
         color: Any | None = None,
         scalars: bool = True,
         cmap: str | None = None,
+        colorbar_title: str | None = None,
         **kwargs: Any,
     ) -> PyVista3DViewer:
         """Add a single horizon surface to the scene.
@@ -604,8 +680,20 @@ class PyVista3DViewer(Base3DViewer):
             ni=ni, nj=nj,
             dx=dx, dy=dy,
         )
+        # add colorbar_title to kwargs if scalars is True and colorbar_title is provided
+        
         depth = horizon.to_grid(x, y)  # shape: (ny, nx)
-        _add_surface(self, depth, x=x, y=y, color=color, scalars=scalars, cmap=cmap, **kwargs)
+        _add_surface(
+            self, 
+            depth, 
+            x=x, 
+            y=y, 
+            color=color, 
+            scalars=scalars, 
+            cmap=cmap, 
+            colorbar_title=colorbar_title, 
+            **kwargs
+        )
         return self
         
     def add_horizons(
@@ -621,6 +709,7 @@ class PyVista3DViewer(Base3DViewer):
         dx: float | None = None,
         dy: float | None = None,
         cmap: str = DEFAULT_CMAP,
+        scalars: bool = True,
         **kwargs: Any,
     ) -> PyVista3DViewer:
         """Add multiple horizons to the scene with distinct colors.
@@ -647,6 +736,8 @@ class PyVista3DViewer(Base3DViewer):
             Cell size along Y used for vertex generation.
         cmap : str, default=DEFAULT_CMAP
             Colormap name used to assign a distinct color per horizon.
+        scalars : bool, default=True
+            If ``True``, scalar-based coloring is enabled for the surface.
         **kwargs : Any
             Additional keyword arguments forwarded to horizon rendering.
 
@@ -663,7 +754,7 @@ class PyVista3DViewer(Base3DViewer):
         )
         colors = Color.get_discrete_cmap(len(horizons), cmap=cmap)
         for i, horizon in enumerate(horizons):
-            self.add_horizon(horizon, x=x, y=y, color=colors[i], **kwargs)
+            self.add_horizon(horizon, x=x, y=y, color=colors[i], scalars=scalars, **kwargs)
         return self
 
 

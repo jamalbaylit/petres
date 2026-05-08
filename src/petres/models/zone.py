@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 
-from ..config.colors import DEFAULT_CMAP
+from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
 from .wells import VerticalWell, _validate_well_sequence
 
 if TYPE_CHECKING:
@@ -125,7 +125,7 @@ class Zone:
         dy: float | None = None,
         z_scale: float = 1.0,
         title: str | Literal["auto"] | None = "auto",
-        color: Any | None = 'gray',
+        color: Any | None = DEFAULT_COLOR,
         show_layers: bool = True,
         show_edges: bool = True,
         wells: Sequence[VerticalWell] | VerticalWell | None = None,
@@ -146,8 +146,9 @@ class Zone:
             Number of cells along x/y when using bounds. Must be >= 1.
         dx, dy : float or None, default None
             Cell size along x/y when using bounds. Mutually exclusive with `ni`/`nj`.
-        color : Any or None, default 'gray'
-            Solid color for the zone surfaces.
+        color : Any or None, default DEFAULT_COLOR
+            Solid color for the zone surfaces. Defaults to the project-wide
+            default color defined in :mod:`petres.config.colors` (`DEFAULT_COLOR`).
         show_layers : bool, default True
             Whether to render internal layers derived from `levels`.
         show_edges : bool, default True

@@ -6,6 +6,7 @@ import pyvista as pv
 
 from .....models.zone import Zone
 from ....._utils._colors import Color
+from .....config.colors import DEFAULT_COLOR
 
 
 def _add_zone(
@@ -38,7 +39,8 @@ def _add_zone(
     name : str | None, default=None
         Actor name prefix. If ``None``, a default name is derived from ``zone.name``.
     color : tuple[float, float, float] | str | None, default=None
-        Surface color. If ``None``, defaults to ``"tan"``.
+        Surface color. If ``None``, defaults to the project default
+        color defined in :mod:`petres.config.colors` (`DEFAULT_COLOR`).
     opacity : float, default=1
         Surface opacity in the inclusive range ``[0, 1]``.
     show_layers : bool, default=True
@@ -81,7 +83,7 @@ def _add_zone(
 
     actor_name = name or f"zone:{zone.name}"
 
-    color = Color(color).as_rgb() if color is not None else 'tan'
+    color = Color(color).as_rgb() if color is not None else DEFAULT_COLOR
 
     assert isinstance(show_outline, bool), \
          f"'show_outline' must be a boolean. Got: {type(show_outline).__name__}"

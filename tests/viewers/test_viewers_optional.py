@@ -184,3 +184,48 @@ def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
     assert calls["kwargs"]["line_width"] == 2.5
     assert calls["kwargs"]["show_tops"] is True
     assert calls["kwargs"]["label_top"] == "Top"
+
+
+def test_apply_camera_uses_camera_position_and_zoom(monkeypatch):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    class DummyCamera:
+        def __init__(self):
+            self.zoom_calls = []
+
+        def zoom(self, factor):
+            self.zoom_calls.append(factor)
+
+    class DummyPlotter:
+        def __init__(self):
+            self.calls = []
+            self.camera = DummyCamera()
+            self.camera_position = None
+
+        def reset_camera(self):
+            self.calls.append("reset_camera")
+
+        def reset_camera_clipping_range(self):
+            self.calls.append("reset_camera_clipping_range")
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.plotter = DummyPlotter()
+
+    camera = viewer_mod.Camera3D.isometric_se().with_zoom(2.0)
+
+    viewer.apply_camera(camera)
+
+    assert viewer.plotter.calls == [
+        "reset_camera",
+        "reset_camera_clipping_range",
+        "reset_camera",
+        "reset_camera_clipping_range",
+    ]
+    assert viewer.plotter.camera_position == [
+        camera.position,
+        camera.focal_point,
+        camera.view_up,
+    ]
+    assert viewer.plotter.camera.zoom_calls == [2.0]

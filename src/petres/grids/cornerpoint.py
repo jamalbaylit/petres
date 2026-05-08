@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-from ..config.colors import DEFAULT_CMAP
+from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
 
 
 
@@ -680,7 +680,7 @@ class CornerPointGrid:
         self, 
         show_inactive: bool = False, 
         scalars: str | None = None,
-        color: Any = 'tan', 
+        color: Any = DEFAULT_COLOR, 
         cmap: str | None = DEFAULT_CMAP, 
         title: str | None = None,
         z_scale: float = 1.0,
@@ -695,8 +695,9 @@ class CornerPointGrid:
             Whether to display inactive cells.
         scalars : str or None, optional
             Property name to color by; if ``None`` uses solid color.
-        color : Any, default 'tan'
-            Solid color when ``scalars`` is not provided.
+        color : Any, default DEFAULT_COLOR
+            Solid color when ``scalars`` is not provided. Defaults to the
+            project default color in :mod:`petres.config.colors` (`DEFAULT_COLOR`).
         cmap : str or None, default DEFAULT_CMAP
             Colormap applied when ``scalars`` is provided.
         title : str or None, optional
@@ -719,9 +720,19 @@ class CornerPointGrid:
         theme = PyVista3DViewerTheme(scale=scale, lighting=False)
         # theme = PyVista3DViewerTheme(lighting=False)
         viewer = PyVista3DViewer(theme=theme)
-        scalars = self._resolve_source(scalars) if scalars is not None else None
+        scalars_arr = self._resolve_source(scalars) if scalars is not None else None
+        colorbar_title = str(scalars).strip().capitalize() if scalars_arr is not None else None
+
         color = None if scalars is not None else color
-        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)
+        viewer.add_grid(
+            grid=self, 
+            show_inactive=show_inactive, 
+            color=color, 
+            scalars=scalars_arr, 
+            cmap=cmap,
+            colorbar_title=colorbar_title, 
+            **kwargs
+        )
         
         if wells is not None:
             viewer.add_wells(_validate_well_sequence(wells))
