@@ -135,11 +135,20 @@ def _add_surface(
 
     # Contour labels fixed:
     if show_contours:
-        zmin = float(np.nanmin(depth))
-        zmax = float(np.nanmax(depth))
-
         if contour_levels < 1:
             raise ValueError("`contour_levels` must be at least 1.")
+
+        finite_depth = depth[np.isfinite(depth)]
+        if finite_depth.size == 0:
+            return grid
+
+        zmin = float(finite_depth.min())
+        zmax = float(finite_depth.max())
+
+        # A flat surface has no meaningful isolines; contouring it can create
+        # degenerate/overlapping geometry in VTK.
+        if np.isclose(zmin, zmax):
+            return grid
 
         contour_values = np.linspace(zmin, zmax, contour_levels)
 
@@ -147,6 +156,9 @@ def _add_surface(
             isosurfaces=contour_values,
             scalars="z",
         )
+        
+        if contours.n_points == 0:          
+            return grid
 
         backend.plotter.add_mesh(
             contours,
