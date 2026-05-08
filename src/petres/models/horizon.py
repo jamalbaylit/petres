@@ -361,7 +361,7 @@ class Horizon:
             Number of cells along x/y when using bounds. Must be >= 1.
         dx, dy : float or None, optional
             Cell size along x/y when using bounds. Mutually exclusive with `ni`/`nj`.
-        color : Any or None, default 'tan'
+        color : Any or None, default 
             Solid color for the surface when `scalars` is False; otherwise used as
             edge/mesh color by the backend.
         scalars : bool, default True

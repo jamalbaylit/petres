@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-from ..config.colors import DEFAULT_CMAP
+from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
 
 
 
@@ -600,8 +600,9 @@ class CornerPointGrid:
         coord = data.coord
         zcorn = data.zcorn
         actnum = data.actnum
-        # For properties, we need to convert raw arrays into GridProperty instances
+
         
+
         pillars = PillarGrid.from_eclipse_coord(coord)
         grid = cls(pillars=pillars, zcorn=zcorn, active=actnum)
         
@@ -615,6 +616,8 @@ class CornerPointGrid:
                 eclipse_keyword=kw
             )
             prop.from_array(val)
+
+        
         return grid
 
     def to_grdecl(
@@ -677,7 +680,7 @@ class CornerPointGrid:
         self, 
         show_inactive: bool = False, 
         scalars: str | None = None,
-        color: Any = 'tan', 
+        color: Any = DEFAULT_COLOR, 
         cmap: str | None = DEFAULT_CMAP, 
         title: str | None = None,
         z_scale: float = 1.0,
@@ -692,8 +695,9 @@ class CornerPointGrid:
             Whether to display inactive cells.
         scalars : str or None, optional
             Property name to color by; if ``None`` uses solid color.
-        color : Any, default 'tan'
-            Solid color when ``scalars`` is not provided.
+        color : Any, default DEFAULT_COLOR
+            Solid color when ``scalars`` is not provided. Defaults to the
+            project default color in :mod:`petres.config.colors` (`DEFAULT_COLOR`).
         cmap : str or None, default DEFAULT_CMAP
             Colormap applied when ``scalars`` is provided.
         title : str or None, optional
@@ -710,12 +714,25 @@ class CornerPointGrid:
         if not np.isfinite(z_scale) or z_scale <= 0:
             raise ValueError("z_scale must be a positive finite value.")
         
-            
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)), lighting=False)
+
+        # get direction of the default z-axis -1 or 1 
+        scale = (PyVista3DViewerTheme.scale[0], PyVista3DViewerTheme.scale[1], float(z_scale))
+        theme = PyVista3DViewerTheme(scale=scale, lighting=False)
+        # theme = PyVista3DViewerTheme(lighting=False)
         viewer = PyVista3DViewer(theme=theme)
-        scalars = self._resolve_source(scalars) if scalars is not None else None
+        scalars_arr = self._resolve_source(scalars) if scalars is not None else None
+        colorbar_title = str(scalars).strip().capitalize() if scalars_arr is not None else None
+
         color = None if scalars is not None else color
-        viewer.add_grid(grid=self, show_inactive=show_inactive, color=color, scalars=scalars, cmap=cmap, **kwargs)
+        viewer.add_grid(
+            grid=self, 
+            show_inactive=show_inactive, 
+            color=color, 
+            scalars=scalars_arr, 
+            cmap=cmap,
+            colorbar_title=colorbar_title, 
+            **kwargs
+        )
         
         if wells is not None:
             viewer.add_wells(_validate_well_sequence(wells))

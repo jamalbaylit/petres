@@ -83,7 +83,7 @@ def _add_surface(
     Raises
     ------
     ValueError
-        If ``x`` or ``y`` are not 1D, if ``depth`` shape is incompatible, or if
+        If ``x`` or ``y`` are not 1D, if ``depth`` shape is incompatib"le, or if
         ``contour_levels < 1`` when contours are enabled.
     """
     x = np.asarray(x, dtype=float).ravel()

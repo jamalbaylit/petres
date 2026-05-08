@@ -130,6 +130,10 @@ class GRDECLReader:
         coord = coord.reshape((nj + 1, ni + 1, 6))
         validate_coord_array_shape(coord, ni=ni, nj=nj)
 
+        # Multiply y-coordinates by -1 to convert from Eclipse's downward-positive system to a more conventional upward-positive system.
+        coord[:, :, 1] *= -1
+        coord[:, :, 4] *= -1
+
         zcorn = self._get_keyword_array(text, "ZCORN", dtype=float)
         validate_zcorn_array_size(zcorn, ni=ni, nj=nj, nk=nk)
         zcorn = zcorn.reshape((2 * nk, 2 * nj, 2 * ni))
