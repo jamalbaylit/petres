@@ -1750,6 +1750,7 @@ docs = [
     { name = "sphinx-rtd-theme", marker = "python_full_version >= '3.11'" },
 ]
 examples = [
+    { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas", marker = "python_full_version >= '3.11'" },
 ]
 llm = [
@@ -1784,7 +1785,10 @@ docs = [
     { name = "sphinx-inline-svg", marker = "python_full_version >= '3.11'", specifier = ">=0.2.0" },
     { name = "sphinx-rtd-theme", marker = "python_full_version >= '3.11'", specifier = ">=3.1.0" },
 ]
-examples = [{ name = "pandas", marker = "python_full_version >= '3.11'", specifier = ">=3.0.1" }]
+examples = [
+    { name = "numpy", marker = "python_full_version >= '3.11'", specifier = ">=2.2.6" },
+    { name = "pandas", marker = "python_full_version >= '3.11'", specifier = ">=3.0.1" },
+]
 llm = [
     { name = "aiohttp", marker = "python_full_version >= '3.11'", specifier = ">=3.9.9" },
     { name = "pygithub", marker = "python_full_version >= '3.11'", specifier = ">=2.9.0" },

@@ -40,6 +40,7 @@ class Page:
     description: str | None = None
     difficulty: str | None = None
     sections: tuple[Section, ...] = ()
+    examples: tuple[ExampleBlock, ...] = ()
     tags: tuple[str, ...] = ()
 
 
@@ -61,20 +62,9 @@ def _project_root(app: Sphinx) -> Path:
     return _docs_dir(app).parent
 
 
-def _generated_dir(app: Sphinx) -> Path:
-    return _source_dir(app) / "_generated"
-
-
-def _generated_getting_started_dir(app: Sphinx) -> Path:
-    return _generated_dir(app) / "getting_started"
-
-
-def _generated_tutorials_dir(app: Sphinx) -> Path:
-    return _generated_dir(app) / "tutorials"
-
-
-def _generated_examples_dir(app: Sphinx) -> Path:
-    return _generated_dir(app) / "examples"
+def _generated_subdir_for_location(app: Sphinx, location: str) -> Path:
+    """Get the _generated directory for a specific location."""
+    return _source_dir(app) / location / "_generated"
 
 
 def _config_path(app: Sphinx) -> Path:
@@ -97,27 +87,15 @@ def _title_from_path(path_str: str) -> str:
 
 
 def _landing_filename(location: str) -> str:
-    if location == "getting_started":
-        return "getting_started.rst"
-    if location == "tutorials":
-        return "tutorials.rst"
-    if location == "examples":
-        return "examples.rst"
-    raise ValueError(f"Unsupported location: {location!r}")
+    """Generate landing page filename for a location."""
+    return "index.rst"
 
 
-def _generated_subdir_for_location(app: Sphinx, location: str) -> Path:
-    if location == "getting_started":
-        return _generated_getting_started_dir(app)
-    if location == "tutorials":
-        return _generated_tutorials_dir(app)
-    if location == "examples":
-        return _generated_examples_dir(app)
-    raise ValueError(f"Unsupported location: {location!r}")
+
 
 
 def _docname_for_page(location: str, slug: str) -> str:
-    return f"_generated/{location}/{slug}"
+    return f"{location}/_generated/{slug}"
 
 
 def _resolve_example_file(app: Sphinx, path_str: str) -> Path:
@@ -169,15 +147,15 @@ def _load_config(app: Sphinx) -> dict[str, Any]:
     return data
 
 
-def _clean_generated(app: Sphinx) -> None:
-    shutil.rmtree(_generated_dir(app), ignore_errors=True)
-
-    _generated_getting_started_dir(app).mkdir(parents=True, exist_ok=True)
-    _generated_tutorials_dir(app).mkdir(parents=True, exist_ok=True)
-    _generated_examples_dir(app).mkdir(parents=True, exist_ok=True)
-
-    for filename in ("getting_started.rst", "tutorials.rst", "examples.rst"):
-        (_source_dir(app) / filename).unlink(missing_ok=True)
+def _clean_generated(app: Sphinx, location: str) -> None:
+    """Clean and prepare _generated directory for a location."""
+    generated_dir = _generated_subdir_for_location(app, location)
+    shutil.rmtree(generated_dir, ignore_errors=True)
+    generated_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Clean up landing page
+    landing_page = _source_dir(app) / location / _landing_filename(location)
+    landing_page.unlink(missing_ok=True)
 
 
 def _validate_difficulty(value: str | None) -> None:
@@ -191,11 +169,8 @@ def _validate_difficulty(value: str | None) -> None:
 
 
 def _validate_location(value: str) -> None:
-    if value not in ALLOWED_LOCATIONS:
-        raise ValueError(
-            f"Invalid location {value!r}. Allowed values: "
-            f"{sorted(ALLOWED_LOCATIONS)}."
-        )
+    if not value or not isinstance(value, str):
+        raise ValueError(f"Location must be a non-empty string, got {value!r}")
 
 
 def _parse_example_block(item: dict[str, Any]) -> ExampleBlock:
@@ -254,7 +229,7 @@ def _parse_page(item: dict[str, Any]) -> Page:
     if not isinstance(item, dict):
         raise ValueError("Each page must be a mapping.")
 
-    required = ("slug", "title", "location", "sections")
+    required = ("slug", "title", "location")
     for field_name in required:
         if field_name not in item:
             raise ValueError(f"Each page must include a '{field_name}' field.")
@@ -266,7 +241,8 @@ def _parse_page(item: dict[str, Any]) -> Page:
     description = item.get("description")
     difficulty = item.get("difficulty")
     tags_raw = item.get("tags", [])
-    sections_raw = item["sections"]
+    sections_raw = item.get("sections")
+    examples_raw = item.get("examples")
 
     if not isinstance(slug, str) or not slug.strip():
         raise ValueError("Each page slug must be a non-empty string.")
@@ -280,17 +256,37 @@ def _parse_page(item: dict[str, Any]) -> Page:
         raise ValueError(f"Invalid description for page slug {slug!r}.")
     if not isinstance(tags_raw, list):
         raise ValueError(f"Invalid tags for page slug {slug!r}; expected a list.")
-    if not isinstance(sections_raw, list):
-        raise ValueError(f"'sections' must be a list for page slug {slug!r}.")
-    if not sections_raw:
-        raise ValueError(f"Page {slug!r} must contain at least one section.")
+
+    if sections_raw is None and examples_raw is None:
+        raise ValueError(
+            f"Page {slug!r} must include either 'sections' or 'examples'."
+        )
+    if sections_raw is not None and examples_raw is not None:
+        raise ValueError(
+            f"Page {slug!r} can define either 'sections' or 'examples', not both."
+        )
 
     slug = _slugify(slug)
     location = location.strip()
     _validate_location(location)
     _validate_difficulty(difficulty)
 
-    sections = tuple(_parse_section(section_item) for section_item in sections_raw)
+    sections: tuple[Section, ...] = ()
+    examples: tuple[ExampleBlock, ...] = ()
+
+    if sections_raw is not None:
+        if not isinstance(sections_raw, list):
+            raise ValueError(f"'sections' must be a list for page slug {slug!r}.")
+        if not sections_raw:
+            raise ValueError(f"Page {slug!r} must contain at least one section.")
+        sections = tuple(_parse_section(section_item) for section_item in sections_raw)
+    elif examples_raw is not None:
+        if not isinstance(examples_raw, list):
+            raise ValueError(f"'examples' must be a list for page slug {slug!r}.")
+        if not examples_raw:
+            raise ValueError(f"Page {slug!r} must contain at least one example block.")
+        examples = tuple(_parse_example_block(example_item) for example_item in examples_raw)
+
     tags = tuple(str(tag).strip() for tag in tags_raw if str(tag).strip())
 
     return Page(
@@ -301,6 +297,7 @@ def _parse_page(item: dict[str, Any]) -> Page:
         description=description.strip() if isinstance(description, str) else None,
         difficulty=difficulty,
         sections=sections,
+        examples=examples,
         tags=tags,
     )
 
@@ -327,8 +324,14 @@ def _ensure_example_files_exist(app: Sphinx, pages: list[Page]) -> None:
     missing: list[str] = []
 
     for page in pages:
-        for section in page.sections:
-            for example in section.examples:
+        if page.sections:
+            for section in page.sections:
+                for example in section.examples:
+                    file_path = _resolve_example_file(app, example.path)
+                    if not file_path.exists():
+                        missing.append(f"{example.path} -> {file_path}")
+        else:
+            for example in page.examples:
                 file_path = _resolve_example_file(app, example.path)
                 if not file_path.exists():
                     missing.append(f"{example.path} -> {file_path}")
@@ -342,8 +345,12 @@ def _ensure_example_files_exist(app: Sphinx, pages: list[Page]) -> None:
 
 def _assert_unique_example_paths_within_page(page: Page) -> None:
     seen: dict[str, int] = {}
-    for section in page.sections:
-        for example in section.examples:
+    if page.sections:
+        for section in page.sections:
+            for example in section.examples:
+                seen[example.path] = seen.get(example.path, 0) + 1
+    else:
+        for example in page.examples:
             seen[example.path] = seen.get(example.path, 0) + 1
 
     duplicates = sorted(path for path, count in seen.items() if count > 1)
@@ -388,6 +395,38 @@ def _write_page(
     if page.description:
         lines.extend([page.description, ""])
 
+    def _write_example_block(example: ExampleBlock, *, multiple_examples: bool) -> None:
+        example_title = example.title or _title_from_path(example.path)
+
+        if multiple_examples or example.title or example.description:
+            example_underline = "^" * len(example_title)
+            lines.extend(
+                [
+                    example_title,
+                    example_underline,
+                    "",
+                ]
+            )
+
+        if show_source:
+            lines.append(f"**Source:** ``{example.path}``")
+            lines.append("")
+
+        if example.description:
+            lines.extend([example.description, ""])
+
+        lines.extend(
+            [
+                ".. code-block:: python",
+                "",
+            ]
+        )
+
+        code = _read_code(app, example.path)
+        for line in code.splitlines():
+            lines.append(f"   {line}")
+        lines.append("")
+
     # if previous or next_:
     #     lines.extend(
     #         [
@@ -402,52 +441,25 @@ def _write_page(
     #         lines.append(f"**Next:** :doc:`{next_.title} <{next_.docname}>`")
     #     lines.append("")
 
-    for section in page.sections:
-        section_underline = "-" * len(section.title)
-        lines.extend(
-            [
-                section.title,
-                section_underline,
-                "",
-            ]
-        )
-
-        if section.description:
-            lines.extend([section.description, ""])
-
-        for idx, example in enumerate(section.examples, start=1):
-            example_title = example.title or _title_from_path(example.path)
-
-            # When there are multiple example blocks in one section,
-            # use a sub-sub-heading for readability.
-            if len(section.examples) > 1 or example.title or example.description:
-                example_underline = "^" * len(example_title)
-                lines.extend(
-                    [
-                        example_title,
-                        example_underline,
-                        "",
-                    ]
-                )
-
-            if show_source:
-                lines.append(f"**Source:** ``{example.path}``")
-                lines.append("")
-
-            if example.description:
-                lines.extend([example.description, ""])
-
+    if page.sections:
+        for section in page.sections:
+            section_underline = "-" * len(section.title)
             lines.extend(
                 [
-                    ".. code-block:: python",
+                    section.title,
+                    section_underline,
                     "",
                 ]
             )
 
-            code = _read_code(app, example.path)
-            for line in code.splitlines():
-                lines.append(f"   {line}")
-            lines.append("")
+            if section.description:
+                lines.extend([section.description, ""])
+
+            for example in section.examples:
+                _write_example_block(example, multiple_examples=len(section.examples) > 1)
+    else:
+        for example in page.examples:
+            _write_example_block(example, multiple_examples=len(page.examples) > 1)
 
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -480,8 +492,10 @@ def _write_landing_page(
 
 
 def _group_pages_by_location(pages: list[Page]) -> dict[str, list[Page]]:
-    grouped = {location: [] for location in ALLOWED_LOCATIONS}
+    grouped: dict[str, list[Page]] = {}
     for page in pages:
+        if page.location not in grouped:
+            grouped[page.location] = []
         grouped[page.location].append(page)
     return grouped
 
@@ -527,42 +541,41 @@ def _build_pages_for_location(
     return docnames
 
 
-def _write_location_landing_pages(app: Sphinx, grouped_pages: dict[str, list[Page]]) -> None:
-    landing_specs = {
-        # "getting_started": {
-        #     "title": "Getting Started",
-        #     "intro": (
-        #         "Start here if you are new to Petres. These guides introduce the "
-        #         "core workflow and the most common first steps."
-        #     ),
-        #     "maxdepth": 1,
-        # },
-        "tutorials": {
-            "title": "Tutorials",
-            "intro": "Task-oriented walkthroughs for common Petres workflows.",
-            "maxdepth": 2,
-        },
-        "examples": {
-            "title": "Examples",
-            "intro": "Focused examples and reference-style usage patterns.",
-            "maxdepth": 2,
-        },
-    }
-
-    for location, spec in landing_specs.items():
-        pages = grouped_pages[location]
-        docnames = [_docname_for_page(location, page.slug) for page in pages]
-        _write_landing_page(
-            _source_dir(app) / _landing_filename(location),
-            title=spec["title"],
-            intro=spec["intro"],
-            docnames=docnames,
-            maxdepth=spec["maxdepth"],
-        )
+def _write_location_landing_pages(
+    app: Sphinx,
+    location: str,
+    pages: list[Page],
+    *,
+    title: str,
+    intro: str,
+    maxdepth: int = 2,
+) -> None:
+    """Write landing page for a location."""
+    if not pages:
+        return
+    
+    # Use relative paths from the landing page location
+    docnames = [f"_generated/{page.slug}" for page in pages]
+    landing_page_path = _source_dir(app) / location / _landing_filename(location)
+    landing_page_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_landing_page(
+        landing_page_path,
+        title=title,
+        intro=intro,
+        docnames=docnames,
+        maxdepth=maxdepth,
+    )
 
 
-def generate_example_docs(app: Sphinx) -> None:
-    logger.info("[exampledocs] Generating example documentation...")
+def generate_example_docs(
+    app: Sphinx,
+    location: str,
+    title: str,
+    intro: str,
+    maxdepth: int = 2,
+) -> None:
+    """Generate example documentation for a single location."""
+    logger.info(f"[exampledocs] Generating {location}...")
 
     config = _load_config(app)
     pages = _collect_pages(config)
@@ -571,16 +584,26 @@ def generate_example_docs(app: Sphinx) -> None:
         _assert_unique_example_paths_within_page(page)
 
     _ensure_example_files_exist(app, pages)
-    _clean_generated(app)
-
+    
     grouped = _group_pages_by_location(pages)
+    location_pages = grouped.get(location, [])
+    
+    if not location_pages:
+        logger.info(f"[exampledocs] No pages found for {location}")
+        return
 
-    for location in ("getting_started", "tutorials", "examples"):
-        _build_pages_for_location(app, grouped[location], location=location)
+    _clean_generated(app, location)
+    _build_pages_for_location(app, location_pages, location=location)
+    _write_location_landing_pages(
+        app,
+        location,
+        location_pages,
+        title=title,
+        intro=intro,
+        maxdepth=maxdepth,
+    )
 
-    _write_location_landing_pages(app, grouped)
-
-    logger.info("[exampledocs] Example documentation generated successfully.")
+    logger.info(f"[exampledocs] {location} generated successfully.")
 
 
 def setup(app: Sphinx) -> dict[str, Any]:
@@ -590,7 +613,28 @@ def setup(app: Sphinx) -> dict[str, Any]:
         rebuild="env",
         types=(str,),
     )
-    app.connect("builder-inited", generate_example_docs)
+    
+    def _on_builder_inited(app: Sphinx, *args: Any, **kwargs: Any) -> None:
+        """Generate documentation for each configured location."""
+        landing_specs = {
+            
+            "examples": {
+                "title": "Examples",
+                "intro": "Focused examples and reference-style usage patterns.",
+                "maxdepth": 2,
+            },
+        }
+        
+        for location, spec in landing_specs.items():
+            generate_example_docs(
+                app,
+                location=location,
+                title=spec["title"],
+                intro=spec["intro"],
+                maxdepth=spec.get("maxdepth", 2),
+            )
+    
+    app.connect("builder-inited", _on_builder_inited)
 
     return {
         "version": "3.0",

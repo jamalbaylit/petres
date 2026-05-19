@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, Literal
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 
-from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
 from .wells import VerticalWell, _validate_well_sequence
+from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
+from .._validation import _validate_z_scale
 
 if TYPE_CHECKING:
     from .horizon import Horizon
@@ -164,12 +165,10 @@ class Zone:
         --------
         >>> zone.show3d(x=[0, 100], y=[0, 50], ni=50, nj=25, color="lightgray")
         """
-        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        if not np.isfinite(z_scale) or z_scale <= 0:
-            raise ValueError("z_scale must be a positive finite value.")
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
-        viewer = PyVista3DViewer(theme=theme)
+
+        z_scale = _validate_z_scale(z_scale, name="z_scale")
+        viewer = PyVista3DViewer(z_scale=z_scale)
         
         title = self._get_plot_title(title)
 

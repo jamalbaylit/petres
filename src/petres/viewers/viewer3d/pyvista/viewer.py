@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from collections.abc import Sequence
 from typing import Any
 import pyvista as pv
 import numpy as np
-import vtk
 
 from ....models.wells import VerticalWell, _validate_well_sequence
 from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.cornerpoint import _add_corner_point_grid
 from .theme import PyVista3DViewerTheme, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
+from ...._validation import _validate_z_scale
+from ....config.colors import DEFAULT_CMAP
 from ....grids.pillars import PillarGrid
 from .layers.pillars import _add_pillars
 from .layers.surface import _add_surface
@@ -20,8 +22,6 @@ from .layers.wells import _add_well
 from ...._utils._colors import Color
 from .layers.zone import _add_zone
 from ....models.zone import Zone
-from ....config.colors import DEFAULT_CMAP
-
 
 class PyVista3DViewer(Base3DViewer):
     """Render and manage 3D geoscience scenes using PyVista.
@@ -41,6 +41,8 @@ class PyVista3DViewer(Base3DViewer):
         is used.
     title : str, default="Petres 3D Viewer"
         Optional title text shown in the viewer window.
+    z_scale : float, default=1.0
+        Scale factor for the z-axis to enhance vertical exaggeration.
     """
 
     theme: PyVista3DViewerTheme
@@ -54,6 +56,7 @@ class PyVista3DViewer(Base3DViewer):
         theme: PyVista3DViewerTheme | None = None,
         camera: Camera3D | None = None,
         title: str = "Petres 3D Viewer",
+        z_scale: float | None = None,
     ) -> None:
         """Initialize viewer state with plotter, theme, and camera defaults.
 
@@ -66,9 +69,27 @@ class PyVista3DViewer(Base3DViewer):
         self.set_camera(camera or Camera3D.isometric_se())
         self.set_plotter(plotter or pv.Plotter())
         self.title = title
+
+        if z_scale is not None:
+            self.set_z_scale(z_scale)
+
         self._deferred_point_labels = []
 
+    def set_z_scale(self, z_scale: float) -> None:
+        """Set the z-axis scale factor for vertical exaggeration.
 
+        Parameters
+        ----------
+        z_scale : float
+            Positive finite value used to scale the z-axis in the rendered scene.
+
+        Raises
+        ------
+        ValueError
+            If ``z_scale`` is not a positive finite float.
+        """
+        z_scale = _validate_z_scale(z_scale, name="z_scale")
+        self.theme = replace(self.theme, scale=(self.theme.scale[0], self.theme.scale[1], z_scale))
 
     def set_plotter(self, plotter: pv.Plotter) -> None:
         """Assign the underlying PyVista plotter.
