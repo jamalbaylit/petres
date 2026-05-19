@@ -77,16 +77,15 @@ path = r"https://raw.githubusercontent.com/jamalbaylit/petres/v0.1.0/data/opm/no
 
 # Import corner-point grid from a ".GRDECL" file, including specified properties
 grid = CornerPointGrid.from_grdecl(
-    path, 
-    properties=["PORO", "PERMX"]
+  path, 
+  properties=["PORO", "PERMX"]
 )
 
-# Visualize the grid
+# Visualize grid
 grid.show(scalars="depth", z_scale=5)
 
-# Visualize porosity property
-porosity = grid.properties["PORO"]
-porosity.show(z_scale=5)
+# Visualize property
+grid.show(scalars="PORO", z_scale=5)
 ```
 
 
