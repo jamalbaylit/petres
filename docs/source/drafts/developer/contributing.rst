@@ -446,7 +446,7 @@ Troubleshooting
 ---------------
 
 **Tests fail locally but pass in CI**
-   - Ensure Python version matches CI (3.11, 3.12, 3.13)
+   - Ensure Python version matches CI (3.11, 3.12, 3.13, 3.14)
    - Run: ``uv sync --python 3.11 && uv run pytest``
    - Check for OS-specific issues (Windows vs Unix paths)
 
