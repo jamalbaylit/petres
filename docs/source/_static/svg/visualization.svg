@@ -1,6 +1,37 @@
-<svg color="black" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="1.5" y="1.5" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"></rect>
-  <path d="M4 14h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path>
-  <path d="M8 11.5v2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path>
-  <path d="M4 8.5L6.5 6l2 2 2-3L13 7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"></path>
+<svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15.2 14.66">
+  <rect
+    x="0.6"
+    y="0.6"
+    width="14"
+    height="10.77"
+    rx="1.62"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.2"
+  />
+
+  <path
+    d="M3.29,14.06h8.62"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-width="1.2"
+  />
+
+  <path
+    d="M7.6,11.37v2.69"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-width="1.2"
+  />
+
+  <path
+    d="M3.75,7.48,5.89,5.34,7.6,7.05,9.31,4.49,11.45,6.2"
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="1.2"
+  />
 </svg>

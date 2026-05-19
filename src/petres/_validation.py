@@ -2,7 +2,30 @@
 
 import numpy as np
 
+def _validate_z_scale(value: float, name: str = "z_scale") -> float:
+    """Validate and coerce z_scale to a positive finite float.
 
+    Parameters
+    ----------
+    value : float
+        Candidate z_scale value.
+    name : str
+        Parameter name used in error messages.
+
+    Returns
+    -------
+    float
+        The validated z_scale.
+
+    Raises
+    ------
+    ValueError
+        If conversion fails, the value is not finite, or it is non-positive.
+    """
+    v = _validate_finite_float(value, name)
+    if v <= 0:
+        raise ValueError(f"`{name}` must be positive, got {v}.")
+    return v
 
 def _validate_finite_float(value: float, name: str) -> float:
     """Coerce a numeric input to ``float`` and ensure it is finite.

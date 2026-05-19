@@ -1,30 +1,26 @@
 from __future__ import annotations
 
-import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Literal
-
+from pathlib import Path
 import numpy as np
-from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
+import warnings
 
-
-
+from .._validation import _validate_finite_float, _validate_z_scale
+from ..models.wells import VerticalWell, _validate_well_sequence
 from ..grids.sampling._validation import _validate_vertex_array
 from ..grids.sampling._vertices import _resolve_xyz_vertices
+from ..grids.properties import GridProperties, GridProperty
 from .builders.cornerpoint import _build_zcorn_from_zones
 from ..errors.property import MissingEclipseKeywordError
 from ..errors.grid import UnsupportedGridAttributeError
+from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
 from ..eclipse.grids.write import GRDECLWriter
+from ..models.boundary import BoundaryPolygon
 from ..eclipse.grids.read import GRDECLReader
 from .pillars import PillarGrid
 from ..models.zone import Zone
-from ..models.boundary import BoundaryPolygon
-from ..models.wells import VerticalWell, _validate_well_sequence
-from ..grids.properties import GridProperties, GridProperty
-
-from .._validation import _validate_finite_float
 
 @dataclass(frozen=True)
 class GridAttributeSpec:
@@ -406,7 +402,7 @@ class CornerPointGrid:
             Dictionary-like facade used to access and validate cell properties.
         """
         return GridProperties(self)
-
+    
     @property
     def ni(self) -> int:
         """Get the number of cells in the i direction.
@@ -711,15 +707,10 @@ class CornerPointGrid:
         """
         from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        if not np.isfinite(z_scale) or z_scale <= 0:
-            raise ValueError("z_scale must be a positive finite value.")
-        
 
-        # get direction of the default z-axis -1 or 1 
-        scale = (PyVista3DViewerTheme.scale[0], PyVista3DViewerTheme.scale[1], float(z_scale))
-        theme = PyVista3DViewerTheme(scale=scale, lighting=False)
-        # theme = PyVista3DViewerTheme(lighting=False)
-        viewer = PyVista3DViewer(theme=theme)
+        theme = PyVista3DViewerTheme(lighting=False)
+        z_scale = _validate_z_scale(z_scale, name="z_scale")
+        viewer = PyVista3DViewer(theme=theme, z_scale=z_scale)
         scalars_arr = self._resolve_source(scalars) if scalars is not None else None
         colorbar_title = str(scalars).strip().capitalize() if scalars_arr is not None else None
 

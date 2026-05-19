@@ -95,6 +95,7 @@ test = [
 ]
 
 examples = [
+    "numpy>=2.2.6",
     "pandas>=3.0.1",
 ]
 

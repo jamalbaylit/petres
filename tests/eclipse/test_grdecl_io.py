@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from io import StringIO
 from pathlib import Path
+import urllib.request
 
 import numpy as np
 import pytest
@@ -42,6 +43,30 @@ def test_grdecl_reader_raises_for_missing_terminating_slash(tmp_path: Path):
 def test_grdecl_reader_use_actnum_false_returns_none(minimal_grdecl_path: Path):
     data = GRDECLReader().read(minimal_grdecl_path, use_actnum=False)
     assert data.actnum is None
+
+
+def test_grdecl_reader_reads_http_url(monkeypatch, minimal_grdecl_path: Path):
+    text = minimal_grdecl_path.read_text(encoding="utf-8")
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return text.encode("utf-8")
+
+    def fake_urlopen(url):
+        assert url == "https://example.com/deck.grdecl"
+        return FakeResponse()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+
+    data = GRDECLReader().read("https://example.com/deck.grdecl")
+
+    assert (data.ni, data.nj, data.nk) == (2, 2, 1)
 
 
 def test_writer_rle_compresses_binary_actnum_tokens():

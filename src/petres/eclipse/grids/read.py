@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-import re
-from typing import Any, Sequence
-
-import numpy as np
 from numpy.typing import DTypeLike, NDArray
+from dataclasses import dataclass
+from urllib.parse import urlparse
+from typing import Any, Sequence
+from pathlib import Path
+import urllib.request
+import numpy as np
+import re
+
 
 from .keywords import NOT_PROPERTY_KEYWORDS
 from .validation import (
@@ -117,8 +119,13 @@ class GRDECLReader:
         ValueError
             If required keywords are missing or keyword data are malformed.
         """
-        path = Path(path)
-        text = path.read_text(encoding="utf-8", errors="ignore")
+        path_str = str(path)
+        if urlparse(path_str).scheme in {"http", "https"}:
+            with urllib.request.urlopen(path_str) as response:
+                text = response.read().decode("utf-8", errors="ignore")
+        else:
+            path = Path(path)
+            text = path.read_text(encoding="utf-8", errors="ignore")
         text = self.clean_comments(text)
 
         dim = self._get_keyword_array(text, "SPECGRID", dtype=str)

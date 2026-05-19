@@ -2,17 +2,15 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal
-
-import numpy as np
 from numpy.typing import ArrayLike
+from typing import Any, Literal
+import numpy as np
 
-
-from ..config.colors import DEFAULT_CMAP
-from ..interpolators.base import BaseInterpolator
 from ..models.wells import VerticalWell, _validate_well_sequence
+from ..interpolators.base import BaseInterpolator
+from .._validation import _validate_z_scale
+from ..config.colors import DEFAULT_CMAP
 from .zone import Zone
-
 
 @dataclass
 class Horizon:
@@ -379,14 +377,11 @@ class Horizon:
         --------
         >>> horizon.show3d(x=[0, 100], y=[0, 100], ni=50, nj=50, cmap="viridis")
         """
-        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
+
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
 
-        if not np.isfinite(z_scale) or z_scale <= 0:
-            raise ValueError("z_scale must be a positive finite value.")
-
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
-        viewer = PyVista3DViewer(theme=theme)
+        z_scale = _validate_z_scale(z_scale, name="z_scale")
+        viewer = PyVista3DViewer(z_scale=z_scale)
         viewer.add_horizon(
             self,
             x=x,

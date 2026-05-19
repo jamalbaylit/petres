@@ -122,6 +122,12 @@ This set of keywords that separately describe topology, geometry, and cell activ
      - :math:`N_i N_j N_k`
      - :math:`(N_k, N_j, N_i)`
 
+
+.. note::
+
+   When visualizing an Eclipse grid in Petrel, the software may invert the :math:`y` or :math:`z` axes for display purposes.
+
+
 .. _eclipse-dimens:
 
 DIMENS

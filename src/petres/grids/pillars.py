@@ -3,13 +3,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
-
 import numpy as np
 
-
-from .._validation import _validate_finite_float
-from .sampling._vertices import _resolve_xy_vertices
+from .._validation import _validate_finite_float, _validate_z_scale
 from .sampling._validation import _validate_vertex_array
+from .sampling._vertices import _resolve_xy_vertices
 
 
 
@@ -340,14 +338,10 @@ class PillarGrid:
         None
             Opens an interactive 3D rendering window.
         """
-        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
 
-        if not np.isfinite(z_scale) or z_scale <= 0:
-            raise ValueError("z_scale must be a positive finite value.")
-        
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
-        viewer = PyVista3DViewer(theme=theme)
+        z_scale = _validate_z_scale(z_scale, name="z_scale")
+        viewer = PyVista3DViewer(z_scale=z_scale)
         viewer.add_pillars(self, color=color, line_width=line_width, **kwargs)
         viewer.show(title=title)
 
