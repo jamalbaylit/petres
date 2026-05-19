@@ -12,7 +12,7 @@ Prerequisites
 
 **Required:**
 
-- **Python 3.11+** (3.11, 3.12, 3.13 tested; 3.14 experimental)
+- **Python 3.11+** (3.11, 3.12, 3.13, 3.14 tested)
 - **uv** (`astral-sh/uv <https://docs.astral.sh/uv/>`_) — fast, reliable Python package installer and manager
 
 **Optional (recommended):**
