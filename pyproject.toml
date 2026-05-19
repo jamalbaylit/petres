@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "petres"
 dynamic = ["version"]
-description = "Petres: lightweight Python library for reservoir grid modeling and visualization"
+description = "Lightweight library for corner-point reservoir grid modeling, visualization and property modeling."
 readme = { file = "README.md", content-type = "text/markdown" }
 
 requires-python = ">=3.10"
@@ -14,13 +14,16 @@ authors = [
     { name = "Tayfun Jamalbayli", email = "jamalbaylit@gmail.com"  }
 ]
 keywords = [
+    
     "corner-point-grid",
     "reservoir-modeling",
-    "reservoir-engineering",
-    "eclipse",
     "reservoir-simulation",
     "grid-modeling",
-    "visualization",
+    "grid-visualization",
+    "eclipse",
+    "reservoir-engineering",
+    "petroleum-engineering",
+    "geoscience"
 ]
 
 
@@ -40,10 +43,11 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
 
     # OS support
     "Operating System :: Microsoft :: Windows",
@@ -70,10 +74,9 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://petres.readthedocs.io/"
+Repository = "https://github.com/jamalbaylit/petres"
 Documentation = "https://petres.readthedocs.io/"
-Source = "https://github.com/jamalbaylit/petres"
 Issues = "https://github.com/jamalbaylit/petres/issues"
-
 
 
 
@@ -81,9 +84,9 @@ Issues = "https://github.com/jamalbaylit/petres/issues"
 docs = [
     "furo>=2025.12.19",
     "shibuya>=2026.1.9",
-    "sphinx>=9.1.0; python_version >= '3.12' and python_version < '3.13'",
+    "sphinx>=9.1.0; python_version >= '3.12' and python_version < '3.15'",
     "sphinx-autoapi>=3.6.1",
-    "sphinx-autodoc-typehints>=3.6.2; python_version >= '3.12'",
+    "sphinx-autodoc-typehints>=3.6.2; python_version >= '3.12' and python_version < '3.15'",
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.7.0",
     "sphinx-inline-svg>=0.2.0",
