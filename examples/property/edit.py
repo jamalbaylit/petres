@@ -7,14 +7,11 @@ path = "https://raw.githubusercontent.com/jamalbaylit/petres/v0.1.0/data/opm/nor
 
 grid = CornerPointGrid.from_grdecl(path, properties=["PORO"])
 
-# Visualize depth
-grid.show(scalars="depth", z_scale=5)
+# Visualize property
+grid.show(scalars="PORO", z_scale=5)
 
 # Access porosity property
 porosity = grid.properties["PORO"]
-
-# Visualize original porosity
-porosity.show(z_scale=5)
 
 # Convert porosity to percentage
 porosity_pct = porosity.apply(lambda x: x * 100, source="PORO")
