@@ -154,16 +154,16 @@ class GridProperty:
         """
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
         
-        z_scale = _validate_z_scale(z_scale, name="z_scale")
-        viewer = PyVista3DViewer(z_scale=z_scale)
+        self.grid.show(
+            show_inactive=show_inactive,
+            scalars=self.name,
+            title=self._get_plot_title(title),
+            cmap=cmap,
+            z_scale=z_scale,
+            wells=wells,
+            **kwargs
+        )
 
-        title = self._get_plot_title(title)
-        
-        viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
-        
-        if wells is not None:
-            viewer.add_wells(_validate_well_sequence(wells))
-        viewer.show(title=title)
     
     def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
         if title == 'auto':

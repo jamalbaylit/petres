@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Any, Protocol
-
-import numpy as np
+from typing import Any
 import pyvista as pv
-
-
-
-
+import numpy as np
 
 def _add_well(
-    backend,
+    plotter: pv.Plotter,
     *,
     well_x: float,
     well_y: float,
@@ -27,9 +21,8 @@ def _add_well(
 
     Parameters
     ----------
-    backend
-        Viewer backend exposing a PyVista plotter and optional deferred
-        point-label API.
+    plotter : pyvista.Plotter
+        PyVista plotter instance for rendering the well.
     well_x : float
         Well x-coordinate in scene units.
     well_y : float
@@ -51,8 +44,7 @@ def _add_well(
     line_width : float, default=3.0
         Line width used when rendering the well line.
     """
-    p = backend.plotter
-
+    p = plotter
 
     if well_top is None or well_bottom is None:
         bounds = p.bounds  # (xmin, xmax, ymin, ymax, zmin, zmax)
@@ -75,24 +67,17 @@ def _add_well(
         width=line_width,  # always visible
     )
         
-
     # label_pos = (well_x * t.xscale, well_y * t.yscale, (well_top - z_offset) * t.zscale)
-    label_pos = (well_x, well_y, well_bottom)
-    point_labels = np.asarray([label_pos])
-    labels = [well_name]
-    label_kwargs = dict(
+    p.add_point_labels(
+        points=(well_x, well_y, well_top),
+        labels=[well_name],
         font_size=label_font_size,
-        text_color=label_color, bold=True, shadow=True,
-        always_visible=False, show_points=False,
+        text_color=label_color,
+        bold=True,
+        shadow=True,
         shape_opacity=1,
         shape=None,
+        always_visible=False,
+        show_points=False,
+        scaling=False,  # disable automatic scaling to maintain consistent label size
     )
-    defer_labels = getattr(backend, "_defer_point_labels", None)
-    if callable(defer_labels):
-        defer_labels(point_labels, labels, **label_kwargs)
-    else:
-        backend.plotter.add_point_labels(
-            point_labels,
-            labels,
-            **label_kwargs,
-        )

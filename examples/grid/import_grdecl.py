@@ -15,5 +15,4 @@ grid = CornerPointGrid.from_grdecl(
 grid.show(scalars="depth", z_scale=5)
 
 # Visualize porosity property
-porosity = grid.properties["PORO"]
-porosity.show(z_scale=5)
+grid.show(scalars="PORO", z_scale=5)

@@ -3,7 +3,7 @@ import pyvista as pv
 from ....._utils._colors import Color
 
 def _add_pillars(
-    backend,
+    plotter: pv.Plotter,
     pillar_top: np.ndarray,
     pillar_bottom: np.ndarray,
     shaft_color: str = "red",
@@ -39,7 +39,6 @@ def _add_pillars(
     opacity : float
         Opacity for both shaft and tip actors.
     """
-    plotter = backend.plotter
     shaft_color = Color(shaft_color).as_rgb()
 
     pillar_top = np.asarray(pillar_top, dtype=np.float64)
