@@ -190,9 +190,11 @@ corner-point grid.
    h4 = Horizon.from_wells(wells=[well_ll, well_lu, well_ru, well_rl], name="Horizon 4", interpolator=IDWInterpolator())
    
    # Visualize horizons
-   viewer = Viewer3D()
+   viewer = Viewer3D(z_scale=0.2)
+   # viewer.add_wells([well_ll, well_lu, well_ru, well_rl])
    viewer.add_horizons([h1, h2, h3, h4],  xlim=xlim, ylim=ylim, dx=2, dy=2)
-   viewer.show()
+   # viewer.show()
+   viewer.screenshot("horizons.png")
    
    # Create zones from horizons and divide them into layers
    z1 = Zone(top=h1, base=h2, name="Zone 1").divide(nk=4)

@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from collections.abc import Sequence
+from dataclasses import replace
+from functools import wraps
 from typing import Any
 import pyvista as pv
 import numpy as np
 
+from ...._validation import _validate_z_scale, _validate_positive_int
 from ....models.wells import VerticalWell, _validate_well_sequence
 from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.cornerpoint import _add_corner_point_grid
 from .theme import PyVista3DViewerTheme, Camera3D
 from ....grids.cornerpoint import CornerPointGrid
-from ...._validation import _validate_z_scale
 from ....config.colors import DEFAULT_CMAP
 from ....grids.pillars import PillarGrid
 from .layers.pillars import _add_pillars
@@ -39,8 +40,6 @@ class PyVista3DViewer(Base3DViewer):
     camera : Camera3D or None, default=None
         Camera configuration. If ``None``, an isometric default camera setup
         is used.
-    title : str, default="Petres 3D Viewer"
-        Optional title text shown in the viewer window.
     z_scale : float, default=1.0
         Scale factor for the z-axis to enhance vertical exaggeration.
     """
@@ -48,14 +47,21 @@ class PyVista3DViewer(Base3DViewer):
     theme: PyVista3DViewerTheme
     camera: Camera3D
     plotter: pv.Plotter
-    _deferred_point_labels: list[tuple[np.ndarray, list[str], dict[str, Any]]]
+    
+    _window_title = "Petres 3D Viewer"
+    _scene_title: str | None = None
+    _point_labels: list[tuple[Any, dict[str, Any]]]
+    _meshes: list[tuple[Any, dict[str, Any]]]
+    _lines: list[tuple[Any, dict[str, Any]]]
+    _cached_camera: pv.Camera | None = None
+    _cached_window_size: tuple[int, int] | None = None
+    _pending_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]]
 
     def __init__(
         self, 
         plotter: pv.Plotter | None = None,
         theme: PyVista3DViewerTheme | None = None,
         camera: Camera3D | None = None,
-        title: str = "Petres 3D Viewer",
         z_scale: float | None = None,
     ) -> None:
         """Initialize viewer state with plotter, theme, and camera defaults.
@@ -65,15 +71,19 @@ class PyVista3DViewer(Base3DViewer):
         AssertionError
             If resolved ``plotter``, ``theme``, or ``camera`` has an invalid type.
         """
+        
         self.set_theme(theme or PyVista3DViewerTheme())
         self.set_camera(camera or Camera3D.isometric_se())
-        self.set_plotter(plotter or pv.Plotter())
-        self.title = title
+        self.set_plotter(plotter)
 
         if z_scale is not None:
             self.set_z_scale(z_scale)
 
-        self._deferred_point_labels = []
+        self._point_labels = []
+        self._meshes = []
+        self._lines = []
+        self._pending_calls = []
+
 
     def set_z_scale(self, z_scale: float) -> None:
         """Set the z-axis scale factor for vertical exaggeration.
@@ -91,37 +101,28 @@ class PyVista3DViewer(Base3DViewer):
         z_scale = _validate_z_scale(z_scale, name="z_scale")
         self.theme = replace(self.theme, scale=(self.theme.scale[0], self.theme.scale[1], z_scale))
 
-    def set_plotter(self, plotter: pv.Plotter) -> None:
+
+
+    def set_plotter(self, plotter: pv.Plotter=None, record: bool = True) -> None:
         """Assign the underlying PyVista plotter.
 
         Parameters
         ----------
         plotter : pyvista.Plotter
             Plotter instance used for all rendering operations.
-
+        record : bool, default=True
+            Whether to record mesh additions for later replay.
+                When enabled, all calls to ``plotter.add_mesh`` are recorded and can be replayed on a new plotter instance. This is useful when switching plotters or when the plotter needs to be reinitialized.
         Raises
         ------
         AssertionError
             If ``plotter`` is not a ``pyvista.Plotter`` instance.
         """
+        if plotter is None:
+            plotter = pv.Plotter()
+            
         assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
-        plotter.theme.allow_empty_mesh = self.theme.allow_empty_mesh
-        self.plotter = plotter
-        # Patch add_mesh to always disable lighting
-        _original_add_mesh = plotter.add_mesh
-        def _add_mesh_no_lighting(*args, **kwargs):
-            kwargs.setdefault('lighting', self.theme.lighting)
-            actor = _original_add_mesh(*args, **kwargs)
-            # Apply global visual Z exaggeration
-            scale = tuple(
-                s * d for s, d in zip(self.theme.scale, self.theme.direction)
-            )
-
-            actor.SetScale(*scale)
-
-            return actor
-        plotter.add_mesh = _add_mesh_no_lighting
-
+        plotter =  self._override_plotter(plotter, record=record)
         self.plotter = plotter
 
     def set_theme(self, theme: PyVista3DViewerTheme) -> None:
@@ -156,16 +157,18 @@ class PyVista3DViewer(Base3DViewer):
         assert isinstance(camera, Camera3D), "`camera` must be a Camera3D instance or None."
         self.camera = camera
 
-    def apply_theme(self, theme: PyVista3DViewerTheme) -> None:
+    def _apply_theme(self, theme: PyVista3DViewerTheme, plotter: pv.Plotter) -> pv.Plotter:
         """Apply scene styling options to the active plotter.
 
         Parameters
         ----------
         theme : PyVista3DViewerTheme
             Theme values controlling background color and axes visibility.
+        plotter : pyvista.Plotter
+            Plotter instance to which the theme is applied.
         """
 
-        p = self.plotter
+        p = plotter
 
         x_scale, y_scale, z_scale = theme.scale
         axes_ranges = [
@@ -192,33 +195,161 @@ class PyVista3DViewer(Base3DViewer):
         )
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
         p.set_background(theme.background, top=theme.background)
+        return p
 
+    # def _render_point_labels(self, plotter: pv.Plotter) -> pv.Plotter:
+    #     if not self._point_labels:
+    #         return plotter
 
-    def _defer_point_labels(
-        self,
-        points: np.ndarray,
-        labels: list[str],
-        **kwargs: Any,
-    ) -> None:
-        self._deferred_point_labels.append((np.asarray(points, dtype=float), labels, kwargs))
+    #     scale = np.asarray(self.theme.scale, dtype=float)
+    #     direction = np.asarray(self.theme.direction, dtype=float)
+    #     for args, kwargs in self._point_labels:
+    #         print(len(self._point_labels))
+    #         kwargs = kwargs.copy()
+    #         use_kwargs = "points" in kwargs
+    #         points = kwargs["points"] if use_kwargs else args[0]
+    #         points = np.asarray(points, dtype=float).copy() * scale * direction
+    #         if use_kwargs:
+    #             kwargs["points"] = points
+    #         else:
+    #             args = (points, *args[1:])
+            
+    #         plotter.add_point_labels(*args, **kwargs)
 
-    def _flush_deferred_point_labels(self) -> None:
-        if not self._deferred_point_labels:
-            return
+    #       self._point_labels.clear()
+    #       return plotter
 
-        scale = np.asarray(self.theme.scale, dtype=float)
-        direction = np.asarray(self.theme.direction, dtype=float)
-        for points, labels, kwargs in self._deferred_point_labels:
-            self.plotter.add_point_labels(points * scale * direction, labels, **kwargs)
-
-        self._deferred_point_labels.clear()
-
-    def reset_camera(self) -> None:
+    def _reset_camera(self, plotter: pv.Plotter) -> pv.Plotter:
         """Reset camera position and clipping range to defaults."""
-        self.plotter.reset_camera()
-        self.plotter.reset_camera_clipping_range()
+        plotter.reset_camera()
+        plotter.reset_camera_clipping_range()
+        return plotter
 
-    def show(self, *, title: str | None = None) -> None:
+    def _override_plotter(self, plotter: pv.Plotter, record: bool = True) -> pv.Plotter:
+        """Override the PyVista plotter.
+
+        Parameters
+        ----------
+        plotter : pyvista.Plotter
+            Plotter instance used for all rendering operations.
+        record : bool, default=True
+            Whether to record mesh additions for later replay.
+                When enabled, all calls to ``plotter.add_mesh`` are recorded and can be replayed on a new plotter instance. This is useful when switching plotters or when the plotter needs to be reinitialized.
+        Returns
+        -------
+        pyvista.Plotter
+            The provided plotter instance with overridden ``add_mesh`` method to apply theme scaling and optional recording.
+                            
+        Raises
+        ------
+        AssertionError
+            If ``plotter`` is not a ``pyvista.Plotter`` instance.
+        """
+        assert isinstance(plotter, pv.Plotter), "`plotter` must be a pyvista.Plotter instance."
+        plotter.theme.allow_empty_mesh = self.theme.allow_empty_mesh
+        self.plotter = plotter
+
+        # Override add_mesh to apply theme scaling and direction to all added meshes
+        _original_add_mesh = plotter.add_mesh
+        def _add_mesh(*args, **kwargs):
+            kwargs.setdefault('lighting', self.theme.lighting)
+            actor = _original_add_mesh(*args, **kwargs)
+            scale = tuple(
+                s * d for s, d in zip(self.theme.scale, self.theme.direction)
+            )
+
+            actor.SetScale(*scale)
+
+            if record: 
+                self._meshes.append((args, kwargs.copy()))
+            return actor
+        plotter.add_mesh = _add_mesh
+        
+        _original_add_point_labels = plotter.add_point_labels
+    
+        def _add_point_labels(*args, **kwargs):
+            if record:
+                self._point_labels.append((args, kwargs.copy()))
+            scaling = kwargs.pop("scaling", True)
+            if scaling:
+                scale = np.asarray(self.theme.scale, dtype=float)
+                direction = np.asarray(self.theme.direction, dtype=float)
+
+                kwargs = kwargs.copy()
+                use_kwargs = "points" in kwargs
+                points = kwargs["points"] if use_kwargs else args[0]
+                
+                if record:
+                    self._point_labels.append((args, kwargs.copy()))
+                points = np.asarray(points, dtype=float).copy()
+                points *= scale * direction
+
+                
+                if use_kwargs:
+                    kwargs["points"] = points
+                else:
+                    args = (points, *args[1:])
+            return _original_add_point_labels(*args, **kwargs)
+        plotter.add_point_labels = _add_point_labels
+
+        _original_add_lines = plotter.add_lines
+        def _add_lines(*args, **kwargs):
+            if record:
+                self._lines.append((args, kwargs.copy()))
+            return _original_add_lines(*args, **kwargs)
+        plotter.add_lines = _add_lines
+        
+        if record: 
+            # _original_close = plotter.close
+            # def _close(*args, **kwargs):
+            #     if plotter.camera is not None:
+            #         self._cached_camera = plotter.camera.copy()
+
+            #     if plotter.render_window is not None:
+            #         print("Updating cached window size for screenshot...")
+            #         self._cached_window_size = tuple(
+            #             plotter.render_window.GetSize()
+            #         )
+            #         print(f"Cached window size: {self._cached_window_size}")
+            #     return _original_close(*args, **kwargs)
+            # plotter.close = _close
+
+            
+            def _on_window_close(obj, event):
+                if plotter.render_window is not None:
+                    self._cached_window_size = tuple(plotter.render_window.GetSize())
+                if plotter.camera is not None:
+                    self._cached_camera = plotter.camera.copy()
+
+            plotter.iren.interactor.AddObserver("ExitEvent", _on_window_close)
+
+
+        return plotter
+
+    def _render_queued(self) -> pv.Plotter:
+        for func, args, kwargs in self._pending_calls:
+            func(self, *args, **kwargs)
+        self._pending_calls.clear()
+
+    def _render(self, plotter: pv.Plotter, title: str | None = None) -> pv.Plotter:
+        # plotter = self._render_point_labels(plotter)
+        self._render_queued()
+        plotter = self._apply_theme(self.theme, plotter)
+        if title:
+            plotter.add_text(
+                str(title),
+                position=self.theme.title_position,
+                font_size=self.theme.title_fontsize,
+                color=self.theme.title_color,
+            )
+        return plotter
+
+
+    def show(
+        self, 
+        *, 
+        title: str | None = None,
+    ) -> None:
         """Render the current scene and open the interactive viewer window.
 
         Parameters
@@ -226,25 +357,99 @@ class PyVista3DViewer(Base3DViewer):
         title : str or None, default=None
             Optional scene title text displayed at the configured theme position.
         """
-
-        # Always apply an explicit scale so repeated calls are deterministic.
-        self._flush_deferred_point_labels()
-        if title:
-            self.plotter.add_text(
-                str(title),
-                position=self.theme.title_position,
-                font_size=self.theme.title_fontsize,
-                color=self.theme.title_color,
-            )
-
-            
-        self.apply_theme(self.theme)
-        self.apply_camera(self.camera)
-        self.plotter.show(title=self.title)
-        
+        self.plotter=self._render(self.plotter, title=title)
+        self.plotter = self._apply_camera(self.camera, self.plotter)
+        self.plotter.show(title=self._window_title)
         self.plotter.close()
-        self.set_plotter(pv.Plotter())
+        self.set_plotter()
+        
 
+
+    def screenshot(
+        self,
+        path: str,
+        *,
+        transparent: bool = False,
+        width: int = None,
+        height: int = None,
+    ) -> None:
+        """
+            Save a screenshot of the current plotter window to an image file.
+
+            Parameters
+            ----------
+            path : str
+                File path where the screenshot image will be saved.
+            transparent : bool, default=False
+                Whether the background should be transparent. If ``True``, the background color is ignored and the output image will have an alpha channel with transparency.
+            width : int
+                Desired output image width in pixels.
+            height : int
+                Desired output image height in pixels.
+
+            Returns
+            -------
+            None
+                This method saves the screenshot to disk and does not return anything.
+
+            Notes
+            -----
+            This method can be called directly after ``show()``. In that case it
+            reuses the cached scene camera and window size captured when the
+            viewer was closed. If ``width`` and ``height`` are not provided, the
+            last known window size is used. The viewer is rendered off-screen and
+            the result is saved directly to ``path`` using the requested pixel
+            dimensions.
+        """
+
+
+
+        window_size = None
+        if self._cached_window_size is not None:
+            window_size = self._cached_window_size
+        
+        if width is not None and height is not None:
+            width = _validate_positive_int(width, name="width")
+            height = _validate_positive_int(height, name="height")
+            window_size = (width, height)
+
+        plotter = pv.Plotter(off_screen=True)
+        plotter = self._override_plotter(plotter, record=False)
+        # plotter = self._render(plotter, title=self._scene_title)
+
+        for args, kwargs in self._meshes:
+            plotter.add_mesh(*args, **kwargs)
+
+        for args, kwargs in self._point_labels:
+            plotter.add_point_labels(*args, **kwargs)
+
+        for args, kwargs in self._lines:
+            plotter.add_lines(*args, **kwargs)
+
+
+        if self._cached_camera is not None:
+            plotter.camera = self._cached_camera 
+        else:
+            plotter = self._apply_camera(self.camera, plotter)
+
+        plotter = self._render(plotter, title=self._scene_title)
+        if transparent:
+            plotter.background_color = (1,1,1,0)
+
+        plotter.screenshot(
+            path,
+            window_size=window_size,
+        )
+
+    @staticmethod
+    def _queued(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if not hasattr(self, "_pending_calls"):
+                self._pending_calls = []
+
+            self._pending_calls.append((func, args, kwargs))
+        return wrapper
         
     def add_grid(
         self, 
@@ -252,7 +457,7 @@ class PyVista3DViewer(Base3DViewer):
         *,
         show_inactive: bool = False,
         color: Any = None,
-        scalars: np.ndarray | None = None,
+        scalars: str | None = None,
         cmap: str | None = None,
         colorbar_title: str | None = None,
         **kwargs: Any,
@@ -267,8 +472,8 @@ class PyVista3DViewer(Base3DViewer):
             If ``True``, include inactive cells in the rendered geometry.
         color : Any, default=None
             Optional fixed color override for the grid mesh.
-        scalars : numpy.ndarray or None, default=None
-            Optional scalar values for per-cell or per-point colormapping.
+        scalars : str or None, optional
+            Property name to color by; if ``None`` uses solid color.
         cmap : str or None, default=None
             Matplotlib-compatible colormap name used when ``scalars`` is provided.
         colorbar_title : str or None, default=None
@@ -287,11 +492,14 @@ class PyVista3DViewer(Base3DViewer):
             If ``grid`` is not a supported grid type.
         """
 
-        if isinstance(grid, CornerPointGrid): 
+        if isinstance(grid, CornerPointGrid):
+            scalars_arr = grid._resolve_source(scalars) if scalars is not None else None
+            colorbar_title = str(scalars).strip().capitalize() if scalars_arr is not None else None
+ 
             self._add_corner_point_grid(
                 grid, 
                 show_inactive=show_inactive, 
-                scalars=scalars, 
+                scalars=scalars_arr, 
                 cmap=cmap, 
                 color=color, 
                 colorbar_title=colorbar_title, 
@@ -328,7 +536,7 @@ class PyVista3DViewer(Base3DViewer):
             The current viewer instance for fluent chaining.
         """
         _add_pillars(
-            self,
+            self.plotter,
             pillars.pillar_top,
             pillars.pillar_bottom,
             color=color,
@@ -337,6 +545,7 @@ class PyVista3DViewer(Base3DViewer):
         )
         return self
 
+    @_queued
     def add_wells(
         self,
         wells: Sequence[VerticalWell] | VerticalWell,
@@ -354,7 +563,7 @@ class PyVista3DViewer(Base3DViewer):
 
         for well in wells:
             _add_well(
-                self,
+                self.plotter,
                 well_x=well.x,
                 well_y=well.y,
                 well_top=None,
@@ -464,19 +673,23 @@ class PyVista3DViewer(Base3DViewer):
 
     #     self.reset_camera()
 
-    def apply_camera(self, cam: Camera3D) -> None:
+    def _apply_camera(self, cam: Camera3D, plotter: pv.Plotter) -> pv.Plotter:
         """Apply camera configuration to the active plotter.
 
         Parameters
         ----------
         cam : Camera3D
             Camera configuration with position, focal point, and view settings.
+        plotter : pyvista.Plotter
+            Plotter instance to which the camera configuration is applied.
         """
         # Auto-fit camera to scene bounds first
         # self.plotter.view_isometric()
-        self.reset_camera()
-        cam.apply(self.plotter)
-        self.reset_camera()
+        self._reset_camera(plotter)
+        cam.apply(plotter)
+        self._reset_camera(plotter)
+        return plotter
+
         
 
 
@@ -707,7 +920,7 @@ class PyVista3DViewer(Base3DViewer):
         
         depth = horizon.to_grid(x, y)  # shape: (ny, nx)
         _add_surface(
-            self, 
+            self.plotter, 
             depth, 
             x=x, 
             y=y, 

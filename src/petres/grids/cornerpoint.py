@@ -597,8 +597,6 @@ class CornerPointGrid:
         zcorn = data.zcorn
         actnum = data.actnum
 
-        
-
         pillars = PillarGrid.from_eclipse_coord(coord)
         grid = cls(pillars=pillars, zcorn=zcorn, active=actnum)
         
@@ -671,7 +669,6 @@ class CornerPointGrid:
             properties=_properties,
         )
 
-
     def show(
         self, 
         show_inactive: bool = False, 
@@ -711,17 +708,14 @@ class CornerPointGrid:
         theme = PyVista3DViewerTheme(lighting=False)
         z_scale = _validate_z_scale(z_scale, name="z_scale")
         viewer = PyVista3DViewer(theme=theme, z_scale=z_scale)
-        scalars_arr = self._resolve_source(scalars) if scalars is not None else None
-        colorbar_title = str(scalars).strip().capitalize() if scalars_arr is not None else None
 
         color = None if scalars is not None else color
         viewer.add_grid(
             grid=self, 
             show_inactive=show_inactive, 
             color=color, 
-            scalars=scalars_arr, 
+            scalars=scalars, 
             cmap=cmap,
-            colorbar_title=colorbar_title, 
             **kwargs
         )
         

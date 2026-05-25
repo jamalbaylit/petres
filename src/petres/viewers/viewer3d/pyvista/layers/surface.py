@@ -10,7 +10,7 @@ from ....._utils._colors import Color
 
 
 def _add_surface(
-    backend: Any,
+    plotter: pv.Plotter,
     depth: np.ndarray,
     *,
     x: Sequence[float] | np.ndarray,
@@ -38,8 +38,8 @@ def _add_surface(
 
     Parameters
     ----------
-    backend : Any
-        Viewer backend exposing a PyVista ``plotter``.
+    plotter : Any
+        PyVista plotter instance.
     depth : numpy.ndarray
         2D depth array with shape ``(len(y), len(x))``.
     x : collections.abc.Sequence[float] | numpy.ndarray
@@ -114,7 +114,7 @@ def _add_surface(
     if scalars:
         color = None
         cmap = cmap or DEFAULT_CMAP
-        backend.plotter.add_mesh(
+        plotter.add_mesh(
             grid,
             name=name,
             scalars="z",
@@ -124,7 +124,7 @@ def _add_surface(
             **mesh_kwargs,
         )
     else:
-        backend.plotter.add_mesh(
+        plotter.add_mesh(
             grid,
             name=name,
             color=color,
@@ -160,7 +160,7 @@ def _add_surface(
         if contours.n_points == 0:          
             return grid
 
-        backend.plotter.add_mesh(
+        plotter.add_mesh(
             contours,
             color=contour_color,
             opacity=contour_opacity,
@@ -209,14 +209,6 @@ def _add_surface(
                     always_visible=False,
                     name=f"{name}_contour_labels" if name else None,
                 )
+                plotter.add_point_labels(point_labels, labels, **label_kwargs)
 
-                defer_labels = getattr(backend, "_defer_point_labels", None)
-                if callable(defer_labels):
-                    defer_labels(point_labels, labels, **label_kwargs)
-                else:
-                    backend.plotter.add_point_labels(
-                        point_labels,
-                        labels,
-                        **label_kwargs,
-                    )
     return grid
