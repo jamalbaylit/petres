@@ -561,13 +561,20 @@ class PyVista3DViewer(Base3DViewer):
         line_color = Color(line_color).as_rgb() if line_color is not None else None
         label_color = Color(label_color).as_rgb() if label_color is not None else None
 
+        bounds = self.plotter.bounds  # (xmin, xmax, ymin, ymax, zmin, zmax)
+        z_min, z_max = bounds[4], bounds[5]
+        # Add a small margin so the tube visually extends beyond the data
+        margin = abs(z_max - z_min) * 0.05 if z_max != z_min else 1.0
+        top = z_max + margin
+        bottom = z_min - margin
+
         for well in wells:
             _add_well(
                 self.plotter,
                 well_x=well.x,
                 well_y=well.y,
-                well_top=None,
-                well_bottom=None,
+                well_top=top,
+                well_bottom=bottom,
                 well_name=well.name,
                 label_font_size=label_font_size,
                 label_color=label_color,
