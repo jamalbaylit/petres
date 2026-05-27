@@ -62,6 +62,14 @@ the active cell definition separately in your simulation setup.
    i, j, and k directions, respectively. These values must be consistent
    with the dimensions of the exported grid.
 
+.. important::
+
+   When importing the exported grid into Petrel, the y or z axes may
+   appear inverted. Petrel may automatically apply a ``-1`` sign flip
+   internally to preserve a right-handed coordinate system. This is
+   normal behavior and does not necessarily indicate an issue with the
+   exported ``.GRDECL`` file.
+
 Exporting Grid Properties
 -------------------------
 

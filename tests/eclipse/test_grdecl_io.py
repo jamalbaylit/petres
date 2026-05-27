@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from petres.eclipse.grids.read import GRDECLReader
+from petres.eclipse.grids.metadata import EclipseGridMetadata
 from petres.eclipse.grids.write import GRDECLWriter
 from petres.grids import CornerPointGrid
 
@@ -43,6 +44,47 @@ def test_grdecl_reader_raises_for_missing_terminating_slash(tmp_path: Path):
 def test_grdecl_reader_use_actnum_false_returns_none(minimal_grdecl_path: Path):
     data = GRDECLReader().read(minimal_grdecl_path, use_actnum=False)
     assert data.actnum is None
+
+
+def test_grdecl_reader_preserves_mapaxes_metadata(tmp_path: Path):
+    deck = tmp_path / "mapaxes.grdecl"
+    deck.write_text(
+        """
+MAPAXES
+10 20
+30 40
+50 60 /
+SPECGRID
+2 2 1 1 F /
+COORD
+54*0.0 /
+ZCORN
+32*1000.0 /
+ACTNUM
+4*1 /
+""".strip(),
+        encoding="utf-8",
+    )
+
+    data = GRDECLReader().read(deck)
+
+    assert data.metadata.mapaxes is not None
+    np.testing.assert_allclose(np.asarray(data.metadata.mapaxes), np.array([10, 20, 30, 40, 50, 60]))
+
+
+def test_cornerpoint_grdecl_roundtrip_preserves_mapaxes(simple_cornerpoint_grid, tmp_path: Path):
+    simple_cornerpoint_grid._eclipse_metadata = EclipseGridMetadata(mapaxes=[10, 20, 30, 40, 50, 60])
+
+    path = tmp_path / "roundtrip_mapaxes.grdecl"
+    simple_cornerpoint_grid.to_grdecl(path)
+
+    rebuilt = CornerPointGrid.from_grdecl(path)
+
+    assert rebuilt._eclipse_metadata is not None
+    np.testing.assert_allclose(
+        np.asarray(rebuilt._eclipse_metadata.mapaxes),
+        np.array([10, 20, 30, 40, 50, 60]),
+    )
 
 
 def test_grdecl_reader_reads_http_url(monkeypatch, minimal_grdecl_path: Path):

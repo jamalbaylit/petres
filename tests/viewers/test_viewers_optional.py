@@ -380,6 +380,30 @@ def test_viewer3d_screenshot_works_after_show(monkeypatch, tmp_path):
     assert viewer.plotter.screenshot_calls == [(str(output_path), (800, 600))]
 
 
+def test_viewer3d_screenshot_rejects_invalid_size(monkeypatch, tmp_path):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    monkeypatch.setattr(viewer_mod.pv, "Plotter", _DummyPlotter)
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.theme = viewer_mod.PyVista3DViewerTheme()
+    viewer.camera = viewer_mod.Camera3D.isometric_se()
+    viewer._point_labels = []
+    viewer._meshes = []
+    viewer._lines = []
+    viewer._pending_calls = []
+    viewer._scene_title = None
+    viewer._cached_camera = None
+    viewer._cached_window_size = None
+
+    output_path = tmp_path / "invalid-size.png"
+
+    with pytest.raises(ValueError, match="width"):
+        viewer.screenshot(str(output_path), width=0, height=768)
+
+
 def test_viewer3d_plotter_close_caches_window_state(monkeypatch):
     pytest.importorskip("pyvista")
 
