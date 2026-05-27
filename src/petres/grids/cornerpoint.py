@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import warnings
 
+
 from .._validation import _validate_finite_float, _validate_z_scale
 from ..models.wells import VerticalWell, _validate_well_sequence
 from ..grids.sampling._validation import _validate_vertex_array
@@ -14,6 +15,7 @@ from ..grids.sampling._vertices import _resolve_xyz_vertices
 from ..grids.properties import GridProperties, GridProperty
 from .builders.cornerpoint import _build_zcorn_from_zones
 from ..errors.property import MissingEclipseKeywordError
+from ..eclipse.grids.metadata import EclipseGridMetadata
 from ..errors.grid import UnsupportedGridAttributeError
 from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
 from ..eclipse.grids.write import GRDECLWriter
@@ -107,7 +109,8 @@ class CornerPointGrid:
     
     _properties: dict[str, GridProperty] = field(default_factory=dict, repr=False)
     _zone_name_to_id: dict[str, int] = field(default_factory=dict, init=False, repr=False)
-    
+    _eclipse_metadata: EclipseGridMetadata | None = field(default=None, repr=False)
+
     def __post_init__(self) -> None:
         """Validate grid arrays and initialize zone lookup metadata.
 
@@ -568,6 +571,7 @@ class CornerPointGrid:
         cls, path: str | Path,
         *,
         use_actnum: bool = True,
+        use_metadata: bool = True,
         properties: Sequence[str] | None = None,
 
     ) -> CornerPointGrid:
@@ -579,6 +583,10 @@ class CornerPointGrid:
             Path to GRDECL file containing COORD/ZCORN (and optional ACTNUM).
         use_actnum : bool, default True
             When True, read ACTNUM to set active cells; otherwise all active.
+        use_metadata : bool, default True
+            When True, read metadata keywords from the file.
+        properties : Sequence[str] | None, default None
+            Property names to import. If None, all available properties are imported.
 
         Returns
         -------
@@ -592,13 +600,19 @@ class CornerPointGrid:
             except Exception as e:
                 raise TypeError(f"`properties` must be a sequence of property names.") from e
             
-        data = GRDECLReader().read(path, use_actnum=use_actnum, properties=properties)  # returns raw arrays/spec, not a grid
+        data = GRDECLReader().read(
+            path, 
+            use_actnum=use_actnum, 
+            use_metadata=use_metadata,
+            properties=properties
+        )
         coord = data.coord
         zcorn = data.zcorn
         actnum = data.actnum
+        metadata = data.metadata
 
         pillars = PillarGrid.from_eclipse_coord(coord)
-        grid = cls(pillars=pillars, zcorn=zcorn, active=actnum)
+        grid = cls(pillars=pillars, zcorn=zcorn, active=actnum, _eclipse_metadata=metadata)
         
         for kw, val in data.properties.items():
             if kw in RESERVED_GRID_PROPERTY_NAMES:
@@ -667,6 +681,7 @@ class CornerPointGrid:
             zcorn=zcorn, 
             actnum=actnum, 
             properties=_properties,
+            metadata=self._eclipse_metadata,
         )
 
     def show(
