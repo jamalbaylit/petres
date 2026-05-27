@@ -1,6 +1,6 @@
 <div align="center">
 
-![Banner](https://raw.githubusercontent.com/jamalbaylit/petres/main/assets/banner-high.png)
+![Banner](https://raw.githubusercontent.com/jamalbaylit/petres/main/assets/banner.png)
 
 
 
