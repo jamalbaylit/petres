@@ -5,11 +5,12 @@ from typing import Any
 import numpy as np
 import pyvista as pv
 
-from ....._utils._color import Color
+from .....config.colors import DEFAULT_CMAP
+from ....._utils._colors import Color
 
 
 def _add_surface(
-    backend: Any,
+    plotter: pv.Plotter,
     depth: np.ndarray,
     *,
     x: Sequence[float] | np.ndarray,
@@ -37,8 +38,8 @@ def _add_surface(
 
     Parameters
     ----------
-    backend : Any
-        Viewer backend exposing a PyVista ``plotter``.
+    plotter : Any
+        PyVista plotter instance.
     depth : numpy.ndarray
         2D depth array with shape ``(len(y), len(x))``.
     x : collections.abc.Sequence[float] | numpy.ndarray
@@ -51,7 +52,7 @@ def _add_surface(
         Solid surface color when scalar coloring is disabled.
     scalars : bool | None, default=True
         Whether to color the surface with depth-derived scalar values.
-    cmap : str | None, default=None
+    cmap : str | None, default=DEFAULT_CMAP
         Colormap used when scalar coloring is enabled.
     show_colorbar : bool, default=True
         Whether to display the scalar bar.
@@ -82,7 +83,7 @@ def _add_surface(
     Raises
     ------
     ValueError
-        If ``x`` or ``y`` are not 1D, if ``depth`` shape is incompatible, or if
+        If ``x`` or ``y`` are not 1D, if ``depth`` shape is incompatib"le, or if
         ``contour_levels < 1`` when contours are enabled.
     """
     x = np.asarray(x, dtype=float).ravel()
@@ -112,8 +113,8 @@ def _add_surface(
 
     if scalars:
         color = None
-        cmap = cmap or "viridis"
-        backend.plotter.add_mesh(
+        cmap = cmap or DEFAULT_CMAP
+        plotter.add_mesh(
             grid,
             name=name,
             scalars="z",
@@ -123,7 +124,7 @@ def _add_surface(
             **mesh_kwargs,
         )
     else:
-        backend.plotter.add_mesh(
+        plotter.add_mesh(
             grid,
             name=name,
             color=color,
@@ -134,11 +135,20 @@ def _add_surface(
 
     # Contour labels fixed:
     if show_contours:
-        zmin = float(np.nanmin(depth))
-        zmax = float(np.nanmax(depth))
-
         if contour_levels < 1:
             raise ValueError("`contour_levels` must be at least 1.")
+
+        finite_depth = depth[np.isfinite(depth)]
+        if finite_depth.size == 0:
+            return grid
+
+        zmin = float(finite_depth.min())
+        zmax = float(finite_depth.max())
+
+        # A flat surface has no meaningful isolines; contouring it can create
+        # degenerate/overlapping geometry in VTK.
+        if np.isclose(zmin, zmax):
+            return grid
 
         contour_values = np.linspace(zmin, zmax, contour_levels)
 
@@ -146,8 +156,11 @@ def _add_surface(
             isosurfaces=contour_values,
             scalars="z",
         )
+        
+        if contours.n_points == 0:          
+            return grid
 
-        backend.plotter.add_mesh(
+        plotter.add_mesh(
             contours,
             color=contour_color,
             opacity=contour_opacity,
@@ -196,14 +209,6 @@ def _add_surface(
                     always_visible=False,
                     name=f"{name}_contour_labels" if name else None,
                 )
+                plotter.add_point_labels(point_labels, labels, **label_kwargs)
 
-                defer_labels = getattr(backend, "_defer_point_labels", None)
-                if callable(defer_labels):
-                    defer_labels(point_labels, labels, **label_kwargs)
-                else:
-                    backend.plotter.add_point_labels(
-                        point_labels,
-                        labels,
-                        **label_kwargs,
-                    )
     return grid

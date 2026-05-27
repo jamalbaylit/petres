@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import Any, TextIO
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TextIO
-
 import numpy as np
+import time
 
 from ...errors.eclipse import GRDECLMissingValueError
 from .keywords import NOT_PROPERTY_KEYWORDS
-
+from .metadata import EclipseGridMetadata
 
 class GRDECLWriter:
     """Write Eclipse/Petrel corner-point data to GRDECL files.
@@ -64,8 +64,7 @@ class GRDECLWriter:
         actnum: np.ndarray | None = None,
         properties: Mapping[str, np.ndarray] | None = None,
         rle: bool = True,
-        units: str = "FEET",
-        mapunits: str = "FEET",
+        metadata: "EclipseGridMetadata" | None = None
     ) -> None:
         """Write a complete corner-point grid to a GRDECL file.
 
@@ -84,10 +83,8 @@ class GRDECLWriter:
             Optional mapping of property keyword to property array.
         rle : bool, default=True
             If ``True``, use run-length encoding for array export.
-        units : str, default="FEET"
-            Reserved unit label for grid coordinates.
-        mapunits : str, default="FEET"
-            Reserved map unit label.
+        metadata : EclipseGridMetadata | None, default=None
+            Optional Eclipse-specific metadata to include in the GRDECL header and keyword blocks.
 
         Raises
         ------
@@ -106,26 +103,16 @@ class GRDECLWriter:
         with open(path, 'w') as f:
             # Header
             f = self._write_header(f, ni, nj, nk)
-            
-            # Map units
-            # f.write(f"MAPUNITS\n'{mapunits}' /\n")
-            
-            # # Map axes
-            # if mapaxes is not None:
-            #     # mapaxes = self._auto_mapaxes()
-            #     f.write(f"MAPAXES\n")
-            #     f.write(f"{mapaxes[0]:.6f} {mapaxes[1]:.6f}\n")
-            #     f.write(f"{mapaxes[2]:.6f} {mapaxes[3]:.6f}\n")
-            #     f.write(f"{mapaxes[4]:.6f} {mapaxes[5]:.6f} /\n")
-            
-            # Grid units
-            # f.write(f"GRIDUNIT\n'{units}' /\n")
+
+            f = self._write_metadata(f, metadata)
             
             # SPECGRID
             f.write("\nSPECGRID\n")
             f.write(f"{ni} {nj} {nk}  1  F /\n")
             
             # COORD
+            # coord[:, :, 1] *= -1
+            # coord[:, :, 4] *= -1
             f = GRDECLWriter._write_array(f, "COORD", coord, rle=rle)
             
             # ZCORN
@@ -146,6 +133,64 @@ class GRDECLWriter:
 
                     f = GRDECLWriter._write_array(f, kw, arr, rle=rle)
 
+    def _write_metadata(
+        self,
+        f: TextIO,
+        metadata: "EclipseGridMetadata" | None,
+    ) -> TextIO:
+        """Write optional Eclipse metadata keyword blocks."""
+        mapaxes = [0, 1,0, 0, 1, 0] if metadata is None or metadata.mapaxes is None else metadata.mapaxes
+        f = self._write_mapaxes(f, mapaxes=mapaxes)
+
+        if metadata is not None:
+            f = self._write_keyword_block(f, "MAPUNITS", metadata.mapunits)
+            f = self._write_keyword_block(f, "GRIDUNIT", metadata.gridunit)
+            f = self._write_keyword_block(f, "COORDSYS", metadata.coordsys)
+            f = self._write_keyword_block(f, "PINCH", metadata.pinch)
+        return f
+
+    @staticmethod
+    def _write_keyword_block(f: TextIO, keyword: str, value: Any) -> TextIO:
+        if value is None:
+            return f
+
+        f.write(f"\n{keyword}\n")
+        f.write(" ".join(list(value)))
+        f.write("/\n\n")
+        return f
+            
+    def _write_mapaxes(
+        self,
+        f: TextIO,
+        mapaxes: Sequence[float] | None = None
+    ) -> TextIO:
+        """Write the MAPAXES keyword block if map axes are provided.
+
+        Parameters
+        ----------
+        f : typing.TextIO
+            Writable text stream.
+        mapaxes : Sequence[float] | None, default=None
+            Optional sequence of six floats defining the map axes in the order
+            (x0, y0, x1, y1, x2, y2).
+
+        Returns
+        -------
+        typing.TextIO
+            The same stream after writing the MAPAXES block if ``mapaxes`` is not ``None``; otherwise, the unchanged stream.
+        """
+        # if not isinstance(mapaxes, Sequence) or isinstance(mapaxes, str):
+        #     raise TypeError(f"MAPAXES must be a sequence of six floats, got {type(mapaxes)}.")
+        # if len(mapaxes) != 6:
+        #     raise ValueError(f"MAPAXES requires a sequence of six floats (x0, y0, x1, y1, x2, y2), got {len(mapaxes)} values.")
+        # if not all(isinstance(x, (int, float, np.integer, np.floating)) for x in mapaxes):
+        #     raise TypeError("MAPAXES values must be numeric.")
+
+        f.write(f"\nMAPAXES\n")
+        f.write(f"{mapaxes[0]:g} {mapaxes[1]:g}\n")
+        f.write(f"{mapaxes[2]:g} {mapaxes[3]:g}\n")
+        f.write(f"{mapaxes[4]:g} {mapaxes[5]:g} /\n\n")
+        return f
 
     def _write_header(
         self, 
@@ -180,27 +225,6 @@ class GRDECLWriter:
         f.write(f"-- Grid        : 3D Grid ({ni}X{nj}X{nk})\n")
         f.write("\n"*2)
         return f
-
-    def _auto_mapaxes(self) -> list[float]:
-        """Compute default MAPAXES coordinates from ``self.COORD``.
-
-        Returns
-        -------
-        list[float]
-            Six-value list representing MAPAXES points.
-        """
-        x_coords = self.COORD[:, :, 0, 0]
-        y_coords = self.COORD[:, :, 0, 1]
-        
-        x_min, x_max = x_coords.min(), x_coords.max()
-        y_min, y_max = y_coords.min(), y_coords.max()
-        
-        # Origin, point on X-axis, point on Y-axis
-        return [
-            x_min, y_min,  # Origin
-            x_min, y_min,  # Point 1 (same as origin)
-            x_max, y_min   # Point 2 (along X-axis)
-        ]
     
     @staticmethod
     def _write_array(
@@ -249,6 +273,7 @@ class GRDECLWriter:
         else:
             if np.isnan(array).any():
                 raise GRDECLMissingValueError(keyword=keyword)
+            
         if rle:
             return GRDECLWriter._write_array_rle(f, keyword, array, ncol, type, decimals)
         else:
@@ -353,12 +378,21 @@ class GRDECLWriter:
         lengths, values = GRDECLWriter._rle(flat)
         keyword = GRDECLWriter._normalize_keyword(keyword)
         f.write(f"\n{keyword}\n")
+        start = time.time()
         GRDECLWriter._rle_writer(f, lengths, values, ncol)
+        print(f"RLE encoding and writing for keyword '{keyword}' completed in {time.time() - start:.2f} seconds.")
         f.write("/\n\n")
         return f
             
     @staticmethod
-    def _rle_writer(f: TextIO, lengths: np.ndarray, values: np.ndarray, ncol: int = 12) -> None:
+    def _rle_writer(
+        f: TextIO, 
+        lengths: np.ndarray, 
+        values: np.ndarray, 
+        ncol: int = 12,
+        max_chars: int = 120,
+        eps: float = 1e-10
+    ) -> None:
         """Write precomputed RLE token pairs with line wrapping.
 
         Parameters
@@ -371,16 +405,30 @@ class GRDECLWriter:
             Run values associated with ``lengths``.
         ncol : int, default=12
             Maximum number of output tokens per line.
+        max_chars : int, default=143
+            Maximum number of characters per output line.
+        eps : float, default=1e-12
+            Tolerance for considering values as zero.
         """
-        line = []
+        current = ""
+
         for n, v in zip(lengths, values):
-            tok = f"{int(n)}*{v}" if n > 1 else f"{v}"
-            line.append(tok)
-            if len(line) >= ncol:
-                f.write(" ".join(line) + "\n")
-                line = []
-        if line:
-            f.write(" ".join(line) + "\n")
+            if abs(v) < 1e-12:
+                v = 0.0
+
+            tok = f"{int(n)}*{v:g}" if n > 1 else f"{v:g}"
+
+            # candidate line
+            new = tok if not current else f"{current} {tok}"
+
+            if len(new) > max_chars:
+                f.write(current + "\n")
+                current = tok
+            else:
+                current = new
+
+        if current:
+            f.write(current + "\n")
         return None
 
     @staticmethod
@@ -434,7 +482,7 @@ class GRDECLWriter:
             Format string compatible with ``numpy.savetxt``.
         """
         is_integer = np.issubdtype(array.dtype, np.integer)
-        fmt = "%d" if is_integer else f"%.{decimals}f" if decimals is not None else "%g"
+        fmt = "%d" if is_integer else f"%.{decimals}g" if decimals is not None else "%g"
         return fmt
     
     

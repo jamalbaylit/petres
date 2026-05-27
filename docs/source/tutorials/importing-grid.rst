@@ -11,7 +11,8 @@ Importing allows you to load grid geometry, grid properties, and the active cell
 Importing Grid Geometry
 -----------------------
 
-A grid can be imported directly from a ``.GRDECL`` file using the :meth:`~petres.grids.CornerPointGrid.from_grdecl` method:
+A grid can be imported directly from a ``.GRDECL`` file using the
+:meth:`~petres.grids.CornerPointGrid.from_grdecl` method:
 
 .. code-block:: python
 
@@ -25,17 +26,35 @@ By default, this method automatically reads:
 - Grid geometry (``COORD``, ``ZCORN``, ``SPECGRID``, or ``DIMENS``)
 - Active cell mask (``ACTNUM``)
 
+If present in the file, the following metadata keywords are also preserved:
+
+- ``MAPAXES``
+- ``MAPUNITS``
+- ``GRIDUNIT``
+- ``COORDSYS``
+- ``PINCH``
+
+To skip loading these metadata keywords, set ``use_metadata=False``.
+These keywords are currently not used internally, but they are preserved
+when the grid is exported again using the
+:meth:`~petres.grids.CornerPointGrid.to_grdecl` method.
+
 .. important::
 
-   The file must contain at least the grid geometry keywords (``COORD``, ``ZCORN``, ``SPECGRID``, or ``DIMENS``).
+   The file must contain the required grid geometry keywords
+   (``COORD``, ``ZCORN``, and either ``SPECGRID`` or ``DIMENS``).
 
-To import the grid without the active cell mask, set the ``use_actnum`` parameter to ``False``:
+To import the grid without the active cell mask, set
+``use_actnum=False``:
 
 .. code-block:: python
 
-   grid = CornerPointGrid.from_grdecl("model.grdecl", use_actnum=False)
+   grid = CornerPointGrid.from_grdecl(
+       "model.grdecl",
+       use_actnum=False,
+   )
 
-This is useful when you want to define ``ACTNUM`` manually after import.
+This is useful when ``ACTNUM`` will be defined manually after import.
 
 Importing Properties
 --------------------

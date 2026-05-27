@@ -27,6 +27,8 @@ class TestGridExport:
         grid.to_grdecl(output_file)
 
         assert output_file.exists()
+        content = output_file.read_text()
+        assert "MAPAXES" in content
         assert output_file.stat().st_size > 0
 
     def test_export_grid_includes_actnum_by_default(self, tmp_path: Path):
@@ -97,6 +99,8 @@ class TestGridImport:
 
         assert grid_reimported.shape == grid_original.shape
         assert grid_reimported.n_cells == grid_original.n_cells
+        assert grid_reimported._eclipse_metadata is not None
+        assert grid_reimported._eclipse_metadata.mapaxes is not None
 
     def test_import_without_actnum(self, tmp_path: Path):
         """Import a grid file and ignore ACTNUM."""

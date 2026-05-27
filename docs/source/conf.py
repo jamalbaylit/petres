@@ -50,7 +50,7 @@ extensions = [
     "sphinx_copybutton",
     "furo_nav_sections",
     "apigen",
-    # "exampledocs",
+    "exampledocs",
 ]
 
 

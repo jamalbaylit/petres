@@ -119,3 +119,26 @@ You can also pass a single well directly without wrapping it in a list:
 .. code-block:: python
 
     grid.show(wells=well1)
+
+Saving a Screenshot
+-------------------
+
+To save a screenshot, create a :class:`~petres.viewers.Viewer3D` scene, interactively adjust
+the view if needed, and then call :meth:`~petres.viewers.Viewer3D.screenshot`.
+
+.. code-block:: python
+
+    from petres.viewers import Viewer3D
+
+    viewer = Viewer3D(z_scale=2)
+    viewer.add_grid(grid)
+    viewer.add_wells([well1, well2])
+
+    viewer.show()
+    viewer.screenshot("grid.png", transparent=False)
+
+.. note::
+
+    The ``screenshot()`` method can also be used without calling
+    ``show()``. Set ``transparent=True`` to save the screenshot
+    with a transparent background as a PNG image.

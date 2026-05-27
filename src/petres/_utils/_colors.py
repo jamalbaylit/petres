@@ -1,11 +1,11 @@
 from __future__ import annotations
 from matplotlib.colors import to_rgba
-from matplotlib.pyplot import cm
+import matplotlib.colors as mcolors
 from dataclasses import dataclass
+from matplotlib.pyplot import cm
+from matplotlib import colormaps
 from typing import Any
 import numpy as np
-import warnings
-
 
 
 @dataclass(frozen=True)
@@ -238,3 +238,25 @@ class Color:
             return [tuple(c[:3]) for c in colors]  # Convert to RGB tuples
         except Exception as e:
             raise ValueError(f"Failed to get discrete cmap for '{cmap}'. Ensure the colormap name is valid.") from e 
+
+
+
+class CMap:
+    def __init__(self, colors, name="custom_cmap", N=256):
+        self.name = name
+        self.cmap = mcolors.LinearSegmentedColormap.from_list(name, colors, N=N)
+
+    @property
+    def reversed(self):
+        return self.cmap.reversed()
+
+    def register(self):
+        colormaps.register(name=self.name, cmap=self.cmap)
+        colormaps.register(name=f"{self.name}_r", cmap=self.reversed)
+
+
+def register_cmap(name, *, colors):
+    if name in colormaps:
+        return name
+    CMap(colors, name=name).register()
+    return name

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-import re
-from typing import Any, Sequence
-
-import numpy as np
 from numpy.typing import DTypeLike, NDArray
+from dataclasses import dataclass
+from urllib.parse import urlparse
+from typing import Any, Sequence
+from pathlib import Path
+import urllib.request
+import numpy as np
+import re
+
 
 from .keywords import NOT_PROPERTY_KEYWORDS
+from .metadata import EclipseGridMetadata
 from .validation import (
     validate_array_shape,
     validate_array_size,
@@ -49,6 +52,7 @@ class GRDECLData:
     zcorn: NDArray[np.float64]   # (2*nk, 2*nj, 2*ni)
     actnum: NDArray[np.int_] | None  # (nk, nj, ni) or None
     properties: dict[str, NDArray[Any]] # Optional dict of property arrays
+    metadata: EclipseGridMetadata # Eclipse-specific metadata
 
 
 class GRDECLReader:
@@ -97,7 +101,14 @@ class GRDECLReader:
             out.append(line)
         return "\n".join(out)
 
-    def read(self, path: str | Path, *, use_actnum: bool = True, properties: Sequence[str] | None = None) -> GRDECLData:
+    def read(
+        self, 
+        path: str | Path, 
+        *, 
+        use_actnum: bool = True, 
+        use_metadata: bool = True,
+        properties: Sequence[str] | None = None,
+    ) -> GRDECLData:
         """Read and validate grid keywords from a GRDECL file.
 
         Parameters
@@ -106,6 +117,10 @@ class GRDECLReader:
             Path to the GRDECL file.
         use_actnum : bool, default=True
             Whether to parse and validate ``ACTNUM`` when it exists.
+        use_metadata : bool, default=True
+            Whether to read metadata keywords (e.g., ``MAPAXES``, ``MAPUNITS``, ``GRIDUNIT``).
+        properties : Sequence[str] | None, default=None
+            List of property keywords to parse and validate.
 
         Returns
         -------
@@ -117,8 +132,13 @@ class GRDECLReader:
         ValueError
             If required keywords are missing or keyword data are malformed.
         """
-        path = Path(path)
-        text = path.read_text(encoding="utf-8", errors="ignore")
+        path_str = str(path)
+        if urlparse(path_str).scheme in {"http", "https"}:
+            with urllib.request.urlopen(path_str) as response:
+                text = response.read().decode("utf-8", errors="ignore")
+        else:
+            path = Path(path)
+            text = path.read_text(encoding="utf-8", errors="ignore")
         text = self.clean_comments(text)
 
         dim = self._get_keyword_array(text, "SPECGRID", dtype=str)
@@ -129,6 +149,10 @@ class GRDECLReader:
         validate_coord_array_size(coord, ni=ni, nj=nj)
         coord = coord.reshape((nj + 1, ni + 1, 6))
         validate_coord_array_shape(coord, ni=ni, nj=nj)
+
+        # Multiply y-coordinates by -1 to convert from Eclipse's downward-positive system to a more conventional upward-positive system.
+        # coord[:, :, 1] *= -1
+        # coord[:, :, 4] *= -1
 
         zcorn = self._get_keyword_array(text, "ZCORN", dtype=float)
         validate_zcorn_array_size(zcorn, ni=ni, nj=nj, nk=nk)
@@ -155,15 +179,37 @@ class GRDECLReader:
                 properties_dict[kw] = prop.reshape((nk, nj, ni))
 
         
+        mapaxes = self.read_optional_keyword(text, "MAPAXES", dtype=float) if use_metadata else None
+        mapunits = self.read_optional_keyword(text, "MAPUNITS", dtype=str) if use_metadata else None
+        gridunit = self.read_optional_keyword(text, "GRIDUNIT", dtype=str) if use_metadata else None
+        coordsys = self.read_optional_keyword(text, "COORDSYS", dtype=str) if use_metadata else None
+        pinch = self.read_optional_keyword(text, "PINCH", dtype=float) if use_metadata else None
+        metadata = EclipseGridMetadata(
+            mapaxes=mapaxes,
+            mapunits=mapunits,
+            gridunit=gridunit,
+            coordsys=coordsys,
+            pinch=pinch
+        )
 
-                        
-
-
-        return GRDECLData(ni=ni, nj=nj, nk=nk, coord=coord, zcorn=zcorn, actnum=actnum, properties=properties_dict)
+        return GRDECLData(
+            ni=ni, 
+            nj=nj, 
+            nk=nk, 
+            coord=coord, 
+            zcorn=zcorn, 
+            actnum=actnum,
+            properties=properties_dict,
+            metadata=metadata
+        )
 
     # ----------------------------
     # helpers
     # ----------------------------
+    def read_optional_keyword(self, text: str, keyword: str, dtype):
+        if not self._has_keyword(text, keyword):
+            return None
+        return self._get_keyword_array(text, keyword, dtype=dtype)
 
     def _find_keyword_block_start(self, text: str, keyword: str) -> str | None:
         """Locate text immediately after a keyword line.
@@ -288,7 +334,7 @@ class GRDECLReader:
         if not content:
             return np.array([], dtype=dtype)
         return np.array(content.split(), dtype=dtype)
-
+    
     def _has_keyword(self, text: str, keyword: str) -> bool:
         """Check whether a keyword exists as a standalone deck token.
 

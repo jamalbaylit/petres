@@ -460,8 +460,7 @@ Continuous Integration
 Tests run automatically on GitHub Actions:
 
 - **Trigger**: Push to `dev`/`main` or PR
-- **Matrix**: Python 3.11, 3.12, 3.13 on Ubuntu + Windows
-- **Optional**: Python 3.14 experimental on Ubuntu (allowed to fail)
+- **Matrix**: Python 3.11, 3.12, 3.13, 3.14 on Ubuntu + Windows
 - **Markers**: Markers enable selective test execution in parallel CI jobs
 
 See `.github/workflows/ci.yml <../../.github/workflows/ci.yml>`_ for full CI configuration.

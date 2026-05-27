@@ -4,7 +4,8 @@ from typing import Any
 import pyvista as pv
 import numpy as np
 
-from ....._utils._color import Color
+from .....config.colors import DEFAULT_CMAP, DEFAULT_COLOR
+from ....._utils._colors import Color
 from .....grids import CornerPointGrid
 
 def _add_corner_point_grid(
@@ -14,6 +15,10 @@ def _add_corner_point_grid(
     color: Color | None = None,
     scalars: np.ndarray | None = None,
     cmap: str | None = None,
+    
+    # Colorbar Options
+    show_colorbar: bool = True,
+    colorbar_title: str | None = None,
     **kwargs: Any,
 ) -> pv.UnstructuredGrid:
     """
@@ -34,6 +39,10 @@ def _add_corner_point_grid(
         with the same mask.
     cmap : str | None, default=None
         Colormap used for scalar rendering.
+    show_colorbar : bool, default=True
+        Whether to display the scalar bar.
+    colorbar_title : str | None, default=None
+        Optional scalar bar title.
     **kwargs : Any
         Additional keyword arguments forwarded to ``plotter.add_mesh``.
 
@@ -82,6 +91,12 @@ def _add_corner_point_grid(
     # ========================================================================
     # Attach scalar values (optional)
     # ========================================================================
+    scalar_bar_args = None
+    if show_colorbar:
+        scalar_bar_args = {
+            "title": "" if colorbar_title is None else colorbar_title
+        }
+
     if scalars is not None:
         scalars = np.asarray(scalars, dtype=float)
 
@@ -101,15 +116,17 @@ def _add_corner_point_grid(
         backend.plotter.add_mesh(
             mesh,
             scalars="values",
-            cmap=cmap or "turbo",   # default fallback
+            cmap=cmap or DEFAULT_CMAP,
             show_edges=True,
+            scalar_bar_args=scalar_bar_args,
             **kwargs
         )
     else:
         backend.plotter.add_mesh(
             mesh,
-            color=Color(color).as_rgb() if color is not None else 'tan',
+            color=Color(color).as_rgb() if color is not None else DEFAULT_COLOR,
             show_edges=True,
+            scalar_bar_args=scalar_bar_args,
             **kwargs
         )
 

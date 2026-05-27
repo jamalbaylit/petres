@@ -54,6 +54,13 @@ and interpolator controls how the continuous surface is reconstructed from these
    The choice of interpolator affects the geometry of the surface.  
    See :doc:`/tutorials/interpolators` page for more details and available options.
 
+
+.. important::
+
+   Each horizon requires its own Interpolator instance.
+   Do not reuse the same interpolator object across different horizons.
+   This ensures that each surface is interpolated independently and correctly.
+
 .. _horizon-from-wells:
 
 From Well Tops

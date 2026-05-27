@@ -21,6 +21,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
 
+# alias_fqn -> canonical_fqn (e.g. petres.viewers.Viewer3D -> petres.viewers.PyVista3DViewer)
+ALIAS_TO_CANONICAL: Dict[str, str] = {}
+
+
 class APIGenerator:
     """Generates complete API reference documentation automatically."""
 
@@ -162,6 +166,8 @@ class APIGenerator:
             # Store aliases
             if alias_names:
                 self.aliases[canonical_name] = alias_names
+                for alias in alias_names:
+                    ALIAS_TO_CANONICAL[alias] = canonical_name
             
             # Categorize based on the CANONICAL EXPORT PATH, not where it's defined
             category = self._extract_category(canonical_name)
@@ -390,6 +396,21 @@ class APIGenerator:
                     lines.append(f"   {obj_info['name']} <{obj_slug}>")
                 
                 lines.append("")
+
+                # Add alias pages (hidden) so alias docs are included in the
+                # build and do not trigger 'not included in any toctree'
+                alias_pages = []
+                for full_name in object_names:
+                    for alias in self.aliases.get(full_name, []):
+                        alias_pages.append(self._slugify(alias))
+
+                if alias_pages:
+                    lines.append(".. toctree::")
+                    lines.append("   :hidden:")
+                    lines.append("")
+                    for a in sorted(set(alias_pages)):
+                        lines.append(f"   {a}")
+                    lines.append("")
             
             category_file = self.api_dir / f"{category_slug}.rst"
             category_file.write_text("\n".join(lines), encoding='utf-8')
@@ -453,6 +474,43 @@ class APIGenerator:
             
             obj_file = self.api_dir / f"{obj_slug}.rst"
             obj_file.write_text("\n".join(lines), encoding='utf-8')
+
+            # Also generate small alias pages so cross-references to alias
+            # names (e.g. ``petres.viewers.Viewer3D``) resolve to the canonical
+            # object. Each alias page registers the alias with the Python
+            # domain using a lightweight ``py:class``/``py:function`` directive
+            # and the ``:noindex:`` option to avoid duplicate indexing.
+            if full_name in self.aliases:
+                for alias in self.aliases[full_name]:
+                    alias_slug = self._slugify(alias)
+                    alias_name = alias.split('.')[-1]
+                    alias_lines = [
+                        alias_name,
+                        "=" * 80,
+                        "",
+                    ]
+
+                    # Generate alias docs through autodoc so Sphinx creates
+                    # full Python-domain targets for alias names (including
+                    # member targets like ``AliasClass.method``).
+                    if obj_info['type'] == 'class':
+                        alias_lines.extend([
+                            f".. autoclass:: {alias}",
+                            "   :members:",
+                            "   :undoc-members:",
+                            "   :show-inheritance:",
+                            "   :special-members: __init__",
+                            "   :exclude-members: __weakref__",
+                            "",
+                        ])
+                    elif obj_info['type'] == 'function':
+                        alias_lines.extend([
+                            f".. autofunction:: {alias}",
+                            "",
+                        ])
+
+                    alias_file = self.api_dir / f"{alias_slug}.rst"
+                    alias_file.write_text("\n".join(alias_lines), encoding='utf-8')
     
     def _slugify(self, text: str) -> str:
         """Convert text to valid filename slug."""
@@ -469,6 +527,41 @@ def generate_api_docs(app):
     generator.generate()
 
 
+def resolve_alias_missing_reference(app, env, node, contnode):
+    """Resolve unresolved Python xrefs that target alias members.
+
+    Example:
+    - ``petres.viewers.Viewer3D.screenshot``
+    becomes
+    - ``petres.viewers.PyVista3DViewer.screenshot``
+    """
+    if node.get("refdomain") != "py":
+        return None
+
+    target = node.get("reftarget")
+    if not target:
+        return None
+
+    # Longest alias first to avoid partial-prefix collisions.
+    for alias in sorted(ALIAS_TO_CANONICAL.keys(), key=len, reverse=True):
+        if target == alias or target.startswith(alias + "."):
+            canonical = ALIAS_TO_CANONICAL[alias]
+            mapped_target = canonical + target[len(alias):]
+            fromdocname = node.get("refdoc", getattr(env, "docname", ""))
+            domain = env.get_domain("py")
+            return domain.resolve_xref(
+                env,
+                fromdocname,
+                app.builder,
+                node.get("reftype"),
+                mapped_target,
+                node,
+                contnode,
+            )
+
+    return None
+
+
 def setup(app):
     """Sphinx extension setup."""
     # Add config value for package name
@@ -476,6 +569,7 @@ def setup(app):
     
     # Connect to builder-inited event
     app.connect('builder-inited', generate_api_docs)
+    app.connect('missing-reference', resolve_alias_missing_reference)
     
     return {
         'version': '1.0',

@@ -167,6 +167,7 @@ For questions, suggestions, or collaboration, feel free to reach out:
    :caption: User Guide
    :hidden:
 
+   examples/index
    tutorials/index
    api/index
 

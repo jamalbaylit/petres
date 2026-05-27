@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Callable, ItemsView, Sequence, ValuesView
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
-import warnings
-import numpy as np
+from dataclasses import dataclass, field
 from numpy.typing import ArrayLike
+import numpy as np
+import warnings
 
-
-from .._validation import _validate_nonempty_string
-from ..interpolators.base import BaseInterpolator
 from ..errors.property import ExistingPropertyNameError, MissingEclipseKeywordError, MissingPropertyValueError, ReservedPropertyNameError
-from ..errors.eclipse import GRDECLMissingValueError
-from ..eclipse.grids.write import GRDECLWriter
+from .._validation import _validate_nonempty_string, _validate_z_scale
 from ..models.wells import VerticalWell, _validate_well_sequence
+from ..errors.eclipse import GRDECLMissingValueError
+from ..interpolators.base import BaseInterpolator
+from ..eclipse.grids.write import GRDECLWriter
+from ..config.colors import DEFAULT_CMAP
 from ..models.zone import Zone
 
 
@@ -125,7 +125,7 @@ class GridProperty:
         self,
         *, 
         show_inactive: bool = False, 
-        cmap: str | None = "turbo",
+        cmap: str | None = DEFAULT_CMAP,
         title: str | Literal["auto"] | None = "auto", 
         z_scale: float = 1.0,
         wells: Sequence[VerticalWell] | VerticalWell | None = None,
@@ -137,7 +137,7 @@ class GridProperty:
         ----------
         show_inactive : bool, default False
             Whether to display inactive cells.
-        cmap : str or None, default 'turbo'
+        cmap : str or None, default DEFAULT_CMAP
             Colormap used for rendering.
         title : str or 'auto', default 'auto'
             Window title; ``'auto'`` uses the property name.
@@ -152,22 +152,18 @@ class GridProperty:
         -----
         ``title='auto'`` expands to ``Property: <name>``.
         """
-        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        if not np.isfinite(z_scale) or z_scale <= 0:
-            raise ValueError("z_scale must be a positive finite value.")
         
-        
-            
-        title = self._get_plot_title(title)
+        self.grid.show(
+            show_inactive=show_inactive,
+            scalars=self.name,
+            title=self._get_plot_title(title),
+            cmap=cmap,
+            z_scale=z_scale,
+            wells=wells,
+            **kwargs
+        )
 
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
-        viewer = PyVista3DViewer(theme=theme)
-        viewer.add_grid(grid=self.grid, show_inactive=show_inactive, scalars=self.values, cmap=cmap, **kwargs)
-        
-        if wells is not None:
-            viewer.add_wells(_validate_well_sequence(wells))
-        viewer.show(title=title)
     
     def _get_plot_title(self, title: str | Literal["auto"] | None) -> str | None:
         if title == 'auto':

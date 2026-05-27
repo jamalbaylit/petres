@@ -72,6 +72,8 @@ class VerticalWell:
         
         try:
             value = _validate_finite_float(value, f"value")
+            if value < 0:
+                raise ValueError(f"Top depth value must be non-negative, got {value}.")
         except Exception as e:
             raise ValueError(f"Invalid depth value for horizon '{name}': {value!r}. Must be a number.") from e
         return name, value
@@ -329,7 +331,6 @@ class VerticalWell:
         if not self.samples[name]:
             del self.samples[name]
             del self._sample_modes[name]
-
 
 
 

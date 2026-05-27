@@ -7,6 +7,100 @@ from petres.models import Horizon, VerticalWell, Zone
 from petres.viewers import Viewer2D, Viewer2DTheme
 
 
+class _DummyActor:
+    def SetScale(self, *args):
+        return None
+
+
+class _DummyCamera:
+    def __init__(self):
+        self.zoom_calls = []
+
+    def zoom(self, factor):
+        self.zoom_calls.append(factor)
+
+    def copy(self):
+        return "cached-camera"
+
+
+class _DummyRenderWindow:
+    def __init__(self, size=(800, 600)):
+        self._size = size
+
+    def GetSize(self):
+        return self._size
+
+
+class _DummyInteractor:
+    def __init__(self):
+        self.observers = {}
+
+    def AddObserver(self, event, callback):
+        self.observers[event] = callback
+
+
+class _DummyIren:
+    def __init__(self):
+        self.interactor = _DummyInteractor()
+
+
+class _DummyPlotter:
+    def __init__(self, off_screen=False):
+        self.off_screen = off_screen
+        self.theme = type("Theme", (), {"allow_empty_mesh": True})()
+        self.camera = _DummyCamera()
+        self.render_window = _DummyRenderWindow()
+        self.iren = _DummyIren()
+        self.bounds = (0.0, 100.0, 0.0, 200.0, 0.0, 300.0)
+        self.background_color = None
+        self.screenshot_calls = []
+        self.camera_position = None
+        self.show_calls = []
+        self.close_calls = []
+
+    def add_mesh(self, *args, **kwargs):
+        return _DummyActor()
+
+    def add_point_labels(self, *args, **kwargs):
+        return None
+
+    def add_lines(self, *args, **kwargs):
+        return None
+
+    def show_bounds(self, *args, **kwargs):
+        return None
+
+    def show_axes(self):
+        return None
+
+    def hide_axes(self):
+        return None
+
+    def set_background(self, *args, **kwargs):
+        return None
+
+    def add_text(self, *args, **kwargs):
+        return None
+
+    def reset_camera(self):
+        return None
+
+    def reset_camera_clipping_range(self):
+        return None
+
+    def screenshot(self, path, window_size=None):
+        self.screenshot_calls.append((path, window_size))
+
+    def show(self, *args, **kwargs):
+        self.show_calls.append((args, kwargs))
+
+    def close(self):
+        self.close_calls.append(True)
+        callback = self.iren.interactor.observers.get("ExitEvent")
+        if callback is not None:
+            callback(None, None)
+
+
 def test_viewer2d_public_aliases_exist():
     assert Viewer2D is not None
     assert Viewer2DTheme is not None
@@ -126,9 +220,10 @@ def test_add_pillars_forwards_raw_arrays(monkeypatch, simple_pillar_grid):
     monkeypatch.setattr(viewer_mod, "_add_pillars", fake_add_pillars)
 
     viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.plotter = _DummyPlotter()
     viewer.add_pillars(simple_pillar_grid, color="red", line_width=4.0)
 
-    assert calls["backend"] is viewer
+    assert calls["backend"] is viewer.plotter
     assert calls["pillar_top"] is simple_pillar_grid.pillar_top
     assert calls["pillar_bottom"] is simple_pillar_grid.pillar_bottom
     assert calls["kwargs"]["color"] == "red"
@@ -159,7 +254,8 @@ def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
 
     viewer = object.__new__(viewer_mod.PyVista3DViewer)
     viewer.theme = viewer_mod.PyVista3DViewerTheme(scale=(1.0, 1.0, 2.0))
-    viewer.plotter = None
+    viewer.plotter = _DummyPlotter()
+    viewer._pending_calls = []
 
     wells = [
         VerticalWell(name="W1", x=0.0, y=0.0, tops={"Top": 10.0, "Base": 20.0}),
@@ -174,7 +270,9 @@ def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
         label_top="Top",
     )
 
-    assert calls["backend"] is viewer
+    viewer._render_queued()
+
+    assert calls["backend"] is viewer.plotter
     assert len(calls["wells"]) == 2
     assert calls["wells"][0]["well_name"] == "W1"
     assert calls["wells"][1]["well_name"] == "W2"
@@ -184,3 +282,147 @@ def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
     assert calls["kwargs"]["line_width"] == 2.5
     assert calls["kwargs"]["show_tops"] is True
     assert calls["kwargs"]["label_top"] == "Top"
+
+
+def test_apply_camera_uses_camera_position_and_zoom(monkeypatch):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    class DummyCamera:
+        def __init__(self):
+            self.zoom_calls = []
+
+        def zoom(self, factor):
+            self.zoom_calls.append(factor)
+
+    class DummyPlotter:
+        def __init__(self):
+            self.calls = []
+            self.camera = DummyCamera()
+            self.camera_position = None
+
+        def reset_camera(self):
+            self.calls.append("reset_camera")
+
+        def reset_camera_clipping_range(self):
+            self.calls.append("reset_camera_clipping_range")
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.plotter = DummyPlotter()
+
+    camera = viewer_mod.Camera3D.isometric_se().with_zoom(2.0)
+
+    viewer._apply_camera(camera, viewer.plotter)
+
+    assert viewer.plotter.calls == [
+        "reset_camera",
+        "reset_camera_clipping_range",
+        "reset_camera",
+        "reset_camera_clipping_range",
+    ]
+    assert viewer.plotter.camera_position == [
+        camera.position,
+        camera.focal_point,
+        camera.view_up,
+    ]
+    assert viewer.plotter.camera.zoom_calls == [2.0]
+
+
+def test_viewer3d_screenshot_uses_cached_state_and_explicit_size(monkeypatch, tmp_path):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    monkeypatch.setattr(viewer_mod.pv, "Plotter", _DummyPlotter)
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.theme = viewer_mod.PyVista3DViewerTheme()
+    viewer.camera = viewer_mod.Camera3D.isometric_se()
+    viewer._point_labels = []
+    viewer._meshes = []
+    viewer._lines = []
+    viewer._pending_calls = []
+    viewer._scene_title = None
+    viewer._cached_camera = "cached-camera"
+    viewer._cached_window_size = (800, 600)
+
+    output_path = tmp_path / "screenshot.png"
+
+    viewer.screenshot(str(output_path), transparent=True, width=1024, height=768)
+
+    assert viewer.plotter.off_screen is True
+    assert viewer.plotter.screenshot_calls == [(str(output_path), (1024, 768))]
+    assert viewer.plotter.background_color == (1, 1, 1, 0)
+    assert viewer.plotter.camera == "cached-camera"
+
+
+def test_viewer3d_screenshot_works_after_show(monkeypatch, tmp_path):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    monkeypatch.setattr(viewer_mod.pv, "Plotter", _DummyPlotter)
+
+    viewer = viewer_mod.PyVista3DViewer()
+    viewer.plotter.add_mesh("mesh")
+
+    viewer.show(title="Scene")
+
+    assert viewer._cached_window_size == (800, 600)
+    assert viewer._cached_camera == "cached-camera"
+
+    output_path = tmp_path / "after-show.png"
+
+    viewer.screenshot(str(output_path))
+
+    assert viewer.plotter.off_screen is True
+    assert viewer.plotter.screenshot_calls == [(str(output_path), (800, 600))]
+
+
+def test_viewer3d_screenshot_rejects_invalid_size(monkeypatch, tmp_path):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    monkeypatch.setattr(viewer_mod.pv, "Plotter", _DummyPlotter)
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.theme = viewer_mod.PyVista3DViewerTheme()
+    viewer.camera = viewer_mod.Camera3D.isometric_se()
+    viewer._point_labels = []
+    viewer._meshes = []
+    viewer._lines = []
+    viewer._pending_calls = []
+    viewer._scene_title = None
+    viewer._cached_camera = None
+    viewer._cached_window_size = None
+
+    output_path = tmp_path / "invalid-size.png"
+
+    with pytest.raises(ValueError, match="width"):
+        viewer.screenshot(str(output_path), width=0, height=768)
+
+
+def test_viewer3d_plotter_close_caches_window_state(monkeypatch):
+    pytest.importorskip("pyvista")
+
+    import petres.viewers.viewer3d.pyvista.viewer as viewer_mod
+
+    monkeypatch.setattr(viewer_mod.pv, "Plotter", _DummyPlotter)
+
+    viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.theme = viewer_mod.PyVista3DViewerTheme()
+    viewer.camera = viewer_mod.Camera3D.isometric_se()
+    viewer._point_labels = []
+    viewer._meshes = []
+    viewer._scene_title = None
+    viewer._cached_camera = None
+    viewer._cached_window_size = None
+
+    viewer.set_plotter()
+
+    viewer.plotter.iren.interactor.observers["ExitEvent"](None, None)
+
+    assert viewer._cached_window_size == (800, 600)
+    assert viewer._cached_camera == "cached-camera"

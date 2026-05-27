@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, Literal
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
 import numpy as np
 
 from .wells import VerticalWell, _validate_well_sequence
+from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
+from .._validation import _validate_z_scale
+
+if TYPE_CHECKING:
+    from .horizon import Horizon
 
 @dataclass(frozen=True)
 class Zone:
@@ -121,7 +126,7 @@ class Zone:
         dy: float | None = None,
         z_scale: float = 1.0,
         title: str | Literal["auto"] | None = "auto",
-        color: Any | None = 'gray',
+        color: Any | None = DEFAULT_COLOR,
         show_layers: bool = True,
         show_edges: bool = True,
         wells: Sequence[VerticalWell] | VerticalWell | None = None,
@@ -142,8 +147,9 @@ class Zone:
             Number of cells along x/y when using bounds. Must be >= 1.
         dx, dy : float or None, default None
             Cell size along x/y when using bounds. Mutually exclusive with `ni`/`nj`.
-        color : Any or None, default 'gray'
-            Solid color for the zone surfaces.
+        color : Any or None, default DEFAULT_COLOR
+            Solid color for the zone surfaces. Defaults to the project-wide
+            default color defined in :mod:`petres.config.colors` (`DEFAULT_COLOR`).
         show_layers : bool, default True
             Whether to render internal layers derived from `levels`.
         show_edges : bool, default True
@@ -159,12 +165,10 @@ class Zone:
         --------
         >>> zone.show3d(x=[0, 100], y=[0, 50], ni=50, nj=25, color="lightgray")
         """
-        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
-        if not np.isfinite(z_scale) or z_scale <= 0:
-            raise ValueError("z_scale must be a positive finite value.")
-        theme = PyVista3DViewerTheme(scale=(1.0, 1.0, float(z_scale)))
-        viewer = PyVista3DViewer(theme=theme)
+
+        z_scale = _validate_z_scale(z_scale, name="z_scale")
+        viewer = PyVista3DViewer(z_scale=z_scale)
         
         title = self._get_plot_title(title)
 
@@ -190,7 +194,7 @@ class Zone:
         dx: float | None = None,
         dy: float | None = None,
         mode: Literal["top", "base", "thickness"] = "thickness",
-        cmap: str = "turbo",
+        cmap: str = DEFAULT_CMAP,
         show_contours: bool = True,
         contour_levels: int = 10,
         aspect: Literal["auto", "equal"] = "auto",
@@ -216,7 +220,7 @@ class Zone:
             Cell size along x/y when using bounds. Mutually exclusive with `ni`/`nj`.
         mode : {'top', 'base', 'thickness'}, default 'thickness'
             Which scalar to plot.
-        cmap : str, default 'turbo'
+        cmap : str, default DEFAULT_CMAP
             Colormap used for the surface.
         show_contours : bool, default True
             Whether to overlay contour lines.
