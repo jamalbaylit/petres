@@ -816,13 +816,15 @@ class GridProperty:
         str
             Multi-line summary string containing metadata and statistics.
         """
+        nk, nj, ni = self.shape
+
         lines = [
             "Property Summary",
             "════════════════════════════════════════════════════════════════",
             f"Name              : {self.name}",
             f"Description       : {self.description}",
             f"Eclipse Keyword   : {self.eclipse_keyword}",
-            f"Grid Shape        : {self.shape}",
+            f"Grid Shape        : {ni}×{nj}×{nk} (i×j×k)",
             f"Min               : {self.min}",
             f"Max               : {self.max}",
             f"Mean              : {self.mean}",
