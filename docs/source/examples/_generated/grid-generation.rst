@@ -146,7 +146,7 @@ corner-point grid.
 
    """ Create a grid from well data """
    
-   from petres.models import VerticalWell, Horizon, Zone
+   from petres.models import VerticalWell, Horizon, Zone, wells
    from petres.grids import CornerPointGrid, PillarGrid
    from petres.interpolators import IDWInterpolator
    from petres.viewers import Viewer3D 
@@ -212,6 +212,11 @@ corner-point grid.
    
    # Visualize grid
    grid.show(cmap="petres_r", scalars='depth', z_scale=0.5)
+   
+   # Get well indices in the grid
+   for well in [well_ll, well_lu, well_ru, well_rl]:
+       well_indices = grid.well_indices(well)
+       print(f"'{well.name}' is located at grid indices (i, j): {well_indices}")
    
    # Export grid to ".GRDECL" format
    grid.to_grdecl("grid.grdecl")

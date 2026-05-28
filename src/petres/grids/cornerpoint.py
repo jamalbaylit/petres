@@ -230,7 +230,7 @@ class CornerPointGrid:
         lines = [
             "Grid Summary",
             "════════════",
-            f"Shape         : {nk}×{nj}×{ni} (k×j×i)",
+            f"Shape         : {ni}×{nj}×{nk} (i×j×k)",
             f"Cells         : {total_cells}",
             f"Active        : {active} ({active_pct:.2f}%)",
             f"Inactive      : {inactive} ({inactive_pct:.2f}%)",

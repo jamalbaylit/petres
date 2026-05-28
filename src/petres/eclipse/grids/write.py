@@ -378,9 +378,7 @@ class GRDECLWriter:
         lengths, values = GRDECLWriter._rle(flat)
         keyword = GRDECLWriter._normalize_keyword(keyword)
         f.write(f"\n{keyword}\n")
-        start = time.time()
         GRDECLWriter._rle_writer(f, lengths, values, ncol)
-        print(f"RLE encoding and writing for keyword '{keyword}' completed in {time.time() - start:.2f} seconds.")
         f.write("/\n\n")
         return f
             

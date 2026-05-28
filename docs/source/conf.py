@@ -173,6 +173,7 @@ html_theme_options = {
 
         "color-heading-1": main_color1,
         # "color-heading-2": main_color1,
+        "color-sidebar-link-text--top-level": main_color1,
 
     },
     "dark_css_variables": {
@@ -192,7 +193,8 @@ html_theme_options = {
 
         "color-heading-1": main_color2,
         "color-heading-2": "#FFFFFF",
-
+        "color-sidebar-link-text--top-level": "#FFFFFF",
+        
 
     },
 }
