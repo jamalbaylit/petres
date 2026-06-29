@@ -124,9 +124,21 @@ Technical Architecture
 
 Getting Started
 ---------------
+
 Start modeling with Petres by following the :doc:`Installation Guide <getting-started/installation>` 
 and the :doc:`Quickstart Tutorial <getting-started/quickstart>`.
 The source code is also available on `GitHub <https://github.com/jamalbaylit/petres>`_.
+
+
+Contributing
+------------
+
+Contributions of all sizes are welcome, whether it's fixing bugs, improving
+documentation, adding new features, or suggesting ideas for future development.
+
+If you'd like to contribute, please read the :doc:`Developer Guide <contributing/developer-guide>`
+to learn about the project structure, development workflow, coding standards,
+testing, and how to submit a pull request.
 
 Contact
 -------
@@ -170,5 +182,15 @@ For questions, suggestions, or collaboration, feel free to reach out:
    examples/index
    tutorials/index
    api/index
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Contributing
+   :hidden:
+
+   contributing/developer-guide
+   contributing/roadmap
+
 
 
