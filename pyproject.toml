@@ -109,12 +109,21 @@ llm = [
     "tqdm>=4.67.3",
 ]
 
+
+
+dev = [
+    { include-group = "docs" },
+    { include-group = "test" },
+    { include-group = "examples" },
+]
+
+
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
 local_scheme = "no-local-version"
 
 [tool.uv.dependency-groups]
-docs = {requires-python = ">=3.11"}
+docs = {requires-python = ">=3.12"}
 examples = {requires-python = ">=3.11"}
 llm = {requires-python = ">=3.11"}
 
