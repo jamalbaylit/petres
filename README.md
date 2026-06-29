@@ -63,7 +63,7 @@ Interactive 2D and 3D rendering of Corner-Point grids, structural zones, horizon
 
 # Installation
 
-Full installation instructions are available in the [documentation](https://petres.readthedocs.io/en/latest/getting-started/installation.html).
+Full installation instructions are available in the [documentation](https://docs.petres.io/en/latest/getting-started/installation.html).
 
 # Quickstart
 
@@ -123,6 +123,16 @@ grid.show(scalars="PORO", z_scale=5)
   </tr>
 </table>
 </div>
+
+
+
+# Contributing
+
+Contributions of all sizes are welcome, whether it's fixing bugs, improving
+documentation, adding new features, or suggesting ideas for future development.
+
+If you'd like to contribute, please read the [developer guide](https://docs.petres.io/en/latest/contributing/developer-guide.html) to learn about the project structure, development workflow, coding standards,
+testing, and how to submit a pull request.
 
 
 # Contact
