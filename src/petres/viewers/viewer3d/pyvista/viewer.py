@@ -194,7 +194,8 @@ class PyVista3DViewer(Base3DViewer):
             ztitle='Z',
         )
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
-        p.set_background(theme.background, top=theme.background)
+        if theme.background:
+            p.set_background(theme.background, top=theme.background)
         return p
 
     # def _render_point_labels(self, plotter: pv.Plotter) -> pv.Plotter:
@@ -439,6 +440,7 @@ class PyVista3DViewer(Base3DViewer):
         plotter.screenshot(
             path,
             window_size=window_size,
+            transparent_background=transparent,
         )
 
     @staticmethod
