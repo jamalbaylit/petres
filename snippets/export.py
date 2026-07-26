@@ -35,7 +35,7 @@ COLORS = {
     "strings":   "#6A3282",
     "keywords":  "#CB04A5",
     "types":     "#0000FF",   # classes
-    "functions": "#5EBF00",
+    "functions": "#519E00",
     "variables": "#1b1b1b",
     "numbers":   "#08605F",
     "imports":   "#000066",   # module paths after `from` / `import`
