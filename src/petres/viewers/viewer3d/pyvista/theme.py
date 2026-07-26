@@ -81,7 +81,7 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     background: Color = "white"
     show_orientation_widget: bool = True
     show_coordinate_axes: bool = True
-    lighting: bool = True
+    lighting: bool = False
     # show_grid: bool = True
     # camera_up: tuple[float, float, float] = (1, 1, -1)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)

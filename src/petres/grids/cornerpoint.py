@@ -684,6 +684,7 @@ class CornerPointGrid:
             metadata=self._eclipse_metadata,
         )
 
+
     def show(
         self, 
         show_inactive: bool = False, 
