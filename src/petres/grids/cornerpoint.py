@@ -684,44 +684,6 @@ class CornerPointGrid:
             metadata=self._eclipse_metadata,
         )
 
-    def screenshot(
-        self,
-        path: str,
-        *,
-        transparent: bool = False,
-        width: int = None,
-        height: int = None,
-    ) -> None:
-        """
-        Save a screenshot of the current plotter window to an image file.
-
-        Parameters
-        ----------
-        path : str
-            File path where the screenshot image will be saved.
-        transparent : bool, default=False
-            Whether the background should be transparent. If ``True``, the background color is ignored and the output image will have an alpha channel with transparency.
-        width : int
-            Desired output image width in pixels.
-        height : int
-            Desired output image height in pixels.
-
-        Returns
-        -------
-        None
-            This method saves the screenshot to disk and does not return anything.
-
-        Notes
-        -----
-        This method can be called directly after ``show()``. In that case it
-        reuses the cached scene camera and window size captured when the
-        viewer was closed. If ``width`` and ``height`` are not provided, the
-        last known window size is used. The viewer is rendered off-screen and
-        the result is saved directly to ``path`` using the requested pixel
-        dimensions.
-        """
-        
-
 
     def show(
         self, 

@@ -440,7 +440,7 @@ class PyVista3DViewer(Base3DViewer):
         plotter.screenshot(
             path,
             window_size=window_size,
-            transparent_background=transparent,
+            # transparent_background=transparent,
         )
 
     @staticmethod
