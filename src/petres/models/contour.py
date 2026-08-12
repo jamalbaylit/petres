@@ -157,6 +157,16 @@ class ContourMap:
             raise TypeError("All items in `contours` must be `Contour` objects.")
 
     @property
+    def is_closed(self) -> bool:
+        """Whether the contour is closed."""
+        return np.allclose(self.xy[0], self.xy[-1])
+
+    @property
+    def is_open(self) -> bool:
+        """Whether the contour is open."""
+        return not self.is_closed
+
+    @property
     def n_contours(self) -> int:
         """Number of contours in the map."""
         return len(self.contours)
