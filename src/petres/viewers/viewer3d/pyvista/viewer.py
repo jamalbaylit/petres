@@ -437,11 +437,15 @@ class PyVista3DViewer(Base3DViewer):
         if transparent:
             plotter.background_color = (1,1,1,0)
 
-        plotter.screenshot(
-            path,
-            window_size=window_size,
-            transparent_background=transparent,
-        )
+        screenshot_kwargs = {"window_size": window_size}
+        if transparent:
+            screenshot_kwargs["transparent_background"] = True
+
+        try:
+            plotter.screenshot(path, **screenshot_kwargs)
+        except TypeError:
+            screenshot_kwargs.pop("transparent_background", None)
+            plotter.screenshot(path, **screenshot_kwargs)
 
     @staticmethod
     def _queued(func):
