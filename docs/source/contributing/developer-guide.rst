@@ -93,13 +93,14 @@ Use the following prefixes:
 
 .. code-block:: text
 
-   feature/<short-description>   # new features
-   bugfix/<short-description>    # bug fixes
-   refactor/<short-description>  # code refactoring without behavior change
-   docs/<short-description>      # documentation updates
-   test/<short-description>      # adding or updating tests
-   ci/<short-description>        # CI/CD changes
-   hotfix/<short-description>    # urgent fixes
+   feature/<short-description>        # new features
+   improvement/<short-description>    # enhancements to existing features
+   bugfix/<short-description>         # bug fixes
+   hotfix/<short-description>         # urgent fixes
+   refactor/<short-description>       # code refactoring without behavior change
+   docs/<short-description>           # documentation updates
+   test/<short-description>           # adding or updating tests
+   ci/<short-description>             # CI/CD changes
 
 Rules for branch names:
 
