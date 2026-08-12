@@ -7,10 +7,13 @@ from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
 
+from ....config.colors import DEFAULT_CMAP
+from ....models.contour import ContourMap
 
 from ....models.wells import VerticalWell, _validate_well_sequence
 from ....grids.sampling._vertices import _resolve_xy_vertices
 from .layers.boundary import _add_boundary_polygon
+from .layers.contour_map import _add_contour_map
 from ....models.boundary import BoundaryPolygon
 from .theme import Matplotlib2DViewerTheme
 from .layers.surface import _add_surface
@@ -18,7 +21,6 @@ from ....models.horizon import Horizon
 from .._core.base import Base2DViewer
 from .layers.wells import _add_well
 from ....models.zone import Zone
-
 
 
 
@@ -98,7 +100,7 @@ class Matplotlib2DViewer(Base2DViewer):
         theme = self.theme
 
         ax.set_facecolor(theme.background)
-        ax.set_aspect(theme.aspect, adjustable="box")
+        ax.set_aspect(theme.aspect, adjustable="datalim")
 
         if theme.grid:
             ax.grid(
@@ -229,6 +231,50 @@ class Matplotlib2DViewer(Base2DViewer):
         )
         return self
 
+    def add_contour_map(
+        self,
+        contour_map: ContourMap,
+        cmap: str = DEFAULT_CMAP,
+        **kwargs: Any,
+    ) -> Matplotlib2DViewer:
+        """Add a contour map to the 2D axes.
+
+        Parameters
+        ----------
+        contour_map : ContourMap
+            Contour map instance to render.
+        cmap : str, default=DEFAULT_CMAP
+            Colormap name used to color contour lines by depth.
+        **kwargs : Any
+            Additional keyword arguments forwarded to the contour plotting
+            helper.
+
+        Returns
+        -------
+        Matplotlib2DViewer
+            The viewer instance, allowing method chaining.
+
+        Examples
+        --------
+        >>> (
+        ...     Matplotlib2DViewer()
+        ...     .add_contour_map(contour_map, cmap="viridis")
+        ...     .show()
+        ... )
+        """
+        if not isinstance(contour_map, ContourMap):
+            raise TypeError("`contour_map` must be a `ContourMap` object.")
+         
+        _add_contour_map(
+            self.ax,
+            cmap=cmap,
+            colorbar_label='Z Value' if cmap else None,
+            xy=(contour.xy for contour in contour_map),
+            z=(contour.z for contour in contour_map),
+            **kwargs,
+        )
+        return self
+    
     def add_zone(
         self,
         zone: Zone,

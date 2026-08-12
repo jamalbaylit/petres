@@ -10,6 +10,7 @@ from ..models.wells import VerticalWell, _validate_well_sequence
 from ..interpolators.base import BaseInterpolator
 from .._validation import _validate_z_scale
 from ..config.colors import DEFAULT_CMAP
+from .contour import ContourMap
 from .zone import Zone
 
 @dataclass
@@ -73,11 +74,102 @@ class Horizon:
             self.xy = np.empty((0, 2), dtype=float)
             self.depth = np.empty((0,), dtype=float)
 
+    def _validate_interpolator(self, interpolator: BaseInterpolator) -> BaseInterpolator:
+        """Validate interpolator type and dimensional support.
+
+        Parameters
+        ----------
+        interpolator : Any
+            Candidate interpolator instance.
+
+        Returns
+        -------
+        BaseInterpolator
+            The validated interpolator.
+
+        Raises
+        ------
+        TypeError
+            If the interpolator is not a ``BaseInterpolator`` or lacks the
+            required ``allowed_dims``/``is_allowed_dim`` interface.
+        """
+        if not isinstance(interpolator, BaseInterpolator):
+            raise TypeError(f"Horizon interpolator must be a `BaseInterpolator` instance. Got {type(interpolator)}")
+        
+        if not hasattr(interpolator, 'allowed_dims'):
+            raise TypeError(f"Horizon interpolator must have an 'allowed_dims' attribute. Got {type(interpolator)}")
+        
+        if interpolator.is_allowed_dim(2) is False:
+            raise TypeError(
+                f"Horizon interpolator must support 2D coordinates (x,y). "
+                f"Got allowed_dims={getattr(interpolator, 'allowed_dims', None)}"
+            )
+        return interpolator
+    
+    @classmethod
+    def from_contour_map(
+        cls,
+        name: str,
+        *,
+        contour_map: ContourMap,
+        interpolator: BaseInterpolator,
+        store_picks: bool = True,
+    ) -> "Horizon":
+        """Construct a horizon from a contour map.
+
+        Parameters
+        ----------
+        name : str
+            Horizon name to assign.
+        contour_map : ContourMap
+            Contour map providing XY coordinates and depth values.
+        interpolator : BaseInterpolator
+            Interpolator instance to fit on the aggregated contour points.
+        store_picks : bool, default True
+            Whether to keep the picks after fitting.
+
+        Returns
+        -------
+        Horizon
+            Horizon fitted to the provided contour map.
+
+        Raises
+        ------
+        ValueError
+            If ``contour_map`` is empty or if any contour has fewer than 2 points.
+        """
+
+        if not isinstance(contour_map, ContourMap):
+            raise TypeError("`contour_map` must be a `ContourMap` object.")
+
+        # For closed contours, exclude the last point to avoid duplication
+        xy = np.concatenate([
+            contour.xy[:-1] if contour.is_closed else contour.xy
+            for contour in contour_map
+        ])
+
+        depth = np.concatenate([
+            np.full(
+                contour.n_points - int(contour.is_closed),
+                -contour.z,
+            )
+            for contour in contour_map
+        ])
+
+        return cls(
+            name=name,
+            interpolator=interpolator,
+            xy=xy,
+            depth=depth,
+            store_picks=store_picks,
+        )
+    
+
     @classmethod
     def from_wells(
         cls,
-        *,
         name: str,
+        *,
         wells: Iterable[VerticalWell],
         interpolator: BaseInterpolator,
         store_picks: bool = True,
@@ -171,11 +263,9 @@ class Horizon:
 
         new_depth = self.depth + depth
 
-        new_interp = type(self.interpolator)()
-
         other = Horizon(
             name=f"{self.name}_shifted",
-            interpolator=new_interp,
+            interpolator=self.interpolator,
             xy=self.xy.copy(),
             depth=new_depth,
             store_picks=self.store_picks,
@@ -485,39 +575,7 @@ class Horizon:
             return str(title)
         else:
             return None
-
-    def _validate_interpolator(self, interpolator: Any) -> BaseInterpolator:
-        """Validate interpolator type and dimensional support.
-
-        Parameters
-        ----------
-        interpolator : Any
-            Candidate interpolator instance.
-
-        Returns
-        -------
-        BaseInterpolator
-            The validated interpolator.
-
-        Raises
-        ------
-        TypeError
-            If the interpolator is not a ``BaseInterpolator`` or lacks the
-            required ``allowed_dims``/``is_allowed_dim`` interface.
-        """
-        if not isinstance(interpolator, BaseInterpolator):
-            raise TypeError(f"Horizon interpolator must be a `BaseInterpolator` instance. Got {type(interpolator)}")
-        
-        if not hasattr(interpolator, 'allowed_dims'):
-            raise TypeError(f"Horizon interpolator must have an 'allowed_dims' attribute. Got {type(interpolator)}")
-        
-        if interpolator.is_allowed_dim(2) is False:
-            raise TypeError(
-                f"Horizon interpolator must support 2D coordinates (x,y). "
-                f"Got allowed_dims={getattr(interpolator, 'allowed_dims', None)}"
-            )
-        return interpolator
-    
+   
     def _validate_name(self, name: Any) -> str:
         """Validate and normalize the horizon name.
 

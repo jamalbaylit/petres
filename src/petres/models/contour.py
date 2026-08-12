@@ -2,7 +2,38 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
+from typing import Literal
 import numpy as np
+
+from petres.models import wells
+
+
+def _sample_indices(
+    xy: np.ndarray,
+    sampling_distance: float | None,
+    max_points: int | None,
+) -> np.ndarray:
+    n = xy.shape[0]
+    idx = np.arange(n)
+
+    if sampling_distance is not None and n > 2:
+        diffs = np.diff(xy, axis=0)
+        seg_len = np.hypot(diffs[:, 0], diffs[:, 1])
+        cum_len = np.concatenate(([0.0], np.cumsum(seg_len)))
+        buckets = (cum_len / sampling_distance).astype(np.int64)
+
+        keep = np.empty(n, dtype=bool)
+        keep[0] = True
+        keep[1:] = buckets[1:] != buckets[:-1]
+        idx = idx[keep]
+
+    if max_points is not None and idx.size > max_points:
+        pos = np.unique(np.linspace(0, idx.size - 1, max_points).astype(np.int64))
+        idx = idx[pos]
+
+    return idx
+
+
 
 @dataclass(frozen=True, slots=True)
 class Contour:
@@ -40,6 +71,16 @@ class Contour:
         object.__setattr__(self, "xy", xy)
         object.__setattr__(self, "z", z)
 
+    @property
+    def is_closed(self) -> bool:
+        """Whether the contour is closed."""
+        return self.xy.shape[0] >= 4 and np.allclose(self.xy[0], self.xy[-1])
+
+    @property
+    def is_open(self) -> bool:
+        """Whether the contour is open."""
+        return not self.is_closed
+    
     @property
     def n_points(self) -> int:
         "Number of points in the contour."
@@ -137,6 +178,30 @@ class Contour:
             z=xyz[0, 2],
         )
 
+    def resample(
+        self,
+        *,
+        sampling_distance: float | None = None,
+        max_points: int | None = None,
+    ) -> "Contour":
+        """Return a new Contour with a reduced set of points.
+
+        Parameters
+        ----------
+        sampling_distance : float or None
+            Minimum distance between kept points along the contour.
+        max_points : int or None
+            Maximum number of points to keep, evenly subsampled afterward.
+        """
+        if self.n_points < 2:
+            raise ValueError(f"Contour at z={self.z} has fewer than 2 points.")
+
+        idx = _sample_indices(self.xy, sampling_distance, max_points)
+        return Contour(xy=self.xy[idx], z=self.z)
+
+
+
+
 
 @dataclass
 class ContourMap:
@@ -149,22 +214,14 @@ class ContourMap:
     """
 
     contours: list[Contour] = field(default_factory=list)
-
+    
     def __post_init__(self) -> None:
         self.contours = list(self.contours)
 
         if not all(isinstance(contour, Contour) for contour in self.contours):
             raise TypeError("All items in `contours` must be `Contour` objects.")
 
-    @property
-    def is_closed(self) -> bool:
-        """Whether the contour is closed."""
-        return np.allclose(self.xy[0], self.xy[-1])
 
-    @property
-    def is_open(self) -> bool:
-        """Whether the contour is open."""
-        return not self.is_closed
 
     @property
     def n_contours(self) -> int:
@@ -191,6 +248,21 @@ class ContourMap:
             bounds[:, 3].max(),
         )
 
+    def resample(
+        self,
+        *,
+        sampling_distance: float | None = None,
+        max_points_per_contour: int | None = None,
+    ) -> "ContourMap":
+        """Return a new ContourMap with each contour decimated."""
+        return ContourMap([
+            contour.resample(
+                sampling_distance=sampling_distance,
+                max_points=max_points_per_contour,
+            )
+            for contour in self
+        ])
+    
     def to_xyz(self) -> np.ndarray:
         """Return all contour vertices as an ``(n, 3)`` array.
 
@@ -215,6 +287,50 @@ class ContourMap:
         """Add multiple contours to the map."""
         for contour in contours:
             self.append(contour)
+
+
+    def show(
+        self,
+        *,
+        view: Literal["3d", "2d"] = "3d",
+    ) -> None:
+        """
+        Render the zone in 3D or 2D.
+
+        Dispatches to `show3d` or `show2d` depending on `view`, passing through
+        any grid specification arguments.
+
+        Parameters
+        ----------
+        view : {'3d', '2d'}, default '3d'
+            Target visualization backend.
+
+        Raises
+        ------
+        ValueError
+            If `view` is not one of {'3d', '2d'}.
+
+        Examples
+        --------
+        >>> zone.show()
+        >>> zone.show(view="2d", xlim=(0, 500), ylim=(0, 500), ni=100, nj=100)
+        """
+        view = view.strip().lower()
+        if view == "3d":
+            self.show3d()
+        elif view == "2d":
+            self.show2d()
+        else:
+            raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
+
+    def show2d(self) -> None:
+        """Render the contour map in 2D."""
+        from ..viewers.viewer2d.matplotlib.viewer import Matplotlib2DViewer
+
+        viewer = Matplotlib2DViewer()
+        viewer.add_contour_map(self)
+        viewer.show()
+
 
     def __len__(self) -> int:
         return self.n_contours
