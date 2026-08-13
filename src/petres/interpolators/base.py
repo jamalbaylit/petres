@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from numpy.typing import ArrayLike, NDArray, DTypeLike
 from collections.abc import Iterable
-
+from abc import ABC, abstractmethod
+from typing import Any, Self
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
-
 
 class BaseInterpolator(ABC):
     """Provide a validated template for spatial interpolation workflows.
@@ -15,32 +14,28 @@ class BaseInterpolator(ABC):
     coordinate/value pairs. Concrete subclasses only need to implement
     :meth:`_fit_impl` and :meth:`_predict_impl`.
 
-    Parameters
+    Attributes
     ----------
-    allowed_dims : Iterable[int] | None
+    allowed_dims : tuple[int, ...] | None
         Optional class-level dimensionality constraints. Subclasses can
         override this attribute, for example ``(2,)`` for 2D-only support or
-        ``(2, 3)`` for both 2D and 3D support.
-
+        ``(2, 3)`` for both 2D and 3D support. ``None`` allows any dimensionality.
+        
     Notes
     -----
     When ``allowed_dims`` is ``None``, any coordinate dimensionality is
     accepted.
     """
 
-    allowed_dims: Iterable[int] | None = None  # override in subclasses, e.g. (2,) or (2, 3)
+    allowed_dims: tuple[int, ...] | None = None  # override in subclasses, e.g. (2,) or (2, 3)
 
-    def __init__(self) -> None:
+    def __init__(self, dtype: DTypeLike = np.float64) -> None:
         """Initialize fitted state and normalize dimensionality constraints."""
+        self.dtype = np.dtype(dtype)
+
         self._is_fitted = False
         self.dim_: int | None = None
-        self._allowed_dims: tuple[int, ...] | None
 
-        if self.allowed_dims is not None:
-            self._allowed_dims = tuple(int(d) for d in self.allowed_dims)
-        else:
-            self._allowed_dims = None
-            
     def is_allowed_dim(self, dim: int) -> bool:
         """Check whether a dimensionality is accepted.
 
@@ -55,11 +50,11 @@ class BaseInterpolator(ABC):
             ``True`` when ``dim`` is supported. If no dimensional restriction is
             configured, all dimensions are accepted.
         """
-        if self._allowed_dims is None:
+        if self.allowed_dims is None:
             return True
-        return dim in self._allowed_dims
-    
-    def fit(self, coordinates: ArrayLike, values: ArrayLike) -> None:
+        return dim in self.allowed_dims
+
+    def fit(self, coordinates: ArrayLike, values: ArrayLike) -> Self:
         """Fit the interpolator using known sample coordinates and values.
 
         Parameters
@@ -82,14 +77,18 @@ class BaseInterpolator(ABC):
         >>> interp = SomeInterpolator()
         >>> interp.fit([[0.0, 0.0], [1.0, 1.0]], [10.0, 20.0])
         """
+        # Validate and convert inputs to numpy arrays
         coordinates, values = self._validate_fit_inputs(coordinates, values)
 
-        self.dim_ = int(coordinates.shape[1])
-
+        # Delegate to subclass-specific fit implementation
         self._fit_impl(coordinates, values)
-        self._is_fitted = True
 
-    def predict(self, coordinates: ArrayLike) -> NDArray[np.float64]:
+        # Only update state after successful fit
+        self.dim_ = int(coordinates.shape[1])
+        self._is_fitted = True
+        return self
+
+    def predict(self, coordinates: ArrayLike) -> NDArray[Any]:
         """Predict interpolated values at new coordinates.
 
         Parameters
@@ -125,8 +124,8 @@ class BaseInterpolator(ABC):
     @abstractmethod
     def _fit_impl(
         self,
-        coordinates: NDArray[np.float64],
-        values: NDArray[np.float64],
+        coordinates: NDArray[Any],
+        values: NDArray[Any],
     ) -> None:
         """Fit implementation hook.
 
@@ -140,7 +139,7 @@ class BaseInterpolator(ABC):
         ...
 
     @abstractmethod
-    def _predict_impl(self, coordinates: NDArray[np.float64]) -> NDArray[np.float64]:
+    def _predict_impl(self, coordinates: NDArray[Any]) -> NDArray[Any]:
         """Prediction implementation hook for subclass-specific inference.
 
         Parameters
@@ -170,7 +169,7 @@ class BaseInterpolator(ABC):
         self,
         coordinates: ArrayLike,
         values: ArrayLike,
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    ) -> tuple[NDArray[Any], NDArray[Any]]:
         """Validate training input arrays.
 
         Parameters
@@ -192,38 +191,26 @@ class BaseInterpolator(ABC):
             If shapes are invalid, sample counts mismatch, inputs are empty, or
             values are non-finite.
         """
-        coordinates = np.asarray(coordinates, dtype=float)
-        values = np.asarray(values, dtype=float)
+        # Validate coordinates
+        coordinates = self._validate_coordinates(coordinates)
 
-        if coordinates.ndim != 2:
-            raise ValueError(f"coordinates must be 2D (n_samples, dim). Got {coordinates.shape}")
+        # Validate values
+        values = np.asarray(values, dtype=self.dtype)
         if values.ndim != 1:
             raise ValueError(f"values must be 1D (n_samples,). Got {values.shape}")
+        if not np.isfinite(values).all():
+            raise ValueError("values contain NaN or inf.")
+        
+        # Check sample count match
         if coordinates.shape[0] != values.shape[0]:
             raise ValueError(
                 f"coordinates and values must have same n_samples. "
                 f"Got {coordinates.shape[0]} and {values.shape[0]}"
             )
-        if coordinates.shape[0] == 0:
-            raise ValueError("coordinates/values must contain at least 1 sample.")
-
-        # Optional but very user-friendly in geo workflows
-        if not np.isfinite(coordinates).all():
-            raise ValueError("coordinates contain NaN or inf.")
-        if not np.isfinite(values).all():
-            raise ValueError("values contain NaN or inf.")
-
-        dim = int(coordinates.shape[1])
-
-        if self._allowed_dims is not None:
-            if dim not in self._allowed_dims:
-                raise ValueError(
-                    f"{self.__class__.__name__} supports dims {self._allowed_dims}, got dim={dim}"
-                )
-
+        
         return coordinates, values
 
-    def _validate_predict_inputs(self, coordinates: ArrayLike) -> NDArray[np.float64]:
+    def _validate_predict_inputs(self, coordinates: ArrayLike) -> NDArray[Any]:
         """Validate prediction coordinates against fitted model metadata.
 
         Parameters
@@ -244,22 +231,42 @@ class BaseInterpolator(ABC):
         RuntimeError
             If fitted dimensionality metadata is unavailable.
         """
-        coordinates = np.asarray(coordinates, dtype=float)
+        coordinates = self._validate_coordinates(coordinates)
 
-        if coordinates.ndim != 2:
-            raise ValueError(f"coordinates must be 2D (n_points, dim). Got {coordinates.shape}")
         if self.dim_ is None:
             raise RuntimeError("Interpolator missing fitted dim_ (internal error).")
         if coordinates.shape[1] != self.dim_:
             raise ValueError(
                 f"predict dim mismatch: fitted dim={self.dim_}, got dim={coordinates.shape[1]}"
             )
+        return coordinates
 
+    def _validate_coordinates(
+        self,
+        coordinates: ArrayLike,
+    ) -> NDArray:
+        """Convert and validate coordinate array."""
+        coordinates = np.asarray(coordinates, dtype=self.dtype)
+
+        if coordinates.ndim != 2:
+            raise ValueError(
+                f"coordinates must be 2D (n_points, dim). "
+                f"Got {coordinates.shape}"
+            )
+        
         if coordinates.shape[0] == 0:
-            # Returning empty prediction is often nicer than error
-            return coordinates
+            raise ValueError("Coordinates must contain at least 1 point.")
+        if coordinates.shape[1] == 0:
+            raise ValueError("Coordinates must contain at least 1 dimension.")
 
         if not np.isfinite(coordinates).all():
-            raise ValueError("predict coordinates contain NaN or inf.")
+            raise ValueError("Coordinates contain NaN or inf.")
 
+        dim = int(coordinates.shape[1])
+
+        if not self.is_allowed_dim(dim):
+            raise ValueError(
+                f"{self.__class__.__name__} supports dims {self.allowed_dims}, got dim={dim}"
+            )
+            
         return coordinates

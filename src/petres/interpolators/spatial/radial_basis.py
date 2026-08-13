@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from scipy.interpolate import RBFInterpolator
+from numpy.typing import DTypeLike, NDArray
 from typing import Literal
 import numpy as np
-from numpy.typing import DTypeLike, NDArray
-from scipy.interpolate import RBFInterpolator
 
 from ..base import BaseInterpolator
 
@@ -37,6 +36,8 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
 
     def __init__(
         self,
+        *,
+        dtype: DTypeLike = np.float64,
         kernel: Literal[
             "linear",
             "thin_plate_spline",
@@ -51,7 +52,6 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
         smoothing: float = 0.0,
         neighbors: int | None = None,
         degree: int | None = None,
-        dtype: DTypeLike = np.float64,
     ) -> None:
         """Initialize interpolation hyperparameters.
 
@@ -61,7 +61,7 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
             If ``epsilon`` is not positive, ``smoothing`` is negative,
             ``neighbors`` is non-positive, or ``degree`` is negative.
         """
-        super().__init__()
+        super().__init__(dtype=dtype)
 
         if epsilon is not None and epsilon <= 0:
             raise ValueError(f"`epsilon` must be > 0 when provided. Got {epsilon}.")

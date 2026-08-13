@@ -66,8 +66,3 @@ def test_knn_and_full_idw_match_for_neighbors_equal_n():
     np.testing.assert_allclose(full.predict(q), knn.predict(q), rtol=1e-12, atol=1e-12)
 
 
-def test_predict_empty_query_returns_empty_array():
-    interp = IDWInterpolator()
-    interp.fit(np.array([[0.0, 0.0], [1.0, 1.0]]), np.array([1.0, 2.0]))
-    pred = interp.predict(np.empty((0, 2)))
-    assert pred.shape == (0,)

@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections.abc import Callable, Iterable, Sequence
+from pykrige.uk3d import UniversalKriging3D
+from pykrige.ok3d import OrdinaryKriging3D
+from pykrige.uk import UniversalKriging
+from pykrige.ok import OrdinaryKriging
+from numpy.typing import DTypeLike
 from typing import Any, Literal
-
+from abc import abstractmethod
 import numpy as np
 
 from ..base import BaseInterpolator
-
-
-from pykrige.ok import OrdinaryKriging
-from pykrige.ok3d import OrdinaryKriging3D
-from pykrige.uk import UniversalKriging
-from pykrige.uk3d import UniversalKriging3D
-
 
 
 VariogramModel = Literal[
@@ -72,6 +69,8 @@ class BasePyKrigeInterpolator(BaseInterpolator):
 
     def __init__(
         self,
+        *,
+        dtype: DTypeLike = np.float64,
         variogram_model: VariogramModel = "linear",
         variogram_parameters: dict[str, Any] | Sequence[float] | None = None,
         variogram_function: Callable[..., Any] | None = None,
@@ -92,7 +91,7 @@ class BasePyKrigeInterpolator(BaseInterpolator):
             If ``nlags < 1``, ``pseudo_inv_type`` is unsupported, or ``backend``
             is not one of the accepted values.
         """
-        super().__init__()
+        super().__init__(dtype=dtype)
 
         if nlags < 1:
             raise ValueError(f"`nlags` must be >= 1. Got {nlags}.")
