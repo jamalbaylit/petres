@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from scipy.interpolate import RBFInterpolator
+from numpy.typing import DTypeLike, NDArray
 from typing import Literal
 import numpy as np
-from numpy.typing import DTypeLike, NDArray
-from scipy.interpolate import RBFInterpolator
 
 from ..base import BaseInterpolator
 
@@ -35,8 +34,14 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
     The implementation expects scalar targets with shape ``(n_samples,)``.
     """
 
+    _ALLOWED_KERNELS = {"linear", "thin_plate_spline", "cubic", "quintic", "multiquadric", "inverse_multiquadric", "inverse_quadratic", "gaussian"}
+    _KERNELS_REQUIRING_EPSILON = {"multiquadric", "inverse_multiquadric", "inverse_quadratic", "gaussian"}
+
+
     def __init__(
         self,
+        *,
+        dtype: DTypeLike = np.float64,
         kernel: Literal[
             "linear",
             "thin_plate_spline",
@@ -51,7 +56,6 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
         smoothing: float = 0.0,
         neighbors: int | None = None,
         degree: int | None = None,
-        dtype: DTypeLike = np.float64,
     ) -> None:
         """Initialize interpolation hyperparameters.
 
@@ -61,7 +65,7 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
             If ``epsilon`` is not positive, ``smoothing`` is negative,
             ``neighbors`` is non-positive, or ``degree`` is negative.
         """
-        super().__init__()
+        super().__init__(dtype=dtype)
 
         if epsilon is not None and epsilon <= 0:
             raise ValueError(f"`epsilon` must be > 0 when provided. Got {epsilon}.")
@@ -72,12 +76,17 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
         if degree is not None and degree < 0:
             raise ValueError(f"`degree` must be >= 0 or None. Got {degree}.")
 
+
+        if kernel not in self._ALLOWED_KERNELS:
+            raise ValueError(f"`kernel` must be one of {sorted(self._ALLOWED_KERNELS)}. Got {kernel!r}.")
+        if kernel in self._KERNELS_REQUIRING_EPSILON and epsilon is None:
+            raise ValueError(f"`epsilon` must be provided for kernel={kernel!r}.")
+
         self.kernel = kernel
         self.epsilon = float(epsilon) if epsilon is not None else None
         self.smoothing = float(smoothing)
         self.neighbors = int(neighbors) if neighbors is not None else None
         self.degree = int(degree) if degree is not None else None
-        self.dtype = np.dtype(dtype)
 
         self._rbf: RBFInterpolator | None = None
 
@@ -91,23 +100,12 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
         values : numpy.typing.NDArray[numpy.float64]
             Scalar training targets with shape ``(n_samples,)``.
         """
-        X = np.asarray(coordinates, dtype=self.dtype)
-        y = np.asarray(values, dtype=self.dtype)
-
-        if X.ndim != 2:
-            raise ValueError(f"`coordinates` must be 2D of shape (n_samples, dim). Got shape {X.shape}.")
-        if y.ndim != 1:
-            raise ValueError(f"`values` must be 1D of shape (n_samples,). Got shape {y.shape}.")
-        if X.shape[0] != y.shape[0]:
-            raise ValueError(
-                f"Number of samples mismatch: coordinates has {X.shape[0]}, values has {y.shape[0]}."
-            )
-        if X.shape[0] == 0:
-            raise ValueError("Cannot fit with zero samples.")
+        X = coordinates
+        y = values
 
         if self.neighbors is not None and self.neighbors > X.shape[0]:
             raise ValueError(
-                f"`neighbors`={self.neighbors} cannot be greater than n_samples={X.shape[0]}."
+                f"`neighbors`={self.neighbors} cannot be greater than number of samples={X.shape[0]}."
             )
 
         kwargs: dict[str, object] = {
@@ -116,6 +114,7 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
             "neighbors": self.neighbors,
             "degree": self.degree,
         }
+
         if self.epsilon is not None:
             kwargs["epsilon"] = self.epsilon
 
@@ -124,7 +123,6 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
         except Exception as exc:
             raise ValueError(f"Failed to construct RBF interpolator: {exc}") from exc
 
-        self._is_fitted = True
 
     def _predict_impl(self, coordinates: NDArray[np.float64]) -> NDArray[np.float64]:
         """Predict interpolated values at query coordinates.
@@ -140,16 +138,5 @@ class RadialBasisFunctionInterpolator(BaseInterpolator):
             Interpolated values with shape ``(n_points,)`` and configured
             ``dtype``.
         """
-        self._check_fitted()
-        assert self._rbf is not None
-
-        Q = np.asarray(coordinates, dtype=self.dtype)
-
-        if Q.ndim != 2:
-            raise ValueError(f"`coordinates` must be 2D of shape (n_points, dim). Got shape {Q.shape}.")
-
-        if Q.shape[0] == 0:
-            return np.asarray([], dtype=self.dtype)
-
-        values = self._rbf(Q)
+        values = self._rbf(coordinates)
         return np.asarray(values, dtype=self.dtype)

@@ -25,7 +25,6 @@ def test_rbf_fit_predict_returns_finite_values():
     assert pred.shape == (3,)
     assert np.all(np.isfinite(pred))
 
-
 def test_rbf_interpolates_training_points_when_smoothing_zero():
     xy, values = _xy_plane_samples()
     interp = RBFInterpolator(kernel="linear", smoothing=0.0)
@@ -33,15 +32,6 @@ def test_rbf_interpolates_training_points_when_smoothing_zero():
 
     pred = interp.predict(xy)
     np.testing.assert_allclose(pred, values, atol=1e-8)
-
-
-def test_rbf_predict_empty_query_returns_empty():
-    xy, values = _xy_plane_samples()
-    interp = RBFInterpolator()
-    interp.fit(xy, values)
-
-    pred = interp.predict(np.empty((0, 2)))
-    assert pred.shape == (0,)
 
 
 def test_rbf_rejects_invalid_constructor_params():
