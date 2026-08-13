@@ -96,7 +96,6 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         self.eps = float(eps)
         self.neighbors = int(neighbors) if neighbors is not None else None
         self.mode: Literal["average", "sum"] = mode
-        self.dtype = np.dtype(dtype)
         self.chunk_size = int(chunk_size)
         self.max_chunk_bytes = int(max_chunk_bytes)
 
@@ -122,42 +121,23 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         Raises
         ------
         ValueError
-            If array shapes are invalid, sample counts differ, arrays are
-            empty, non-finite values are present, or ``neighbors`` exceeds the
-            number of fitted samples.
+            If ``neighbors`` exceeds the number of fitted samples.
         """
-        X = np.asarray(coordinates, dtype=self.dtype)
-        y = np.asarray(values, dtype=self.dtype)
-
-        if X.ndim != 2:
-            raise ValueError(f"`coordinates` must be 2D of shape (n_samples, dim). Got shape {X.shape}.")
-        if y.ndim != 1:
-            raise ValueError(f"`values` must be 1D of shape (n_samples,). Got shape {y.shape}.")
-        if X.shape[0] != y.shape[0]:
-            raise ValueError(
-                f"Number of samples mismatch: coordinates has {X.shape[0]}, values has {y.shape[0]}."
-            )
-        if X.shape[0] == 0:
-            raise ValueError("Cannot fit with zero samples.")
+        X = coordinates
+        y = values
 
         if self.neighbors is not None and self.neighbors > X.shape[0]:
             raise ValueError(
                 f"`neighbors`={self.neighbors} cannot be greater than n_samples={X.shape[0]}."
             )
 
-        if not np.isfinite(X).all():
-            raise ValueError("`coordinates` contains NaN/Inf.")
-        if not np.isfinite(y).all():
-            raise ValueError("`values` contains NaN/Inf.")
-
         self._X = X
         self._y = y
-        self._is_fitted = True
 
         # Build a KD-tree once at fit time; reused for every predict() call.
         # Only needed for the neighbors-limited path, but it's cheap to build
         # eagerly so repeated predict() calls don't pay the build cost again.
-        self._tree = cKDTree(X)
+        self._tree = cKDTree(X) if self.neighbors is not None else None
 
     def _predict_impl(self, coordinates: NDArray[np.floating[Any]]) -> NDArray[np.floating[Any]]:
         """Predict values for query coordinates using IDW weighting.
@@ -172,29 +152,8 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         numpy.ndarray
             Predicted values with shape ``(n_points,)``.
 
-        Raises
-        ------
-        ValueError
-            If ``coordinates`` is not 2D, has a dimensionality mismatch with
-            fitted data, or contains non-finite values.
-        RuntimeError
-            If prediction is requested before fitting.
         """
-        self._check_fitted()
-        assert self._X is not None and self._y is not None and self._tree is not None
-
-        Q = np.asarray(coordinates, dtype=self.dtype)
-        if Q.ndim != 2:
-            raise ValueError(f"`coordinates` must be 2D of shape (n_points, dim). Got shape {Q.shape}.")
-        if Q.shape[1] != self._X.shape[1]:
-            raise ValueError(
-                f"Dim mismatch: query dim={Q.shape[1]} but fitted dim={self._X.shape[1]}."
-            )
-        if Q.shape[0] == 0:
-            return np.asarray([], dtype=self.dtype)
-
-        if not np.isfinite(Q).all():
-            raise ValueError("Query `coordinates` contains NaN/Inf.")
+        Q = coordinates
 
         if self.neighbors is not None:
             return self._predict_knn(Q)
