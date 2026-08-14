@@ -25,9 +25,9 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         use all samples (brute-force, processed in chunks to bound memory).
     dtype : numpy.dtype or str, default numpy.float64
         Storage dtype for cached arrays and outputs.
-    chunk_size : int, default 20000
-        Upper bound on query points processed per batch in the "use all
-        samples" (``neighbors=None``) path. 
+    chunk_size : int or None, default None
+        Upper bound on query points processed per batch. 
+        If None, all samples are processed at once.
     """
 
     allowed_dims = None # allow any dim
@@ -39,7 +39,7 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
         power: float = 2.0,
         eps: float = 1e-12,
         neighbors: int | None = None,
-        chunk_size: int = 20000,
+        chunk_size: int | None= None,
     ) -> None:
         """Initialize the interpolator with validated IDW configuration.
 
@@ -64,13 +64,13 @@ class InverseDistanceWeightingInterpolator(BaseInterpolator):
             raise ValueError(f"`eps` must be > 0. Got {eps}.")
         if neighbors is not None and (not isinstance(neighbors, int) or neighbors <= 0):
             raise ValueError(f"`neighbors` must be a positive int or None. Got {neighbors}.")
-        if chunk_size <= 0:
+        if chunk_size is not None and chunk_size <= 0:
             raise ValueError(f"`chunk_size` must be > 0. Got {chunk_size}.")
 
         self.power = float(power)
         self.eps = float(eps)
         self.neighbors = int(neighbors) if neighbors is not None else None
-        self.chunk_size = int(chunk_size)
+        self.chunk_size = int(chunk_size) if chunk_size is not None else None
 
         # fitted state
         self._coords: np.ndarray | None = None  # (n, dim)
