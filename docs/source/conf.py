@@ -64,7 +64,11 @@ exclude_patterns = [
 ]
 
 root_doc = "index"
-furo_nav_sections_maxdepth = 3
+
+furo_nav_sections_maxdepth = 7
+furo_nav_heading_maxdepth = 3 
+
+
 numfig = True
 numtables = True
 numfig_format = {
