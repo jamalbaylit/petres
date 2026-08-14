@@ -10,4 +10,4 @@ build:
       - uv sync --group docs
     build:
       html:
-        - cd docs && make html BUILDDIR=$READTHEDOCS_OUTPUT
+        - cd docs && make dirhtml BUILDDIR=$READTHEDOCS_OUTPUT

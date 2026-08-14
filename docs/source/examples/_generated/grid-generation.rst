@@ -146,7 +146,7 @@ corner-point grid.
 
    """ Create a grid from well data """
    
-   from petres.models import VerticalWell, Horizon, Zone, wells
+   from petres.models import VerticalWell, Horizon, Zone
    from petres.grids import CornerPointGrid, PillarGrid
    from petres.interpolators import IDWInterpolator
    from petres.viewers import Viewer3D 

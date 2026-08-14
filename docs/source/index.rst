@@ -114,11 +114,11 @@ Technical Architecture
    * - 3D Visualization
      - Interactive 3D rendering and mesh visualization via *PyVista*.
    * - Kriging Interpolation
-     - :ref:`Ordinary <ok-interpolation>` and :ref:`Universal <uk-interpolation>` Kriging implemented via *PyKrige*.
+     - :ref:`Ordinary <ok-tutorials>` and :ref:`Universal <uk-tutorials>` Kriging implemented via *PyKrige*.
    * - RBF Interpolation
-     - Multi-dimensional :ref:`Radial Basis Function <rbf-interpolation>` interpolation utilizing *SciPy*.
+     - Multi-dimensional :ref:`Radial Basis Function <rbf-tutorials>` interpolation utilizing *SciPy*.
    * - IDW Interpolation
-     - In-house implementation for :ref:`Inverse Distance Weighting <idw-interpolation>`.
+     - In-house implementation for :ref:`Inverse Distance Weighting <idw-tutorials>`.
    
 
 
@@ -166,13 +166,14 @@ For questions, suggestions, or collaboration, feel free to reach out:
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Fundamentals
    :hidden:
 
    fundamentals/grid-classification
    fundamentals/grid-types
    fundamentals/corner-point-grids
+   fundamentals/interpolations/index
 
 .. toctree::
    :maxdepth: 3

@@ -13,7 +13,7 @@ The tutorials present Petres through practical workflows, beginning with direct 
 #. :doc:`property-modeling`
 #. :doc:`boundary-polygon`
 #. :doc:`mapping-wells-to-grid-cells`
-#. :doc:`interpolators`
+#. :doc:`interpolations/index`
 #. :doc:`exporting-grid`
 #. :doc:`importing-grid`
 
@@ -30,7 +30,7 @@ The tutorials present Petres through practical workflows, beginning with direct 
    property-modeling
    boundary-polygon
    mapping-wells-to-grid-cells
-   interpolators
+   interpolations/index
    exporting-grid
    importing-grid
    

@@ -52,7 +52,7 @@ and interpolator controls how the continuous surface is reconstructed from these
 .. note::
 
    The choice of interpolator affects the geometry of the surface.  
-   See :doc:`/tutorials/interpolators` page for more details and available options.
+   See :doc:`/tutorials/interpolations/index` page for more details and available options.
 
 
 .. important::

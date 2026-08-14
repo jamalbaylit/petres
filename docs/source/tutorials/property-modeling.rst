@@ -413,7 +413,7 @@ interpolation is performed in **2D** and applied uniformly along the vertical ax
 
     In this example, Inverse Distance Weighting 
     (:class:`~petres.interpolators.InverseDistanceWeightingInterpolator`) is used. 
-    For more details and additional interpolation options, see :doc:`/tutorials/interpolators`. 
+    For more details and additional interpolation options, see :doc:`/tutorials/interpolations/index`. 
 
 
 
