@@ -1,19 +1,18 @@
 """Create and visualize a horizon from scattered depth points."""
 
-from petres.models import Horizon
 from petres.interpolators import IDWInterpolator
+from petres.models import Horizon
 
 # Create a horizon from scattered depth points
 horizon = Horizon(
     name="H1",
     xy=[
-        [0, 0],
-        [100, 0],
-        [100, 100],
-        [0, 100],
+        [20, 78],
+        [70, 80],
+        [32, 55],
     ],
-    depth=[0, 1, 0, 1],
-    interpolator=IDWInterpolator(),
+    depth=[100, 110, 90],
+    interpolator=IDWInterpolator(power=2)
 )
 
 # Visualize the horizon
@@ -22,4 +21,5 @@ horizon.show(
     ylim=(0, 100),
     ni=50,
     nj=50,
+    z_scale=2,
 )
