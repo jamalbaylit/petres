@@ -270,3 +270,4 @@ class BaseInterpolator(ABC):
             )
             
         return coordinates
+    
