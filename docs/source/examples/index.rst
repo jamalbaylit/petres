@@ -8,4 +8,5 @@ Focused examples and reference-style usage patterns.
 
    _generated/grid-generation
    _generated/import-export
+   _generated/horizon-modeling
    _generated/property-modeling
