@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from collections.abc import Sequence
 from dataclasses import dataclass
 import numpy as np
+import warnings
 
 from .wells import VerticalWell, _validate_well_sequence
 from ..config.colors import DEFAULT_CMAP, DEFAULT_COLOR
@@ -61,59 +62,12 @@ class Zone:
         """
         return self.base.sample(xy) - self.top.sample(xy)
     
+    def show3d(self, **kwargs) -> None:
+        """Deprecated alias for `show`. Will be removed in a future version."""
+        warnings.warn("show3d is deprecated; use show() instead.", DeprecationWarning, stacklevel=2)
+        return self.show(**kwargs)
+    
     def show(
-        self,
-        *,
-        x: np.ndarray | None = None,
-        y: np.ndarray | None = None,
-        xlim: tuple[float, float] | None = None,
-        ylim: tuple[float, float] | None = None,
-        ni: int | None = None,
-        nj: int | None = None,
-        dx: float | None = None,
-        dy: float | None = None,
-        view: Literal["3d", "2d"] = "3d",
-        wells: Sequence[VerticalWell] | VerticalWell | None = None,
-
-    ) -> None:
-        """
-        Render the zone in 3D or 2D.
-
-        Dispatches to `show3d` or `show2d` depending on `view`, passing through
-        any grid specification arguments.
-
-        Parameters
-        ----------
-        x, y : ndarray or None, default None
-            1D vertex arrays. Mutually exclusive with `xlim`/`ylim`.
-        xlim, ylim : tuple[float, float] or None, default None
-            Bounds used to generate vertices when `x` or `y` are not supplied.
-        ni, nj : int or None, default None
-            Number of cells along x/y when using bounds. Must be >= 1.
-        dx, dy : float or None, default None
-            Cell size along x/y when using bounds. Mutually exclusive with `ni`/`nj`.
-        view : {'3d', '2d'}, default '3d'
-            Target visualization backend.
-
-        Raises
-        ------
-        ValueError
-            If `view` is not one of {'3d', '2d'}.
-
-        Examples
-        --------
-        >>> zone.show()
-        >>> zone.show(view="2d", xlim=(0, 500), ylim=(0, 500), ni=100, nj=100)
-        """
-        view = view.strip().lower()
-        if view == "3d":
-            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
-        elif view == "2d":
-            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
-        else:
-            raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
-
-    def show3d(
         self,
         *,
         x: np.ndarray | None = None,
@@ -163,12 +117,16 @@ class Zone:
 
         Examples
         --------
-        >>> zone.show3d(x=[0, 100], y=[0, 50], ni=50, nj=25, color="lightgray")
+        >>> zone.show(x=[0, 100], y=[0, 50], ni=50, nj=25, color="lightgray")
         """
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
+
+
 
         z_scale = _validate_z_scale(z_scale, name="z_scale")
-        viewer = PyVista3DViewer(z_scale=z_scale)
+        
+        viewer = PyVista3DViewer(z_scale=z_scale, theme=PyVista3DViewerTheme(lighting=True))
         
         title = self._get_plot_title(title)
 

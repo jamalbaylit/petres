@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from numpy.typing import ArrayLike
 from typing import Any, Literal
 import numpy as np
+import warnings
 
 from ..models.wells import VerticalWell, _validate_well_sequence
 from ..interpolators.base import BaseInterpolator
@@ -266,67 +267,12 @@ class Horizon:
         x, y = well.xy
         return float(self.sample([[x, y]])[0])
 
-    def show(
-        self,
-        *,
-        x: ArrayLike | None = None,
-        y: ArrayLike | None = None,
-        xlim: tuple[float, float] | None = None,
-        ylim: tuple[float, float] | None = None,
-        ni: int | None = None,
-        nj: int | None = None,
-        dx: float | None = None,
-        dy: float | None = None,
-        view: Literal["3d", "2d"] = "3d",
-        wells: Sequence[VerticalWell] | VerticalWell | None = None,
-    ) -> None:
-        """Render the horizon in either 3D or 2D.
-
-        Dispatches to `show3d` or `show2d` based on `view`, passing through any
-        grid specification arguments.
-
-        Parameters
-        ----------
-        x : array-like or None, optional
-            1D x-vertices. Mutually exclusive with `xlim`.
-        y : array-like or None, optional
-            1D y-vertices. Mutually exclusive with `ylim`.
-        xlim : tuple[float, float] or None, optional
-            Inclusive x-limits used to generate vertices when `x` is not given.
-        ylim : tuple[float, float] or None, optional
-            Inclusive y-limits used to generate vertices when `y` is not given.
-        ni : int or None, optional
-            Number of cells along x when using `xlim`. Must be >= 1.
-        nj : int or None, optional
-            Number of cells along y when using `ylim`. Must be >= 1.
-        dx : float or None, optional
-            Cell size along x when using `xlim`. Mutually exclusive with `ni`.
-        dy : float or None, optional
-            Cell size along y when using `ylim`. Mutually exclusive with `nj`.
-        view : {'3d', '2d'}, default '3d'
-            Target visualization backend. Use '3d' for PyVista, '2d' for Matplotlib.
-        wells : VerticalWell or Sequence[VerticalWell] or None, optional
-            Well(s) to plot on top of the grid. Can be a single VerticalWell or a sequence of them. If ``None``, no wells are plotted.
-
-        Raises
-        ------
-        ValueError
-            If `view` is not one of {'3d', '2d'}.
-
-        Examples
-        --------
-        >>> horizon.show()
-        >>> horizon.show(view="2d", x=[0, 10], y=[0, 10])
-        """
-        view = view.strip().lower()
-        if view == "3d":
-            self.show3d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
-        elif view == "2d":
-            self.show2d(x=x, y=y, xlim=xlim, ylim=ylim, ni=ni, nj=nj, dx=dx, dy=dy, wells=wells)
-        else:
-            raise ValueError(f"Invalid view: {view!r}. Must be '3d' or '2d'.")
+    def show3d(self, **kwargs) -> None:
+        """Deprecated alias for `show`. Will be removed in a future version."""
+        warnings.warn("show3d is deprecated; use show() instead.", DeprecationWarning, stacklevel=2)
+        return self.show(**kwargs)
         
-    def show3d(
+    def show(
         self,
         *,
         x: ArrayLike | None = None,
@@ -375,13 +321,14 @@ class Horizon:
 
         Examples
         --------
-        >>> horizon.show3d(x=[0, 100], y=[0, 100], ni=50, nj=50, cmap="viridis")
+        >>> horizon.show(x=[0, 100], y=[0, 100], ni=50, nj=50, cmap="viridis")
         """
 
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
+        from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
 
         z_scale = _validate_z_scale(z_scale, name="z_scale")
-        viewer = PyVista3DViewer(z_scale=z_scale)
+        viewer = PyVista3DViewer(z_scale=z_scale, theme=PyVista3DViewerTheme(lighting=True))
         viewer.add_horizon(
             self,
             x=x,
