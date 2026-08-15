@@ -3,6 +3,8 @@ Export a Python source file to a PDF with:
   - Manual, theme-independent syntax colors
   - Correct class/function coloring everywhere they're used (via jedi)
   - Distinct color for import module paths (e.g. petres.grids.cornerpoint)
+  - Distinct color for function/class PARAMETER names (def f(a=1, b=3))
+    and keyword-argument names at call sites (f(a=1, b=3))
   - Inline line numbers with adjustable gutter spacing
   - Real, selectable text in the final PDF (renders via headless Chrome)
 
@@ -11,19 +13,20 @@ Dependencies:
     playwright install chromium
 """
 
+import ast
 import io
 import jedi
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import HtmlFormatter
 from pygments.style import Style
-from pygments.token import Comment, String, Keyword, Name, Number, Text
+from pygments.token import Comment, String, Keyword, Name, Number, Text, Token
 from playwright.sync_api import sync_playwright
 
 # ============================================================
 # CONFIG — edit these
 # ============================================================
-SOURCE_FILE = "examples\\grid\\from_rectilinear.py"
+SOURCE_FILE = "examples\\horizons\\from_picks.py"
 OUTPUT_PDF = "code_output.pdf"
 FONT_FAMILY = "'Gabarito Regular', Consolas, monospace"
 FONT_SIZE = "21pt"
@@ -39,6 +42,7 @@ COLORS = {
     "variables": "#1b1b1b",
     "numbers":   "#08605F",
     "imports":   "#000066",   # module paths after `from` / `import`
+    "params":    "#9C4807",   # function/class parameter & kwarg names
     "background": "#ededed",
     "foreground": "#1b1b1b",
 }
@@ -79,6 +83,39 @@ def resolve_type(line, col):
     return result
 
 # ============================================================
+# Positions of function/class PARAMETER names and call-site
+# KEYWORD ARGUMENT names, via the `ast` module (line, 0-based col)
+# ============================================================
+def collect_param_positions(source):
+    positions = set()
+    tree = ast.parse(source)
+
+    def add(node):
+        positions.add((node.lineno, node.col_offset))
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            a = node.args
+            for arg in (getattr(a, "posonlyargs", []) + a.args + a.kwonlyargs):
+                add(arg)
+            if a.vararg:
+                add(a.vararg)
+            if a.kwarg:
+                add(a.kwarg)
+        elif isinstance(node, ast.Call):
+            for kw in node.keywords:
+                # kw.arg is None for **kwargs unpacking -> skip
+                if kw.arg is not None:
+                    positions.add((kw.lineno, kw.col_offset))
+
+    return positions
+
+PARAM_POSITIONS = collect_param_positions(code)
+
+# Custom token type for parameter / keyword-argument names
+Name.Param = Token.Name.Param
+
+# ============================================================
 # Pygments style — manual colors
 # ============================================================
 class ManualStyle(Style):
@@ -92,24 +129,32 @@ class ManualStyle(Style):
         Name.Builtin:    COLORS["types"],
         Name.Function:   COLORS["functions"],
         Name.Namespace:  COLORS["imports"],   # e.g. petres.grids.cornerpoint
+        Name.Param:      COLORS["params"],    # function/class params & kwargs
         Number:          COLORS["numbers"],
         Name:            COLORS["variables"],
     }
 
 # ============================================================
 # Custom lexer: re-tag Name tokens using jedi's resolved type
+# and the ast-derived parameter positions
 # ============================================================
 class SemanticPythonLexer(PythonLexer):
     def get_tokens_unprocessed(self, text):
         for index, token, value in super().get_tokens_unprocessed(text):
-            # Re-tag identifiers (including builtins) based on jedi inference.
             if value.isidentifier() and token in (Name, Name.Builtin):
                 line, col = offset_to_line_col(index)
-                kind = resolve_type(line, col)
-                if kind == "class":
-                    token = Name.Class
-                elif kind in ("function", "builtin"):
-                    token = Name.Function
+
+                # 1) Parameter name in a def/lambda, or kwarg name at a call
+                if (line, col) in PARAM_POSITIONS:
+                    token = Name.Param
+                else:
+                    # 2) Otherwise fall back to jedi-based class/function detection
+                    kind = resolve_type(line, col)
+                    if kind == "class":
+                        token = Name.Class
+                    elif kind in ("function", "builtin"):
+                        token = Name.Function
+
             yield index, token, value
 
 # ============================================================
