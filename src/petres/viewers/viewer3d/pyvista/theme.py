@@ -5,46 +5,7 @@ from typing import Literal
 
 from .._core.theme import Base3DViewerTheme
 
-# CameraView = Literal[
-#     "iso",      # 3D angled view
-#     "top",      # map view
-#     "bottom",
-#     "front",    # look from +Y
-#     "back",     # look from -Y
-#     "right",    # look from +X
-#     "left",     # look from -X
-# ]
 
-# @dataclass(frozen=True)
-# class Camera3D:
-#     """Define camera orientation controls for 3D scene rendering.
-
-#     Parameters
-#     ----------
-#     view : {"iso", "top", "bottom", "front", "back", "right", "left"}, default="iso"
-#         Base camera viewpoint preset.
-#     tilt : float, default=0.0
-#         Vertical tilt in degrees. Positive values reveal more top surface.
-#     turn : float, default=0.0
-#         Horizontal rotation in degrees around the vertical axis.
-#     roll : float, default=0.0
-#         Screen-space roll in degrees.
-#     zoom : float, default=1.0
-#         Zoom factor where ``1.0`` is neutral, values above ``1.0`` zoom in,
-#         and values below ``1.0`` zoom out.
-#     position : tuple[float, float, float], default=(0, 0, -1)
-#         Absolute camera position in 3D space. Default looks towards the origin from the negative Z direction.
-#     """
-
-#     view: CameraView = "iso"
-
-#     # “small intuitive knobs”
-#     tilt: float = 0.0     # degrees: + = see more top, - = see more bottom
-#     turn: float = 0.0     # degrees: rotate around vertical axis
-#     roll: float = 0.0     # degrees: rotate the screen (usually keep 0)
-#     zoom: float = 1.0     # 1.0 = normal, 1.2 = closer, 0.8 = farther
-#     # focal_point = (0, 0, 0)
-#     # up = (0, 1, 0)
 
 Color = str | tuple[float, float, float] 
 

@@ -193,8 +193,8 @@ To visualize the horizon in 2D, set ``view="2d"``:
    )
 
 For more advanced control over the visualization, Petres provides separate
-:meth:`~petres.models.Horizon.show2d` and :meth:`~petres.models.Horizon.show3d` methods,
-which offer additional customization options for 2D and 3D plots, respectively. 
+:meth:`~petres.models.Horizon.show` and :meth:`~petres.models.Horizon.show2d` methods,
+which offer additional customization options for 3D and 2D plots, respectively. 
 
 Wells can also be visualized alongside horizons by passing them to the ``wells`` argument:
 

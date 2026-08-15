@@ -115,8 +115,7 @@ Visualizing a Zone
 
 Like horizons, zones are continuous and need to be sampled for visualization.
 They can be displayed directly using the :meth:`~petres.models.Zone.show` 
-method, or with more control in 2D and 3D using 
-:meth:`~petres.models.Zone.show2d` and :meth:`~petres.models.Zone.show3d`, respectively.
+method in 3D, or :meth:`~petres.models.Zone.show2d` in 2D.
 
 The grid sampling options are the same as those described for
 :ref:`visualizing horizons <horizon-visualization>`. That is, you can

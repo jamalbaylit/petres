@@ -256,9 +256,6 @@ class TestZoneVisualizationApi:
         assert callable(zone.show)
         assert hasattr(zone, "show2d")
         assert callable(zone.show2d)
-        assert hasattr(zone, "show3d")
-        assert callable(zone.show3d)
-
 
 class TestBoundaryPolygonVisualizationApi:
     """Test boundary polygon visualization API."""
