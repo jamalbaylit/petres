@@ -788,7 +788,6 @@ class PyVista3DViewer(Base3DViewer):
         color: Any | None = None,
         scalars: bool = True,
         cmap: str | None = None,
-        colorbar_title: str | None = None,
         **kwargs: Any,
     ) -> PyVista3DViewer:
         """Add a single horizon surface to the scene.
@@ -844,7 +843,7 @@ class PyVista3DViewer(Base3DViewer):
             color=color, 
             scalars=scalars, 
             cmap=cmap, 
-            colorbar_title=colorbar_title, 
+            colorbar_title="Depth" if scalars else None,
             **kwargs
         )
         return self
