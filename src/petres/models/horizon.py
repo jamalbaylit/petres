@@ -343,7 +343,6 @@ class Horizon:
             scalars=scalars,
             cmap=cmap,
             show_colorbar=True,
-            colorbar_title="Depth",
         )
         title = self._get_plot_title(title)
 
