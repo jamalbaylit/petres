@@ -1,37 +1,48 @@
 """
-Export a Python source file to a PDF with:
+Export a Python source file to an SVG with:
   - Manual, theme-independent syntax colors
   - Correct class/function coloring everywhere they're used (via jedi)
   - Distinct color for import module paths (e.g. petres.grids.cornerpoint)
   - Distinct color for function/class PARAMETER names (def f(a=1, b=3))
     and keyword-argument names at call sites (f(a=1, b=3))
   - Inline line numbers with adjustable gutter spacing
-  - Real, selectable text in the final PDF (renders via headless Chrome)
+  - Real, selectable vector text (native SVG <text>/<tspan>, no rasterization)
+  - Transparent background (text only)
 
 Dependencies:
-    pip install pygments jedi playwright --break-system-packages
-    playwright install chromium
+    pip install pygments jedi --break-system-packages
 """
 
 import ast
-import io
+import html
 import jedi
-from pygments import highlight
 from pygments.lexers import PythonLexer
-from pygments.formatters import HtmlFormatter
-from pygments.style import Style
-from pygments.token import Comment, String, Keyword, Name, Number, Text, Token
-from playwright.sync_api import sync_playwright
+from pygments.token import Comment, String, Keyword, Name, Number
 
 # ============================================================
 # CONFIG — edit these
 # ============================================================
-SOURCE_FILE = "examples\\horizons\\from_picks.py"
-OUTPUT_PDF = "code_output.pdf"
+SOURCE_FILE = "layering.py"
+OUTPUT_SVG = "code_output.svg"
 FONT_FAMILY = "'Gabarito Regular', Consolas, monospace"
-FONT_SIZE = "21pt"
-LINE_HEIGHT = "28pt"
-NUMBER_CODE_GAP = "30px"   # <-- distance between line numbers and code
+FONT_SIZE = 33               # pt
+
+# All spacing below is defined relative to FONT_SIZE (in "em" units, i.e.
+# multiples of FONT_SIZE) so the layout keeps its proportions automatically
+# when FONT_SIZE changes -- no need to retune gaps by hand.
+LINE_HEIGHT_EM = 1.4        # em, line-to-line spacing
+LEFT_MARGIN_EM = 0           # em, left edge of the line-number column
+NUMBER_CODE_GAP_EM = 0.95    # em, distance between line numbers and code
+RIGHT_PADDING_EM = 0         # em, extra canvas width beyond the longest line
+CHAR_WIDTH_FACTOR = 0.6      # em, monospace advance width; only used to size the canvas
+LINENO_CHARS = 3             # digits reserved for the line-number column
+
+LINE_HEIGHT = LINE_HEIGHT_EM * FONT_SIZE               # pt
+LEFT_MARGIN = LEFT_MARGIN_EM * FONT_SIZE               # pt
+NUMBER_CODE_GAP = NUMBER_CODE_GAP_EM * FONT_SIZE       # pt
+RIGHT_PADDING = RIGHT_PADDING_EM * FONT_SIZE           # pt
+CHAR_WIDTH_ESTIMATE = FONT_SIZE * CHAR_WIDTH_FACTOR    # pt
+LINENO_WIDTH = LINENO_CHARS * CHAR_WIDTH_ESTIMATE      # pt
 
 COLORS = {
     "comments":  "#4f4f4f",
@@ -43,8 +54,8 @@ COLORS = {
     "numbers":   "#08605F",
     "imports":   "#000066",   # module paths after `from` / `import`
     "params":    "#9C4807",   # function/class parameter & kwarg names
-    "background": "#ededed",
     "foreground": "#1b1b1b",
+    "linenos":   "#4f4f4f",
 }
 
 # ============================================================
@@ -56,17 +67,6 @@ with open(SOURCE_FILE, encoding="utf-8") as f:
 # ============================================================
 # Semantic resolution via jedi (class vs function vs other)
 # ============================================================
-lines = code.splitlines(keepends=True)
-line_start_offsets = [0]
-for line in lines:
-    line_start_offsets.append(line_start_offsets[-1] + len(line))
-
-def offset_to_line_col(offset):
-    for i in range(len(line_start_offsets) - 1):
-        if line_start_offsets[i] <= offset < line_start_offsets[i + 1]:
-            return i + 1, offset - line_start_offsets[i]
-    return len(lines), offset - line_start_offsets[-2]
-
 script = jedi.Script(code=code)
 infer_cache = {}
 
@@ -112,96 +112,91 @@ def collect_param_positions(source):
 
 PARAM_POSITIONS = collect_param_positions(code)
 
-# Custom token type for parameter / keyword-argument names
-Name.Param = Token.Name.Param
+# ============================================================
+# Color a single token, resolving Name/Name.Builtin via the
+# ast-derived parameter positions and jedi
+# ============================================================
+def token_style(token, value, line, col):
+    if value.isidentifier() and token in (Name, Name.Builtin):
+        # 1) Parameter name in a def/lambda, or kwarg name at a call
+        if (line, col) in PARAM_POSITIONS:
+            return COLORS["params"], False
+        # 2) Otherwise fall back to jedi-based class/function detection
+        kind = resolve_type(line, col)
+        if kind == "class":
+            return COLORS["types"], False
+        if kind in ("function", "builtin"):
+            return COLORS["functions"], False
+    if token in Comment:
+        return COLORS["comments"], True
+    if token in String:
+        return COLORS["strings"], False
+    if token in Keyword:
+        return COLORS["keywords"], False
+    if token in Name.Namespace:
+        return COLORS["imports"], False
+    if token in Number:
+        return COLORS["numbers"], False
+    return COLORS["foreground"], False
 
 # ============================================================
-# Pygments style — manual colors
+# Tokenize and group into per-line runs of (text, color, italic)
 # ============================================================
-class ManualStyle(Style):
-    background_color = COLORS["background"]
-    styles = {
-        Text:            COLORS["foreground"],
-        Comment:         f"italic {COLORS['comments']}",
-        String:          COLORS["strings"],
-        Keyword:         f"{COLORS['keywords']}",
-        Name.Class:      COLORS["types"],
-        Name.Builtin:    COLORS["types"],
-        Name.Function:   COLORS["functions"],
-        Name.Namespace:  COLORS["imports"],   # e.g. petres.grids.cornerpoint
-        Name.Param:      COLORS["params"],    # function/class params & kwargs
-        Number:          COLORS["numbers"],
-        Name:            COLORS["variables"],
-    }
+line_runs = [[]]
+current_line, current_col = 1, 0
+
+for token, value in PythonLexer().get_tokens(code):
+    remaining = value
+    while remaining:
+        nl_index = remaining.find("\n")
+        segment = remaining if nl_index == -1 else remaining[:nl_index]
+        remaining = "" if nl_index == -1 else remaining[nl_index + 1:]
+        if segment:
+            color, italic = token_style(token, segment, current_line, current_col)
+            line_runs[-1].append((segment, color, italic))
+            current_col += len(segment)
+        if nl_index != -1:
+            line_runs.append([])
+            current_line += 1
+            current_col = 0
+
+if line_runs and not line_runs[-1]:
+    line_runs.pop()
 
 # ============================================================
-# Custom lexer: re-tag Name tokens using jedi's resolved type
-# and the ast-derived parameter positions
+# Build SVG
 # ============================================================
-class SemanticPythonLexer(PythonLexer):
-    def get_tokens_unprocessed(self, text):
-        for index, token, value in super().get_tokens_unprocessed(text):
-            if value.isidentifier() and token in (Name, Name.Builtin):
-                line, col = offset_to_line_col(index)
+code_x = LEFT_MARGIN + LINENO_WIDTH + NUMBER_CODE_GAP
+max_chars = max((sum(len(seg) for seg, _, _ in run) for run in line_runs), default=0)
+svg_width = code_x + max_chars * CHAR_WIDTH_ESTIMATE + RIGHT_PADDING
+svg_height = len(line_runs) * LINE_HEIGHT + LINE_HEIGHT * 0.5
 
-                # 1) Parameter name in a def/lambda, or kwarg name at a call
-                if (line, col) in PARAM_POSITIONS:
-                    token = Name.Param
-                else:
-                    # 2) Otherwise fall back to jedi-based class/function detection
-                    kind = resolve_type(line, col)
-                    if kind == "class":
-                        token = Name.Class
-                    elif kind in ("function", "builtin"):
-                        token = Name.Function
+body_lines = []
+for i, run in enumerate(line_runs):
+    y = (i + 1) * LINE_HEIGHT
+    lineno_x = LEFT_MARGIN + LINENO_WIDTH
+    body_lines.append(
+        f'<text x="{lineno_x:.1f}" y="{y:.1f}" text-anchor="end" '
+        f'fill="{COLORS["linenos"]}">{i + 1}</text>'
+    )
+    tspans = "".join(
+        f'<tspan fill="{color}"{" font-style=\"italic\"" if italic else ""}>'
+        f'{html.escape(text)}</tspan>'
+        for text, color, italic in run
+    )
+    body_lines.append(f'<text x="{code_x:.1f}" y="{y:.1f}">{tspans}</text>')
 
-            yield index, token, value
-
-# ============================================================
-# Highlight -> HTML (in-memory string)
-# ============================================================
-formatter = HtmlFormatter(
-    style=ManualStyle,
-    linenos="inline",
-    full=True,
-    cssclass="codebox",
-)
-html_str = highlight(code, SemanticPythonLexer(), formatter)
-
-custom_css = f"""
+svg = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="{svg_width:.1f}" height="{svg_height:.1f}"
+     viewBox="0 0 {svg_width:.1f} {svg_height:.1f}" xml:space="preserve">
 <style>
-    body {{ background: {COLORS['background']}; margin: 0; padding: 20px; }}
-    .codebox pre {{
-        font-family: {FONT_FAMILY};
-        font-size: {FONT_SIZE};
-        line-height: {LINE_HEIGHT};
-    }}
-    .codebox .linenos {{
-        color: {COLORS['comments']};
-        padding-right: {NUMBER_CODE_GAP};
-        display: inline-block;
-        min-width: 3em;
-        text-align: right;
-        user-select: none;
-    }}
+    text {{ font-family: {FONT_FAMILY}; font-size: {FONT_SIZE}pt; }}
 </style>
-</head>
-"""
-html_str = html_str.replace("</head>", custom_css)
+{chr(10).join(body_lines)}
+</svg>
+'''
 
-# ============================================================
-# Render to PDF (real selectable text, not raster) via headless Chrome
-# ============================================================
-with sync_playwright() as p:
-    browser = p.chromium.launch()
-    page = browser.new_page()
-    page.set_content(html_str, wait_until="networkidle")
-    pdf_bytes = page.pdf(print_background=True)
-    browser.close()
+with open(OUTPUT_SVG, "w", encoding="utf-8") as f:
+    f.write(svg)
 
-pdf_buffer = io.BytesIO(pdf_bytes)
-
-with open(OUTPUT_PDF, "wb") as f:
-    f.write(pdf_buffer.getvalue())
-
-print(f"Done -> {OUTPUT_PDF}")
+print(f"Done -> {OUTPUT_SVG}")
