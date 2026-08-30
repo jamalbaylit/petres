@@ -1,0 +1,18 @@
+<section class="slide-page main-page {{ theme }}">
+    <div class="header">
+        {% if logo_src %}
+            <img class="logo" src="{{ logo_src }}" alt="logo">
+        {% endif %}
+    </div>
+    
+    <div class="content">
+        <h1 class="title">{{ title }}</h1>
+        {% if description %}
+        <h4 class="description">{{ description }}</h4>
+        {% endif %}
+    </div>
+    <div class="footer">
+        <span class="left">{{ footer_left or "" }}</span>
+        <span class="right">{{ footer_right or "" }}</span>
+    </div>
+</section>

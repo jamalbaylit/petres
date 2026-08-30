@@ -1,0 +1,128 @@
+/* Shared reset + page shell. All sizing is relative (rem/%/vw) so a slide
+   looks the same proportionally whatever width/height SlideDeck is given.
+   1rem = 1% of the page width -- change --page-width and everything scales. */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Gabarito', 'Segoe UI', sans-serif;
+}
+
+:root{
+    /* Color Palette */
+    --color-primary-dark: #000038;
+    --color-primary-soft: #E9E9FF;
+    --color-primary: #000096;
+    
+    --color-secondary: #BFFF00;
+    --color-secondary-soft: #FAFFDE;
+
+    --color-green: #8FBF26;
+    --color-black: #191716;
+
+    --color-gray-dark: #4F4F4F;
+    --color-gray: #8B8B8C;
+    --color-gray-light: #BFBFBF;
+    --color-gray-lighter: #CECECE;
+
+    --color-white: #FFFFFF;
+
+
+    /* Spacing */
+    --page-padding: 6% 8%;
+}
+
+    
+
+h1, h2, h3, h4, h5, h6 {
+    line-height: 1.1;
+}
+
+/* h2{
+    font-size: 6rem;
+    font-weight: 700;
+}
+h3{
+    font-size: 5rem;
+    font-weight: 600;
+} */
+
+
+
+h1{
+    font-size: 7rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+h2{
+    font-size: 5.5rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+}
+h4{
+    font-weight: 400;
+    font-size: 3.3rem;
+}
+
+
+p {
+    font-size: 2.7rem;
+    color: var(--color-gray-dark);
+}
+span{
+    font-size: 2.5rem;
+}
+
+
+
+.step{
+    font-size: 3rem;
+    font-weight: 600;
+    color: var(--color-green);
+}
+
+.logo {
+    width: min-content;
+}
+.page-number{
+    color: var(--color-gray);
+    font-size: 2.5rem;
+}
+
+
+html {
+    font-size: 1vw;
+}
+
+body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.slide-page {
+    position: relative;
+    width: var(--page-width);
+    height: var(--page-height);
+    overflow: hidden;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: var(--page-padding);
+}
+
+.slide-page:last-child {
+    page-break-after: avoid;
+}
+
+.footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+
+

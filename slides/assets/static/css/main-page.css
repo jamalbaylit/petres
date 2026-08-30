@@ -1,0 +1,83 @@
+.main-page {
+    justify-content: space-between;
+    /* Set height distribution being customly 10% for the header, 80% for the main body, and 10% for the footer */
+    flex: 10% 50% 100%;
+}
+.main-page.dark{
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+}
+.main-page.light{
+    background: linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-primary) 100%);
+}
+
+.main-page .header {
+    flex: 1;
+}
+.main-page .content {
+    flex: 1.5;
+    align-items: flex-start;
+}
+.main-page .footer {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.main-page .logo {
+    height: 5.5rem;
+}
+
+.main-page .main-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+
+.main-page.dark .title{
+    color: var(--color-white);
+}
+
+
+/* Title */
+.main-page .title {
+    line-height: 1.1;
+}
+.main-page.dark .description{
+    color: var(--color-gray-light);
+}
+.main-page.light .description{
+    color: var(--color-gray-dark);
+}
+
+/* Description */
+.main-page.dark .description{
+    color: var(--color-gray-light);
+}
+
+.main-page.light .description{
+    color: var(--color-gray-dark);
+}
+
+.main-page .description {
+    max-width: 90%;
+}
+
+
+/* Footer */
+
+.main-page.light .footer .left {
+    color: var(--color-primary);
+}
+
+.main-page.dark .footer .left {
+    color: var(--color-secondary);
+}
+
+.main-page.dark .footer .right {
+    color: var(--color-gray-light);
+}
+.main-page.light .footer .right {
+    color: var(--color-gray);
+}

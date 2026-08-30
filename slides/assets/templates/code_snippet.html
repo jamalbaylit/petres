@@ -1,0 +1,37 @@
+<section class="slide-page code-page {{ theme }}">
+    <div class="header">
+        <span class="step">{{ header_left or "" }}</span>
+        <span class="right">
+            {% if header_right_first %}<span class="crumb-first">{{ header_right_first }}</span>{% endif %}
+            {% if header_right_first and header_right_second %}<span class="crumb-splitter">{{ header_right_splitter }}</span>{% endif %}
+            {% if header_right_second %}<span class="crumb-second">{{ header_right_second }}</span>{% endif %}
+        </span>
+    </div>
+    <div class="text-block">
+        {% if title %}
+        <h2 class="title">{{ title }}</h2>
+        {% endif %}
+        {% if description %}
+        <p class="description">{{ description }}</p>
+        {% endif %}
+    </div>
+    <div class="code-body">
+        <div class="code-card full-width">
+            <div class="header">
+                <div class="window-chrome">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="content">
+                {{ code_html | safe }}
+            </div>
+        </div>
+        {% if preview_src %}
+        <img class="code-preview" src="{{ preview_src }}" alt="">
+        {% endif %}
+    </div>
+    <div class="footer">
+        <span class="left">{{ footer_left or "" }}</span>
+        <span class="page-number">{{ footer_right or "" }}</span>
+    </div>
+</section>
