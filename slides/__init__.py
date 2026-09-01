@@ -1,4 +1,3 @@
-from .components import CodeSnippet, MainPage
-from .deck import SlideDeck
+from .src import CodeSnippet, MainPage, Outro, SlideDeck
 
-__all__ = ["SlideDeck", "MainPage", "CodeSnippet"]
+__all__ = ["SlideDeck", "MainPage", "CodeSnippet", "Outro"]

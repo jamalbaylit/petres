@@ -24,8 +24,14 @@ def get_template(name: str):
     return _env.get_template(name)
 
 
-def assemble_document(sections: list[str], *, width: int, height: int) -> str:
-    """Wrap already-rendered page fragments in the shared document shell."""
-    css_files = "\n".join(path.read_text(encoding="utf-8") for path in sorted(_CSS_DIR.glob("*.css")))
-    css = build_font_face_css(_FONTS_DIR) + "\n" + css_files
+def assemble_document(sections: list[str], css_files: list[str], *, width: int, height: int) -> str:
+    """Wrap already-rendered page fragments in the shared document shell.
+
+    base.css always loads; css_files are the per-page-type stylesheets
+    actually needed by the pages in this deck (e.g. only outro.css when the
+    deck has no Outro page, not every *.css file in the folder).
+    """
+    base_css = (_CSS_DIR / "base.css").read_text(encoding="utf-8")
+    page_css = "\n".join((_CSS_DIR / name).read_text(encoding="utf-8") for name in css_files if name != "base.css")
+    css = build_font_face_css(_FONTS_DIR) + "\n" + base_css + "\n" + page_css
     return get_template("document.html").render(width=width, height=height, css=css, sections=sections)

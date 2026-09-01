@@ -1,7 +1,8 @@
 """Local live-reload preview for editing templates/CSS.
 
 Run:
-    python -m slides.preview
+    python slides/preview.py
+    (or python -m slides.preview, from the repo root)
 
 Renders through the exact same pipeline as SlideDeck.to_pdf(), so what you
 see in the browser is what ends up in the PDF (the iframe is sized to the
@@ -22,18 +23,19 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from slides import CodeSnippet, MainPage, SlideDeck
+from slides import CodeSnippet, MainPage, SlideDeck, Outro
 
 _THIS_FILE = Path(__file__).resolve()
-_SLIDES_DIR = _THIS_FILE.parent
+_PACKAGE_DIR = _THIS_FILE.parent / "src"
 _WATCH_PATHS = [
-    _SLIDES_DIR / "assets",
-    _SLIDES_DIR / "components.py",
-    _SLIDES_DIR / "highlight.py",
-    _SLIDES_DIR / "deck.py",
-    _SLIDES_DIR / "rendering",
+    _PACKAGE_DIR / "assets",
+    _PACKAGE_DIR / "components.py",
+    _PACKAGE_DIR / "highlight.py",
+    _PACKAGE_DIR / "deck.py",
+    _PACKAGE_DIR / "rendering",
     # preview.py itself -- build_preview_deck() lives here, so editing it
     # needs the *process* to restart, not just the browser tab to refetch.
     _THIS_FILE,
@@ -64,7 +66,7 @@ def build_preview_deck() -> SlideDeck:
     deck.add(
         MainPage(
             title="Zone Modeling",
-            description="Create zones from defined horizon and Transform horizons into volumetric zones and subdivide them into meaningful geological layers.",
+            description="Create zones from horizons and divide them into layers.",
             theme="dark",
             logo=True,
             footer_left="petres.io",
@@ -72,17 +74,87 @@ def build_preview_deck() -> SlideDeck:
         )
     )
 
+    
     deck.add(
         CodeSnippet(
             header_left="STEP 01",
             header_right_first="Tutorials",
-            header_right_second="Hello World",
+            header_right_second="Zone Modeling",
             title="Define a Horizon",
-            description="Start with a set of scattered depth measurements and interpolate them into a continuous horizon.",
-            code="print('Hello, World!')",
-            code_preview="path/to/hello_world_preview.png",
+            description="Start with a few depth measurements and turn them into a continuous horizon.",
+            code="""
+    from petres.interpolators import IDWInterpolator
+    from petres.models import Horizon
+
+    horizon = Horizon(
+        name="Top Layer",
+        xy=[[20, 78], [70, 80], [32, 55]],
+        depth=[100, 110, 90],
+        interpolator=IDWInterpolator(power = 2)
+    )
+            """,
             footer_right="1 / 4",
             theme="light",
+        )
+    )
+
+
+    deck.add(
+        CodeSnippet(
+            header_left="STEP 02",
+            header_right_first="Tutorials",
+            header_right_second="Zone Modeling",
+            title="Create a Zone",
+            description="Turn the horizon into a zone by giving it a defined thickness.",
+            code="""
+import numpy as np
+
+zone = horizon.to_zone(
+    name="Reservoir",
+    depth=20
+)
+
+zone.show(
+    x=np.linspace(0, 100, 50),
+    y=np.linspace(0, 100, 50)
+)    
+            """,
+            code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\zone_modeling\assets\zone.png",
+            footer_right="2 / 4",
+            theme="light",
+        )
+    )
+
+    deck.add(
+        CodeSnippet(
+            header_left="STEP 03",
+            header_right_first="Tutorials",
+            header_right_second="Zone Modeling",
+            title="Subdivide the Zone",
+            description="Divide the zone into three layers based on their relative thickness.",
+            code="""
+zone.divide(fractions=[0.3, 0.5, 0.2])
+
+zone.show(
+    x=np.linspace(0, 100, 50),
+    y=np.linspace(0, 100, 50)
+)    
+            """,
+            code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\zone_modeling\assets\layering.png",
+            footer_right="3 / 4",
+            theme="light",
+        )
+    )
+    deck.add(
+        Outro(
+            title="Explore Further",
+            theme="dark",
+            logo=True,
+            footer_left="petres.io",
+
+            footer_left_title="TUTORIALS & DOCUMENTATION",
+            footer_right_title="SOURCE CODE",
+            footer_right="https://github.com/jamalbaylit/petres",
         )
     )
     return deck

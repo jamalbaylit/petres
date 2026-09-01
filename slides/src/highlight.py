@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import html
+import textwrap
 
 import jedi
 from pygments.lexers import PythonLexer
@@ -63,6 +64,13 @@ def _offset_to_line_col(offsets: list[int], offset: int) -> tuple[int, int]:
 
 def render_code_html(code: str) -> str:
     """Render Python source to an HTML ``<pre>`` block with inline line numbers."""
+    # A code= argument written as an indented triple-quoted string literal
+    # (natural Python style) carries that indentation as literal content,
+    # which is invalid syntax at module level -- ast.parse() then silently
+    # fails (no parameter coloring) and jedi's error-recovery parsing can
+    # misclassify tokens. Normalize it away instead of relying on every
+    # caller to remember textwrap.dedent() themselves.
+    code = textwrap.dedent(code).strip("\n")
     param_positions = _collect_param_positions(code)
     offsets = _line_offsets(code)
 
@@ -86,8 +94,14 @@ def render_code_html(code: str) -> str:
         infer_cache[key] = result
         return result
 
+    # Pygments tags definition-site names more specifically than plain Name
+    # (e.g. `class Grid:` -> Name.Class, `def __init__` -> Name.Function.Magic)
+    # -- `token in Name` alone would also swallow Name.Namespace (imports,
+    # handled separately below), so list the exact subtypes instead.
+    _resolvable = (Name, Name.Builtin, Name.Class, Name.Function, Name.Function.Magic)
+
     def classify(token, value: str, line: int, col: int) -> str | None:
-        if value.isidentifier() and token in (Name, Name.Builtin):
+        if value.isidentifier() and token in _resolvable:
             if (line, col) in param_positions:
                 return "param"
             kind = resolve_type(line, col)

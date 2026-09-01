@@ -7,7 +7,8 @@
     --card-shadow-color: #ececff;
     --card-left-right-gap: 2.5rem;
     --card-top-bottom-gap: 2rem;
-    --card-font-size: 2.4rem;
+    --card-font-size: 2.2rem;
+    --card-line-height:2.9rem;
 }
 
 .code-page .description{
@@ -39,19 +40,25 @@
     align-items: flex-start;
     gap: 1.5rem;
     min-height: 0;
-    margin-top: 1rem;
+    margin-top: 2rem;
     margin-left: 3rem;
+    position: relative;
 }
+
+
 
 
 
 
 .code-card {
     width: min-content;
-    border-radius: 1rem;
-    border: 0.3rem solid var(--card-border-color);
-    box-shadow: 0 1rem 3rem var(--card-shadow-color);
+    border-radius: 2.3rem;
+    border: 0.33rem solid var(--card-border-color);
+    box-shadow: 0 4rem 13rem var(--card-shadow-color);
     overflow: hidden;
+    z-index: 2;
+    background-color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(39px);
 }
 
 .code-card .header{
@@ -81,18 +88,25 @@
 .code-page .window-chrome span:nth-child(3) { background: var(--color-primary-soft); }
 
 .code-page .code-preview {
-    flex: 0 1 38%;
-    max-width: 38%;
-    max-height: 100%;
     object-fit: contain;
-    border-radius: 1rem;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    top: -12%;
+    width: 82%;
+    right: -7%;
+
+    
 }
+
 
 /* ---- Code block ---- */
 
 .code-block *{
     /* font-family: 'Fira Code', Consolas, monospace; */
     font-size: var(--card-font-size) !important;
+    line-height: var(--card-line-height) !important;
 }
 
 .code-line {

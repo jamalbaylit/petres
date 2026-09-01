@@ -28,7 +28,8 @@ class SlideDeck:
 
     def to_html(self) -> str:
         sections = [page.render(width=self.width, height=self.height) for page in self._pages]
-        return assemble_document(sections, width=self.width, height=self.height)
+        css_files = sorted({name for page in self._pages for name in page.css_files})
+        return assemble_document(sections, css_files, width=self.width, height=self.height)
 
     def to_pdf(self, path: str | Path) -> Path:
         return write_pdf(self.to_html(), self.width, self.height, path)

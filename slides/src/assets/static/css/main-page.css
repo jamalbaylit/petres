@@ -36,7 +36,9 @@
 
 
 .main-page.dark .title{
-    color: var(--color-white);
+    /* color: var(--color-white); */
+    color: var(--color-secondary);
+
 }
 
 
@@ -61,7 +63,7 @@
 }
 
 .main-page .description {
-    max-width: 90%;
+    /* max-width: 90%; */
 }
 
 
