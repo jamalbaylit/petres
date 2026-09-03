@@ -46,16 +46,15 @@
 .main-page .title {
     line-height: 1.1;
 }
-.main-page.dark .description{
-    color: var(--color-gray-light);
-}
+
 .main-page.light .description{
     color: var(--color-gray-dark);
 }
 
 /* Description */
 .main-page.dark .description{
-    color: var(--color-gray-light);
+    /* color: var(--color-gray-light); */
+    color: var(--color-white);
 }
 
 .main-page.light .description{

@@ -62,8 +62,17 @@ def _offset_to_line_col(offsets: list[int], offset: int) -> tuple[int, int]:
     return len(offsets) - 1, offset - offsets[-2]
 
 
-def render_code_html(code: str) -> str:
-    """Render Python source to an HTML ``<pre>`` block with inline line numbers."""
+def render_code_html(code: str, context: str = "") -> str:
+    """Render Python source to an HTML ``<pre>`` block with inline line numbers.
+
+    ``context`` is prior code (e.g. earlier tutorial steps) that establishes
+    variables/imports this snippet uses but doesn't itself define -- it's
+    prepended for jedi's type inference only, never rendered or counted in
+    the visible line numbers. Without it, a snippet like ``zone.show(...)``
+    that never defines ``zone`` itself can't be resolved and falls back to
+    uncolored plain text, even though the deck as a whole makes it obvious
+    what ``zone`` is.
+    """
     # A code= argument written as an indented triple-quoted string literal
     # (natural Python style) carries that indentation as literal content,
     # which is invalid syntax at module level -- ast.parse() then silently
@@ -71,11 +80,15 @@ def render_code_html(code: str) -> str:
     # misclassify tokens. Normalize it away instead of relying on every
     # caller to remember textwrap.dedent() themselves.
     code = textwrap.dedent(code).strip("\n")
+    context = textwrap.dedent(context).strip("\n") if context else ""
+    context_line_count = len(context.splitlines()) if context else 0
+    combined = f"{context}\n{code}" if context else code
+
     param_positions = _collect_param_positions(code)
     offsets = _line_offsets(code)
 
     try:
-        script = jedi.Script(code=code)
+        script = jedi.Script(code=combined)
     except Exception:
         script = None
     infer_cache: dict[tuple[int, int], str | None] = {}
@@ -87,7 +100,7 @@ def render_code_html(code: str) -> str:
         if key in infer_cache:
             return infer_cache[key]
         try:
-            defs = script.infer(line=line, column=col)
+            defs = script.infer(line=line + context_line_count, column=col)
             result = defs[0].type if defs else None
         except Exception:
             result = None
@@ -109,6 +122,11 @@ def render_code_html(code: str) -> str:
                 return "class"
             if kind in ("function", "builtin"):
                 return "function"
+            if kind == "module":
+                # a bare module reference (e.g. `np` in `np.linspace(...)`) --
+                # match the color it already gets on its own import line
+                # (there it's pygments' Name.Namespace, handled below).
+                return "import"
             return None
         if token in Comment:
             return "comment"

@@ -94,6 +94,12 @@ class Outro(MainPage):
 
 
 class CodeSnippet:
+    """Pass ``context`` (e.g. earlier tutorial steps' code) when this snippet
+    uses names it doesn't itself define -- each snippet is highlighted in
+    isolation, so without it a call like ``zone.show(...)`` has no way to
+    know what ``zone`` is and renders uncolored.
+    """
+
     template_name = "code_snippet.html"
     css_files = ("code-snippet.css",)
 
@@ -110,8 +116,10 @@ class CodeSnippet:
         footer_left: str | None = None,
         footer_right: str | None = None,
         theme: str = "light",
+        context: str = "",
     ):
         self.code = code
+        self.context = context
         self.title = title
         self.description = description
         self.header_left = header_left
@@ -138,7 +146,7 @@ class CodeSnippet:
             header_right_splitter=self.header_right_splitter,
             title=self.title,
             description=self.description,
-            code_html=render_code_html(self.code),
+            code_html=render_code_html(self.code, context=self.context),
             preview_src=preview_src,
             footer_left=self.footer_left,
             footer_right=self.footer_right,

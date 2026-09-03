@@ -51,14 +51,32 @@
 
 
 .code-card {
+    position: relative;
     width: min-content;
     border-radius: 2.3rem;
     border: 0.33rem solid var(--card-border-color);
     box-shadow: 0 4rem 13rem var(--card-shadow-color);
     overflow: hidden;
     z-index: 2;
-    background-color: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(39px);
+    /* Opaque fallback for when there's no code-preview image (no blur
+       layer gets rendered then, see code_snippet.html) -- otherwise fully
+       covered/replaced by .code-card-blur below. */
+    background-color: var(--card-background-color);
+}
+
+/* Fakes backdrop-filter (unsupported by Chromium's PDF print pipeline --
+   page.pdf() drops it silently even though it renders fine on-screen) by
+   sampling the same code-preview image as a plain background-image, sized
+   and positioned by the script in document.html to match exactly what's
+   behind this card, then blurring that with regular filter: blur(), which
+   *does* render correctly in PDF export. background-position/-size are set
+   at runtime since the card's box is flex-determined, not static. */
+.code-card-blur {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    filter: blur(39px);
+    background-repeat: no-repeat, no-repeat;
 }
 
 .code-card .header{
@@ -131,7 +149,7 @@
 .tok-string   { color: #6a3282; }
 .tok-keyword  { color: #cb04a5; }
 .tok-class    { color: #0000ff; }
-.tok-function { color: #519e00; }
+.tok-function { color: #59ae00; }
 .tok-number   { color: #08605f; }
 .tok-import   { color: #000066; }
 .tok-param    { color: #9c4807; }

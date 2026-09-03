@@ -14,5 +14,29 @@
 <body>
 {% for section in sections %}{{ section | safe }}
 {% endfor %}
+<script>
+// Fakes backdrop-filter for .code-card-blur (see code-snippet.css) --
+// Chromium's PDF print pipeline (page.pdf()) silently drops real
+// backdrop-filter even though it renders fine on-screen, but a plain
+// filter: blur() on a background-image *does* survive PDF export. Since
+// the card's box is flex-determined (not static), position/size the
+// background here at runtime to match exactly what the card would be
+// sampling from the code-preview image behind it.
+window.addEventListener("load", function () {
+    document.querySelectorAll(".code-card-blur").forEach(function (blurLayer) {
+        var body = blurLayer.closest(".code-body");
+        var img = body ? body.querySelector(".code-preview") : null;
+        var card = blurLayer.closest(".code-card");
+        if (!img || !card) return;
+        var imgRect = img.getBoundingClientRect();
+        var cardRect = card.getBoundingClientRect();
+        blurLayer.style.backgroundImage =
+            "linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('" + img.src + "')";
+        blurLayer.style.backgroundSize = "cover, " + imgRect.width + "px " + imgRect.height + "px";
+        blurLayer.style.backgroundPosition =
+            "center, " + (imgRect.left - cardRect.left) + "px " + (imgRect.top - cardRect.top) + "px";
+    });
+});
+</script>
 </body>
 </html>

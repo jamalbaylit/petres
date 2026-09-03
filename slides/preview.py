@@ -75,14 +75,11 @@ def build_preview_deck() -> SlideDeck:
     )
 
     
-    deck.add(
-        CodeSnippet(
-            header_left="STEP 01",
-            header_right_first="Tutorials",
-            header_right_second="Zone Modeling",
-            title="Define a Horizon",
-            description="Start with a few depth measurements and turn them into a continuous horizon.",
-            code="""
+    # Each CodeSnippet is highlighted in isolation (its own jedi.Script), so a
+    # later step referencing names an earlier step defined (horizon, zone,
+    # np) can't resolve them on its own -- pass the earlier steps' code as
+    # context= so jedi can still infer types, without it being rendered.
+    step1_code = """
     from petres.interpolators import IDWInterpolator
     from petres.models import Horizon
 
@@ -92,21 +89,22 @@ def build_preview_deck() -> SlideDeck:
         depth=[100, 110, 90],
         interpolator=IDWInterpolator(power = 2)
     )
-            """,
-            footer_right="1 / 4",
+            """
+    deck.add(
+        CodeSnippet(
+            header_left="STEP 01",
+            header_right_first="Tutorials",
+            header_right_second="Zone Modeling",
+            title="Define a Horizon",
+            description="Start with a few depth measurements and turn them into a continuous horizon.",
+            code=step1_code,
+            footer_right="1 / 3",
             theme="light",
         )
     )
 
 
-    deck.add(
-        CodeSnippet(
-            header_left="STEP 02",
-            header_right_first="Tutorials",
-            header_right_second="Zone Modeling",
-            title="Create a Zone",
-            description="Turn the horizon into a zone by giving it a defined thickness.",
-            code="""
+    step2_code = """
 import numpy as np
 
 zone = horizon.to_zone(
@@ -117,10 +115,19 @@ zone = horizon.to_zone(
 zone.show(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50)
-)    
-            """,
+)
+            """
+    deck.add(
+        CodeSnippet(
+            header_left="STEP 02",
+            header_right_first="Tutorials",
+            header_right_second="Zone Modeling",
+            title="Create a Zone",
+            description="Turn the horizon into a zone by giving it a defined thickness.",
+            code=step2_code,
+            context=step1_code,
             code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\zone_modeling\assets\zone.png",
-            footer_right="2 / 4",
+            footer_right="2 / 3",
             theme="light",
         )
     )
@@ -138,10 +145,11 @@ zone.divide(fractions=[0.3, 0.5, 0.2])
 zone.show(
     x=np.linspace(0, 100, 50),
     y=np.linspace(0, 100, 50)
-)    
+)
             """,
+            context=step1_code + step2_code,
             code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\zone_modeling\assets\layering.png",
-            footer_right="3 / 4",
+            footer_right="3 / 3",
             theme="light",
         )
     )
@@ -154,7 +162,7 @@ zone.show(
 
             footer_left_title="TUTORIALS & DOCUMENTATION",
             footer_right_title="SOURCE CODE",
-            footer_right="https://github.com/jamalbaylit/petres",
+            footer_right="github.com/jamalbaylit/petres",
         )
     )
     return deck
