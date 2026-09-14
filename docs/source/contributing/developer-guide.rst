@@ -93,14 +93,15 @@ Use the following prefixes:
 
 .. code-block:: text
 
-   feature/<short-description>        # new features
-   improvement/<short-description>    # enhancements to existing features
-   bugfix/<short-description>         # bug fixes
-   hotfix/<short-description>         # urgent fixes
-   refactor/<short-description>       # code refactoring without behavior change
-   docs/<short-description>           # documentation updates
-   test/<short-description>           # adding or updating tests
-   ci/<short-description>             # CI/CD changes
+   feature/<short-description>            # add new functionality
+   improvement/<short-description>        # improve existing functionality
+   bugfix/<short-description>             # fix a non-urgent bug
+   hotfix/<short-description>             # fix an urgent issue
+   refactor/<short-description>           # restructure code without changing behavior
+   breaking/<short-description>           # make major changes to the public API or architecture
+   docs/<short-description>               # add or update documentation
+   test/<short-description>               # add or update tests
+   ci/<short-description>                 # change CI/CD configuration or workflows
 
 Rules for branch names:
 
@@ -112,10 +113,9 @@ Examples:
 
 .. code-block:: text
 
-   feature/add-grid-export
-   feature/property-upscaling
-   bugfix/fault-handling
-
+   feature/grid-export
+   improvement/idw-interpolation-accuracy
+   refactor/docstring-formatting
 
 Make Changes
 ^^^^^^^^^^^^
