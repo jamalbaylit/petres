@@ -109,7 +109,7 @@ from petres.grids import CornerPointGrid
 viewer = Viewer3D(z_scale=25)
 viewer.add_pillars(pillars)
 viewer.show()
-# viewer.screenshot("./assets/pillars.png", transparent=True)
+viewer.screenshot("./assets/pillars.png", transparent=True)
 
 
 grid = CornerPointGrid.from_zones(
