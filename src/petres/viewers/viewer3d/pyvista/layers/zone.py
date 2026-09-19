@@ -112,9 +112,14 @@ def _add_zone(
         """
         surf = dataset.extract_surface(algorithm='dataset_surface')
 
+        # Boundary edges only. `feature_edges=True` would also flag interior
+        # edges whose dihedral angle exceeds VTK's feature angle -- on a folded
+        # horizon that means the crest itself gets outlined, since the hinge is
+        # measured in raw data coordinates (where z relief dwarfs the xy cell
+        # size) and before `z_scale` flattens the view.
         edges = surf.extract_feature_edges(
-            boundary_edges=True,        # in case surface is open somewhere
-            feature_edges=True,         # sharp outer edges
+            boundary_edges=True,
+            feature_edges=False,
             manifold_edges=False,
             non_manifold_edges=False,
         )
