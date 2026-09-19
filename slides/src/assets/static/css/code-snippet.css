@@ -1,0 +1,155 @@
+.code-page{
+    /* background-color: var(--color-white); */
+    background-color: #fefeff;
+    
+    --card-background-color: var(--color-white);
+    --card-border-color: var(--color-primary-soft);
+    --card-shadow-color: #ececff;
+    --card-left-right-gap: 2.5rem;
+    --card-top-bottom-gap: 2rem;
+    --card-font-size: 2.2rem;
+    --card-line-height:2.9rem;
+}
+
+.code-page .description{
+    margin-bottom: 1rem;
+}
+
+
+.code-page .header {
+    display: flex;
+    justify-content: space-between;
+}
+.code-page .header .right{
+    font-size: 2rem;
+}
+
+.code-page .header .right .crumb-first {
+    color: var(--color-primary);
+}
+.code-page .header .right .crumb-splitter {
+    color: var(--color-black);
+}
+.code-page .header .right .crumb-second {
+    color: var(--color-gray-dark);
+}
+
+.code-page .code-body {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    min-height: 0;
+    margin-top: 2rem;
+    margin-left: 3rem;
+    position: relative;
+}
+
+
+
+
+
+
+.code-card {
+    position: relative;
+    width: min-content;
+    border-radius: 2.3rem;
+    border: 0.33rem solid var(--card-border-color);
+    box-shadow: 0 4rem 13rem var(--card-shadow-color);
+    overflow: hidden;
+    z-index: 2;
+    /* Opaque fallback for when there's no code-preview image (no blur
+       layer gets rendered then, see code_snippet.html) -- otherwise fully
+       covered/replaced by .code-card-blur below. */
+    background-color: var(--card-background-color);
+}
+
+/* Fakes backdrop-filter (unsupported by Chromium's PDF print pipeline --
+   page.pdf() drops it silently even though it renders fine on-screen) by
+   sampling the same code-preview image as a plain background-image, sized
+   and positioned by the script in document.html to match exactly what's
+   behind this card, then blurring that with regular filter: blur(), which
+   *does* render correctly in PDF export. background-position/-size are set
+   at runtime since the card's box is flex-determined, not static. */
+.code-card-blur {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    filter: blur(39px);
+    background-repeat: no-repeat, no-repeat;
+}
+
+.code-card .header{
+    display: flex;
+    align-items: center;
+    padding: var(--card-top-bottom-gap) var(--card-left-right-gap);
+}
+.code-card .content{
+    padding-left: var(--card-left-right-gap);
+    padding-right: var(--card-left-right-gap);
+    padding-bottom: var(--card-top-bottom-gap);
+}
+.code-page .window-chrome {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.code-page .window-chrome span {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.code-page .window-chrome span:nth-child(1) { background: var(--color-primary-soft); }
+.code-page .window-chrome span:nth-child(2) { background: var(--color-primary-soft); }
+.code-page .window-chrome span:nth-child(3) { background: var(--color-primary-soft); }
+
+.code-page .code-preview {
+    object-fit: contain;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    top: -12%;
+    width: 82%;
+    right: -7%;
+
+    
+}
+
+
+/* ---- Code block ---- */
+
+.code-block *{
+    /* font-family: 'Fira Code', Consolas, monospace; */
+    font-size: var(--card-font-size) !important;
+    line-height: var(--card-line-height) !important;
+}
+
+.code-line {
+    display: flex;
+}
+
+.code-line .lineno {
+    min-width: 2em;
+    text-align: right;
+    padding-right: 1em;
+    color: var(--muted);
+    user-select: none;
+}
+
+.code-line .code-text {
+    white-space: pre;
+    color: var(--fg);
+}
+
+/* Semantic token colors -- edit these to restyle the highlighter */
+.tok-comment  { color: #6b7280; font-style: italic; }
+.tok-string   { color: #6a3282; }
+.tok-keyword  { color: #cb04a5; }
+.tok-class    { color: #0000ff; }
+.tok-function { color: #59ae00; }
+.tok-number   { color: #08605f; }
+.tok-import   { color: #000066; }
+.tok-param    { color: #9c4807; }
