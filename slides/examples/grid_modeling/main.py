@@ -39,7 +39,8 @@ deck.add(
         title="Define the Zones",
         description="Define the vertical intervals and their layer discretization.",
         code=step1_code,
-        footer_right="1 / 4",
+        code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\zone.png",
+        footer_right="1 / 3",
         theme="light",
     )
 )
@@ -64,19 +65,23 @@ deck.add(
         title="Create the Pillars",
         description="Define the lateral grid geometry.",
         code=step2_code,
-        footer_right="2 / 4",
+        code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\pillars.png",
+        footer_right="2 / 3",
         theme="light",
     )
 )
 
 
 step3_code = """
+from petres.grids import CornerPointGrid
+
 grid = CornerPointGrid.from_zones(
     pillars=pillars,
     zones=[zone],
 )
 
-grid.show()
+grid.show(z_scale=5)
+grid.to_grdecl("model.GRDECL")
 """
 
 deck.add(
@@ -84,30 +89,12 @@ deck.add(
         header_left="STEP 03",
         header_right_first="Tutorials",
         header_right_second="Grid Modeling",
-        title="Build the Grid",
-        description="Combine the pillars and zones into a Corner-Point grid.",
+        title="Build and Export the Grid",
+        description="Build the Corner-Point grid, visualize it, and export it to Eclipse GRDECL format.",
         code=step3_code,
-        footer_right="3 / 4",
-        theme="light",
-    )
-)
-
-
-step4_code = """
-grid.to_grdecl(
-    "reservoir.GRDECL"
-)
-"""
-
-deck.add(
-    CodeSnippet(
-        header_left="STEP 04",
-        header_right_first="Tutorials",
-        header_right_second="Grid Modeling",
-        title="Export the Grid",
-        description="Export the grid to Eclipse GRDECL format.",
-        code=step4_code,
-        footer_right="4 / 4",
+        context=step1_code + step2_code,
+        code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\grid.png",
+        footer_right="3 / 3",
         theme="light",
     )
 )

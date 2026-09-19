@@ -1,22 +1,182 @@
+from __future__ import annotations
+
+from typing import Any
 import numpy as np
 import pyvista as pv
 from ....._utils._colors import Color
 
+
+# ----------------------------------------------------------------------
+# Colour helpers
+# ----------------------------------------------------------------------
+def _plotter_background(plotter: pv.Plotter) -> tuple[float, float, float]:
+    """Read the plotter background as a unit RGB triple.
+
+    Fallback only: the viewer passes its theme background explicitly, since
+    it applies the theme to the plotter at render time, after layers have
+    been added.
+    """
+    return tuple(plotter.background_color.float_rgb)
+
+
+def _fade(rgb: tuple, amount: float, background: tuple) -> tuple:
+    """Blend ``rgb`` toward ``background`` by ``amount`` in [0, 1].
+
+    Used instead of transparency: a dense set of translucent lines renders
+    order-dependently, which produces dark blotches wherever lines happen to
+    draw back-to-front. Blending the colour is order-independent and gives
+    the same visual weight.
+    """
+    amount = float(min(max(amount, 0.0), 1.0))
+    return tuple((1.0 - amount) * c + amount * b for c, b in zip(rgb, background))
+
+
+# ----------------------------------------------------------------------
+# Geometry helpers
+# ----------------------------------------------------------------------
+def _sample_indices(n: int, target: int) -> np.ndarray:
+    """Pick at most ``target`` evenly spaced indices from ``range(n)``.
+
+    The first and last indices are always kept so the silhouette stays
+    closed, and the step is exactly constant wherever that is possible.
+
+    Even spacing has to be exact, not near-exact. Spreading ``target``
+    indices over ``n - 1`` intervals by rounding gives gaps that differ by
+    one index, which sounds harmless but reads as alternating wide/narrow
+    columns -- 12 pillars over 50 cells alternates 5, 4, 5, 4. So the number
+    of gaps is reduced to the largest divisor of ``n - 1`` that is no larger
+    than ``target - 1``, giving a constant step. Rounding is used only when
+    no usable divisor exists (a prime interval count), where the alternative
+    would be collapsing to two pillars at the ends.
+    """
+    if n <= 1 or target <= 0:
+        return np.arange(max(n, 0))
+    if target == 1:
+        return np.array([0, n - 1], dtype=np.int64)
+    if n <= target:
+        return np.arange(n)
+
+    intervals = n - 1
+    max_gaps = target - 1
+    # Refuse a divisor that would thin the pillars below a third of the
+    # requested count; a near-even grid beats a nearly empty one.
+    floor_gaps = max(2, -(-max_gaps // 3))
+    for gaps in range(max_gaps, floor_gaps - 1, -1):
+        if intervals % gaps == 0:
+            return np.arange(0, n, intervals // gaps, dtype=np.int64)
+
+    return np.unique(np.linspace(0, n - 1, target).round().astype(np.int64))
+
+
+def _polylines(paths) -> pv.PolyData | None:
+    """Build a PolyData holding one polyline cell per path.
+
+    Polylines rather than independent segments: with
+    ``render_lines_as_tubes`` the renderer can then join consecutive
+    sections instead of butting flat-capped quads against each other.
+    """
+    paths = [np.asarray(p, dtype=np.float64) for p in paths]
+    paths = [p for p in paths if p.ndim == 2 and p.shape[0] >= 2]
+    if not paths:
+        return None
+
+    pts = np.concatenate(paths, axis=0)
+    conn = np.empty(sum(len(p) + 1 for p in paths), dtype=np.int64)
+
+    write = 0
+    offset = 0
+    for p in paths:
+        m = len(p)
+        conn[write] = m
+        conn[write + 1 : write + 1 + m] = np.arange(offset, offset + m)
+        write += m + 1
+        offset += m
+
+    return pv.PolyData(pts, lines=conn)
+
+
+def _lattice_lines(
+    points: np.ndarray,
+    jj: np.ndarray | None = None,
+    ii: np.ndarray | None = None,
+) -> pv.PolyData | None:
+    """Grid lines of a lattice, optionally restricted to selected rows/columns.
+
+    Each line keeps the full node resolution along its own direction, so a
+    coarse cage still follows curved geometry instead of cutting corners
+    between the sampled nodes.
+
+    Parameters
+    ----------
+    points : np.ndarray
+        (nj+1, ni+1, 3) array of lattice node coordinates.
+    jj : np.ndarray, optional
+        Row indices to draw along i. Defaults to every row.
+    ii : np.ndarray, optional
+        Column indices to draw along j. Defaults to every column.
+    """
+    nj, ni = points.shape[:2]
+    if jj is None:
+        jj = np.arange(nj)
+    if ii is None:
+        ii = np.arange(ni)
+
+    paths = [points[j, :, :] for j in jj]
+    paths += [points[:, i, :] for i in ii]
+    return _polylines(paths)
+
+
+def _segments(start: np.ndarray, end: np.ndarray) -> pv.PolyData:
+    """Build a PolyData of independent 2-point line cells."""
+    n = start.shape[0]
+    pts = np.empty((2 * n, 3), dtype=np.float64)
+    pts[0::2] = start
+    pts[1::2] = end
+
+    conn = np.empty((n, 3), dtype=np.int64)
+    conn[:, 0] = 2
+    conn[:, 1] = np.arange(0, 2 * n, 2)
+    conn[:, 2] = np.arange(1, 2 * n, 2)
+
+    return pv.PolyData(pts, lines=conn.ravel())
+
+
+# ----------------------------------------------------------------------
+# Main entry point
+# ----------------------------------------------------------------------
 def _add_pillars(
     plotter: pv.Plotter,
     pillar_top: np.ndarray,
     pillar_bottom: np.ndarray,
-    shaft_color: str = "red",
-    shaft_radius_factor: float = 0.08,
-    tip_radius_factor: float = 2.5,
-    tip_length_factor: float = 0.12,
+    color: str = "black",
+    line_width: float = 2.0,
+    show_grid_lines: bool = True,
+    show_pillars: bool = True,
+    show_arrows: bool = False,
+    pillar_opacity: float = 0.5,
+    max_pillars_per_axis: int = 12,
     opacity: float = 1.0,
-    **kwargs
+    lattice_mode: str = "both",
+    base_fade: float = 0.45,
+    texture_fade: float = 0.75,
+    use_fade: bool = True,
+    background: Any | None = None,
+    render_lines_as_tubes: bool = True,
+    **kwargs,
 ) -> None:
-    """
-    Add arrow lines (pillars) from top points to bottom points, similar to
-    Petrel's pillar visualisation.  Adapts visually to any XYZ scale or
-    aspect ratio by deriving sizes from the structured grid spacing.
+    """Render a pillar grid as a skeletal wireframe.
+
+    Draws the top and base lattices as i/j grid lines with the pillars
+    connecting them, so the grid structure reads directly.
+
+    Three things keep it legible on a fine grid. The pillars are thinned,
+    since drawing all of them renders the volume as an opaque mass. The
+    lattice is drawn twice -- a strong cage on exactly the rows and columns
+    that carry a pillar, over a faded full-resolution lattice -- so every
+    visible pillar sits on a visible intersection rather than on an
+    arbitrary node. And the base lattice is lighter and thinner than the
+    top, which separates the two in projection instead of letting them
+    moire against each other.
 
     Parameters
     ----------
@@ -26,21 +186,56 @@ def _add_pillars(
         (nj+1, ni+1, 3) array of pillar top coordinates.
     pillar_bottom : np.ndarray
         (nj+1, ni+1, 3) array of pillar bottom coordinates.
-    shaft_color : str
-        Color of the shaft tubes.
-    tip_color : str
-        Color of the arrowhead cones.
-    shaft_radius_factor : float
-        Shaft radius as a fraction of the median lateral pillar spacing.
-    tip_radius_factor : float
-        Cone base radius as a multiple of the shaft radius.
-    tip_length_factor : float
-        Cone length as a fraction of each individual pillar length.
-    opacity : float
-        Opacity for both shaft and tip actors.
-    """
-    shaft_color = Color(shaft_color).as_rgb()
+    color : str, default="black"
+        Base colour for the grid lines, pillars and arrow tips.
+    line_width : float, default=2.0
+        Width of the top cage lines. Everything else is derived from this.
+    show_grid_lines : bool, default=True
+        Whether to draw the top/base lattices.
+    show_pillars : bool, default=True
+        Whether to draw the pillars connecting the two lattices.
+    show_arrows : bool, default=False
+        Whether to cap each pillar with a cone at its base end. Useful for
+        non-vertical pillars where direction matters; redundant clutter on a
+        regular vertical grid, hence off by default.
+    pillar_opacity : float, default=0.5
+        Visual weight of the pillars relative to the cage. Applied as a
+        colour blend when ``use_fade`` is True, otherwise as true alpha.
+    max_pillars_per_axis : int, default=12
+        Cap on how many pillars are drawn along each axis. The outermost
+        pillars are always kept so the silhouette stays closed.
+    opacity : float, default=1.0
+        Weight of the top cage lines, applied the same way as
+        ``pillar_opacity``.
+    lattice_mode : {"both", "cage", "full"}, default="both"
+        ``"cage"`` draws grid lines only where pillars are, ``"full"`` draws
+        the fine lattice only, ``"both"`` draws the cage over a faded fine
+        lattice.
+    base_fade : float, default=0.45
+        How far the base lattice is blended toward the background relative
+        to the top lattice. Cheap depth cue; set to 0 to match them.
+    texture_fade : float, default=0.75
+        How far the full-resolution lattice is faded when ``lattice_mode``
+        is ``"both"``, so it reads as texture under the cage.
+    use_fade : bool, default=True
+        Blend toward the background instead of using alpha. Order-
+        independent, so overlapping lines do not blotch.
+    background : Any, optional
+        Colour the fade blends toward, in any form ``Color`` accepts. The
+        viewer passes its theme background; defaults to the current plotter
+        background when called directly.
+    render_lines_as_tubes : bool, default=True
+        Round caps and joined corners instead of flat-capped quads, which
+        otherwise notch wherever two lines cross.
 
+    Notes
+    -----
+    Thin dark lines alias badly and shimmer while orbiting, and translucent
+    lines (``use_fade=False``) render order-dependently. Both are fixed by
+    plotter-wide settings -- ``anti_aliasing`` and ``depth_peeling`` on
+    ``PyVista3DViewerTheme`` -- rather than here, because the viewer rebuilds
+    the plotter for screenshots and only replays ``add_mesh`` calls.
+    """
     pillar_top = np.asarray(pillar_top, dtype=np.float64)
     pillar_bottom = np.asarray(pillar_bottom, dtype=np.float64)
 
@@ -53,80 +248,134 @@ def _add_pillars(
             f"Shape mismatch: pillar_top {pillar_top.shape} vs "
             f"pillar_bottom {pillar_bottom.shape}"
         )
-
-    nj1, ni1, _ = pillar_top.shape
-
-    # ------------------------------------------------------------------
-    # Compute adaptive sizes from the STRUCTURED grid spacing
-    # ------------------------------------------------------------------
-    # Use pillar midpoints so sizing reflects actual pillar positions
-    mid = 0.5 * (pillar_top + pillar_bottom)  # (nj+1, ni+1, 3)
-
-    lateral_dists = []
-    if ni1 > 1:
-        # i-direction neighbor distances
-        di = np.linalg.norm(mid[:, 1:, :] - mid[:, :-1, :], axis=2)  # (nj+1, ni)
-        lateral_dists.append(di.ravel())
-    if nj1 > 1:
-        # j-direction neighbor distances
-        dj = np.linalg.norm(mid[1:, :, :] - mid[:-1, :, :], axis=2)  # (nj, ni+1)
-        lateral_dists.append(dj.ravel())
-
-    if lateral_dists:
-        median_spacing = np.median(np.concatenate(lateral_dists))
-    else:
-        # Single pillar fallback — use pillar length
-        median_spacing = np.linalg.norm(
-            pillar_bottom.ravel() - pillar_top.ravel()
+    if lattice_mode not in ("both", "cage", "full"):
+        raise ValueError(
+            f"lattice_mode must be 'both', 'cage' or 'full', got {lattice_mode!r}"
         )
 
-    shaft_radius = max(median_spacing * shaft_radius_factor, 1e-6)
-    cone_radius = shaft_radius * tip_radius_factor
-
-    # ------------------------------------------------------------------
-    # Flatten to (N, 3)
-    # ------------------------------------------------------------------
-    top = pillar_top.reshape(-1, 3)
-    bot = pillar_bottom.reshape(-1, 3)
-    n = top.shape[0]
-    if n == 0:
+    if pillar_top[..., 0].size == 0:
         return
 
-    directions = bot - top                                       # (N, 3)
-    lengths = np.linalg.norm(directions, axis=1, keepdims=True)  # (N, 1)
-    safe_lengths = np.where(lengths > 0, lengths, 1.0)
-    unit_dirs = directions / safe_lengths                        # (N, 3)
+    base_rgb = Color(color).as_rgb()
+    bg = Color(background).as_rgb() if background is not None else _plotter_background(plotter)
 
-    # Per-pillar cone length — also capped by an absolute limit relative
-    # to the lateral spacing so cones stay proportional in stretched scenes
-    max_cone_abs = median_spacing * 1.5
-    cone_lengths = np.minimum(
-        np.clip(lengths.ravel() * tip_length_factor, 0.0, lengths.ravel() * 0.4),
-        max_cone_abs,
-    )                                                            # (N,)
+    def _style(weight: float, extra_fade: float = 0.0) -> dict:
+        """Turn a 0-1 visual weight into colour/opacity keyword arguments."""
+        if use_fade:
+            amount = (1.0 - weight) + extra_fade * weight
+            return {"color": _fade(base_rgb, amount, bg), "opacity": 1.0}
+        return {
+            "color": _fade(base_rgb, extra_fade, bg),
+            "opacity": float(min(max(weight, 0.0), 1.0)),
+        }
 
-    shaft_bottoms = bot - unit_dirs * cone_lengths[:, np.newaxis]
+    # Colour and opacity are derived from the weights above, so a caller
+    # smuggling them through **kwargs would collide with the style dict.
+    kwargs = {k: v for k, v in kwargs.items() if k not in ("color", "opacity")}
+
+    # Lines are unlit on purpose: shading a wireframe only darkens it
+    # unevenly. Set explicitly so the viewer's ``lighting`` theme default
+    # (applied via setdefault in its add_mesh wrapper) does not override it.
+    line_kwargs = {
+        "render_lines_as_tubes": render_lines_as_tubes,
+        "lighting": False,
+        **kwargs,
+    }
+
+    # Pillars, their arrow caps and the cage all use this same subset, so
+    # every drawn pillar lands on a drawn intersection.
+    jj = _sample_indices(pillar_top.shape[0], max_pillars_per_axis)
+    ii = _sample_indices(pillar_top.shape[1], max_pillars_per_axis)
+    sel = np.ix_(jj, ii)
+
+    top = pillar_top[sel]
+    bot = pillar_bottom[sel]
+    top_flat = top.reshape(-1, 3)
+    bot_flat = bot.reshape(-1, 3)
 
     # ------------------------------------------------------------------
-    # Shaft tubes
+    # Lattice grid lines -- the part that makes it read as a grid
     # ------------------------------------------------------------------
-    shaft_pts = np.empty((2 * n, 3), dtype=np.float64)
-    shaft_pts[0::2] = top
-    shaft_pts[1::2] = shaft_bottoms
+    if show_grid_lines:
+        lattices = (
+            ("top", pillar_top, 0.0),
+            ("base", pillar_bottom, base_fade),
+        )
 
-    cell_conn = np.empty((n, 3), dtype=np.int64)
-    cell_conn[:, 0] = 2
-    cell_conn[:, 1] = np.arange(0, 2 * n, 2)
-    cell_conn[:, 2] = np.arange(1, 2 * n, 2)
+        for name, nodes, depth_fade in lattices:
+            if lattice_mode in ("both", "full"):
+                mesh = _lattice_lines(nodes)
+                if mesh is not None:
+                    fine_fade = texture_fade if lattice_mode == "both" else 0.0
+                    plotter.add_mesh(
+                        mesh,
+                        name=f"pillars:lattice:{name}",
+                        line_width=max(line_width * 0.5, 0.5),
+                        **_style(opacity, min(depth_fade + fine_fade, 0.95)),
+                        **line_kwargs,
+                    )
 
-    shaft_lines = pv.PolyData(shaft_pts, lines=cell_conn.ravel())
-    shaft_tubes = shaft_lines.tube(radius=shaft_radius, n_sides=12)
+            if lattice_mode in ("both", "cage"):
+                mesh = _lattice_lines(nodes, jj=jj, ii=ii)
+                if mesh is not None:
+                    plotter.add_mesh(
+                        mesh,
+                        name=f"pillars:cage:{name}",
+                        line_width=max(line_width * (0.75 if name == "base" else 1.0), 0.5),
+                        **_style(opacity, depth_fade),
+                        **line_kwargs,
+                    )
 
-    plotter.add_mesh(
-        shaft_tubes,
-        color=shaft_color,
-        opacity=opacity,
-        smooth_shading=True,
+    # ------------------------------------------------------------------
+    # Pillars
+    # ------------------------------------------------------------------
+    if show_pillars:
+        plotter.add_mesh(
+            _segments(top_flat, bot_flat),
+            name="pillars:shafts",
+            line_width=max(line_width * 0.6, 0.5),
+            **_style(pillar_opacity),
+            **line_kwargs,
+        )
+
+    if not show_arrows:
+        return
+
+    # ------------------------------------------------------------------
+    # Optional direction cones at the base end
+    # ------------------------------------------------------------------
+    directions = bot_flat - top_flat
+    lengths = np.linalg.norm(directions, axis=1)
+    keep = lengths > 0
+    if not keep.any():
+        return
+    unit_dirs = directions[keep] / lengths[keep, np.newaxis]
+
+    # Spacing is measured on the thinned grid, since that is what the cones
+    # sit on. Measuring it on the full lattice makes them come out roughly
+    # nj/max_pillars_per_axis times too small -- specks on the line ends.
+    mid = 0.5 * (top + bot)
+    lateral = []
+    if mid.shape[1] > 1:
+        lateral.append(np.linalg.norm(mid[:, 1:] - mid[:, :-1], axis=2).ravel())
+    if mid.shape[0] > 1:
+        lateral.append(np.linalg.norm(mid[1:, :] - mid[:-1, :], axis=2).ravel())
+    spacing = np.median(np.concatenate(lateral)) if lateral else lengths[keep].mean()
+
+    cone_len = float(min(spacing * 0.35, lengths[keep].mean() * 0.3))
+    if cone_len <= 0:
+        return
+
+    tips = pv.PolyData(bot_flat[keep] - unit_dirs * cone_len * 0.5)
+    tips["direction"] = unit_dirs
+    cones = tips.glyph(
+        orient="direction",
+        scale=False,
+        geom=pv.Cone(radius=cone_len * 0.35, height=cone_len, resolution=16),
     )
-
-
+    plotter.add_mesh(
+        cones,
+        name="pillars:arrows",
+        **_style(pillar_opacity),
+        **kwargs,
+    )

@@ -79,6 +79,12 @@ class _DummyPlotter:
     def set_background(self, *args, **kwargs):
         return None
 
+    def enable_anti_aliasing(self, *args, **kwargs):
+        return None
+
+    def enable_depth_peeling(self, *args, **kwargs):
+        return None
+
     def add_text(self, *args, **kwargs):
         return None
 
@@ -199,6 +205,7 @@ def test_add_pillars_forwards_raw_arrays(monkeypatch, simple_pillar_grid):
     monkeypatch.setattr(viewer_mod, "_add_pillars", fake_add_pillars)
 
     viewer = object.__new__(viewer_mod.PyVista3DViewer)
+    viewer.theme = viewer_mod.PyVista3DViewerTheme(background="#202030")
     viewer.plotter = _DummyPlotter()
     viewer.add_pillars(simple_pillar_grid, color="red", line_width=4.0)
 
@@ -207,6 +214,8 @@ def test_add_pillars_forwards_raw_arrays(monkeypatch, simple_pillar_grid):
     assert calls["pillar_bottom"] is simple_pillar_grid.pillar_bottom
     assert calls["kwargs"]["color"] == "red"
     assert calls["kwargs"]["line_width"] == 4.0
+    # The layer fades lines toward the background, so the theme's is forwarded.
+    assert calls["kwargs"]["background"] == "#202030"
 
 
 def test_add_wells_forwards_raw_wells_and_customization(monkeypatch):
