@@ -196,6 +196,12 @@ class PyVista3DViewer(Base3DViewer):
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
         if theme.background:
             p.set_background(theme.background, top=theme.background)
+        # Plotter-wide render settings live here, not in the layers: the
+        # screenshot path builds a fresh plotter and only replays add_mesh.
+        if theme.anti_aliasing:
+            p.enable_anti_aliasing(theme.anti_aliasing)
+        if theme.depth_peeling:
+            p.enable_depth_peeling()
         return p
 
     # def _render_point_labels(self, plotter: pv.Plotter) -> pv.Plotter:
@@ -541,6 +547,10 @@ class PyVista3DViewer(Base3DViewer):
         PyVista3DViewer
             The current viewer instance for fluent chaining.
         """
+        # The layer fades lines toward the background; the theme background is
+        # only pushed to the plotter at render time, so hand it over here.
+        if self.theme.background:
+            kwargs.setdefault("background", self.theme.background)
         _add_pillars(
             self.plotter,
             pillars.pillar_top,

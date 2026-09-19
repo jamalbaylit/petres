@@ -314,24 +314,30 @@ class PillarGrid:
         *,
         title: str | None = None,
         color: Any = "black",
-        line_width: float = 6.0,
+        line_width: float = 2.0,
         z_scale: float = 1.0,
         **kwargs: Any,
     ) -> None:
         """Render the pillar grid in the 3D PyVista viewer.
+
+        The grid is drawn as a skeleton: the top and base lattices as i/j grid
+        lines, with the pillars connecting them.
 
         Parameters
         ----------
         title : str or None, default=None
             Optional figure title.
         color : Any, default="black"
-            Color used for the pillar lines and direction arrows.
-        line_width : float, default=6.0
-            Width used for the rendered pillar lines.
+            Color used for the grid lines, pillars and direction arrows.
+        line_width : float, default=2.0
+            Width of the lattice grid lines. Pillars are drawn thinner.
         z_scale : float, default 1.0
             Scale factor for the z-axis.
         **kwargs
-            Forwarded to the viewer's pillar layer renderer.
+            Forwarded to the viewer's pillar layer renderer. Notable options:
+            ``show_arrows`` (default ``False``) to cap pillars with direction
+            cones, ``show_grid_lines`` / ``show_pillars`` to draw only one
+            part, and ``max_pillars_per_axis`` to control pillar thinning.
 
         Returns
         -------

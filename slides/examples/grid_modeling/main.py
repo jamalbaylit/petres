@@ -65,6 +65,7 @@ deck.add(
         title="Create the Pillars",
         description="Define the lateral grid geometry.",
         code=step2_code,
+        code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\pillars.png",
         footer_right="2 / 3",
         theme="light",
     )

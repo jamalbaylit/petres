@@ -23,6 +23,14 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
         Display coordinate axes in the scene.
     lighting : bool, default=True
         Enable lighting when adding shaded meshes to the scene.
+    anti_aliasing : str | None, default="ssaa"
+        Anti-aliasing mode passed to ``plotter.enable_anti_aliasing``
+        (``"ssaa"``, ``"msaa"`` or ``"fxaa"``). Thin lines such as grid
+        wireframes alias badly and shimmer while orbiting without it. Use
+        ``"fxaa"`` if ``"ssaa"`` is too slow, or ``None`` to disable.
+    depth_peeling : bool, default=False
+        Enable depth peeling so overlapping translucent actors render in the
+        correct order. Off by default since it costs render time.
     scale : tuple[float, float, float], default=(1.0, 1.0, 1.0)
         Per-axis scale multipliers for rendering.
     title_fontsize : int, default=12
@@ -43,6 +51,8 @@ class PyVista3DViewerTheme(Base3DViewerTheme):
     show_orientation_widget: bool = True
     show_coordinate_axes: bool = True
     lighting: bool = True
+    anti_aliasing: str | None = "ssaa"
+    depth_peeling: bool = False
     # show_grid: bool = True
     # camera_up: tuple[float, float, float] = (1, 1, -1)
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)

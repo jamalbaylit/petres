@@ -95,7 +95,7 @@ zone = zone.divide(nk=4)
 viewer = Viewer3D(z_scale=z_scale)
 viewer.add_zone(zone, x=np.linspace(0, 100, 50), y=np.linspace(0, 100, 50))
 viewer.show()
-viewer.screenshot("./assets/zone.png", transparent=True)
+# viewer.screenshot("./assets/zone.png", transparent=True)
 
 from petres.grids import PillarGrid
 
@@ -105,8 +105,11 @@ pillars = PillarGrid.from_regular(
     ni=50,
     nj=50,
 )
-
 from petres.grids import CornerPointGrid
+viewer = Viewer3D(z_scale=25)
+viewer.add_pillars(pillars)
+viewer.show()
+# viewer.screenshot("./assets/pillars.png", transparent=True)
 
 
 grid = CornerPointGrid.from_zones(
@@ -116,6 +119,6 @@ grid = CornerPointGrid.from_zones(
 # grid.show(z_scale=z_scale)
 
 viewer = Viewer3D(z_scale=z_scale)
-viewer.add_grid(grid)
+viewer.add_grid(grid, scalars='thickness')
 viewer.show()
 viewer.screenshot("./assets/grid.png", transparent=True)
