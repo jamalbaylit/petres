@@ -328,7 +328,7 @@ class Horizon:
         from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
 
         z_scale = _validate_z_scale(z_scale, name="z_scale")
-        viewer = PyVista3DViewer(z_scale=z_scale, theme=PyVista3DViewerTheme(lighting=True))
+        viewer = PyVista3DViewer(z_scale=z_scale, theme=PyVista3DViewerTheme())
         viewer.add_horizon(
             self,
             x=x,

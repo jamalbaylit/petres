@@ -721,7 +721,7 @@ class CornerPointGrid:
         from ..viewers.viewer3d.pyvista.theme import PyVista3DViewerTheme
         from ..viewers.viewer3d.pyvista.viewer import PyVista3DViewer
 
-        theme = PyVista3DViewerTheme(lighting=False)
+        theme = PyVista3DViewerTheme()
         z_scale = _validate_z_scale(z_scale, name="z_scale")
         viewer = PyVista3DViewer(theme=theme, z_scale=z_scale)
 

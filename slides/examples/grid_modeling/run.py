@@ -75,6 +75,9 @@ h2 = Horizon(
 # Zone and grid (the deck's STEP 01 - STEP 03)
 # ---------------------------------------------------------------------------
 z_scale = 0.3
+
+from petres.viewers import Viewer3D
+
 zone = Zone(
     name="Reservoir",
     top=h1,
@@ -84,12 +87,15 @@ zone = Zone(
 # `divide` returns a new Zone -- it does not mutate in place.
 zone = zone.divide(nk=4)
 
-zone.show(
-    x=np.linspace(0, 100, 50),
-    y=np.linspace(0, 100, 50),
-    z_scale=z_scale,
-)
-
+# zone.show(
+#     x=np.linspace(0, 100, 50),
+#     y=np.linspace(0, 100, 50),
+#     z_scale=z_scale,
+# )
+viewer = Viewer3D(z_scale=z_scale)
+viewer.add_zone(zone, x=np.linspace(0, 100, 50), y=np.linspace(0, 100, 50))
+viewer.show()
+viewer.screenshot("./assets/zone.png", transparent=True)
 
 from petres.grids import PillarGrid
 
@@ -102,9 +108,14 @@ pillars = PillarGrid.from_regular(
 
 from petres.grids import CornerPointGrid
 
+
 grid = CornerPointGrid.from_zones(
     pillars=pillars,
     zones=[zone],
 )
+# grid.show(z_scale=z_scale)
 
-grid.show(z_scale=z_scale)
+viewer = Viewer3D(z_scale=z_scale)
+viewer.add_grid(grid)
+viewer.show()
+viewer.screenshot("./assets/grid.png", transparent=True)

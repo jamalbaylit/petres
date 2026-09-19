@@ -126,7 +126,7 @@ class Zone:
 
         z_scale = _validate_z_scale(z_scale, name="z_scale")
         
-        viewer = PyVista3DViewer(z_scale=z_scale, theme=PyVista3DViewerTheme(lighting=True))
+        viewer = PyVista3DViewer(z_scale=z_scale, theme=PyVista3DViewerTheme())
         
         title = self._get_plot_title(title)
 
