@@ -61,43 +61,46 @@ poll();
 
 
 def build_preview_deck() -> SlideDeck:
-    """Edit this to preview whatever page(s) you're working on."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+    from slides import CodeSnippet, MainPage, SlideDeck, Outro
+
     deck = SlideDeck(width=1350, height=1080)
+
     deck.add(
         MainPage(
-            title="Zone Modeling",
-            description="Create zones from horizons and divide them into layers.",
-            theme="dark",
+            title="Grid Modeling",
+            description="Build and export a Corner-Point grid from horizons, zones, and pillars.",
+            image=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\grid-preview.png",
+            theme="light",
             logo=True,
             footer_left="petres.io",
             footer_right="Swipe →",
         )
     )
 
-    
-    # Each CodeSnippet is highlighted in isolation (its own jedi.Script), so a
-    # later step referencing names an earlier step defined (horizon, zone,
-    # np) can't resolve them on its own -- pass the earlier steps' code as
-    # context= so jedi can still infer types, without it being rendered.
-    step1_code = """
-    from petres.interpolators import IDWInterpolator
-    from petres.models import Horizon
 
-    horizon = Horizon(
-        name="Top Layer",
-        xy=[[20, 78], [70, 80], [32, 55]],
-        depth=[100, 110, 90],
-        interpolator=IDWInterpolator(power = 2)
+    step1_code = """
+    from petres.models import Zone
+
+    zone = Zone(
+        name="Reservoir",
+        top=h1,
+        base=h2,
     )
-            """
+
+    zone.divide(nk=4)
+    """
+
     deck.add(
         CodeSnippet(
             header_left="STEP 01",
             header_right_first="Tutorials",
-            header_right_second="Zone Modeling",
-            title="Define a Horizon",
-            description="Start with a few depth measurements and turn them into a continuous horizon.",
+            header_right_second="Grid Modeling",
+            title="Define the Zones",
+            description="Define the vertical intervals and their layer discretization.",
             code=step1_code,
+            code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\zone.png",
             footer_right="1 / 3",
             theme="light",
         )
@@ -105,61 +108,65 @@ def build_preview_deck() -> SlideDeck:
 
 
     step2_code = """
-import numpy as np
+    from petres.grids import PillarGrid
 
-zone = horizon.to_zone(
-    name="Reservoir",
-    depth=20
-)
+    pillars = PillarGrid.from_regular(
+        xlim=(0, 100),
+        ylim=(0, 100),
+        ni=50,
+        nj=50,
+    )
+    """
 
-zone.show(
-    x=np.linspace(0, 100, 50),
-    y=np.linspace(0, 100, 50)
-)
-            """
     deck.add(
         CodeSnippet(
             header_left="STEP 02",
             header_right_first="Tutorials",
-            header_right_second="Zone Modeling",
-            title="Create a Zone",
-            description="Turn the horizon into a zone by giving it a defined thickness.",
+            header_right_second="Grid Modeling",
+            title="Create the Pillars",
+            description="Define the lateral grid geometry.",
             code=step2_code,
-            context=step1_code,
-            code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\zone_modeling\assets\zone.png",
+            code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\pillars.png",
             footer_right="2 / 3",
             theme="light",
         )
     )
 
+
+    step3_code = """
+    from petres.grids import CornerPointGrid
+
+    grid = CornerPointGrid.from_zones(
+        pillars=pillars,
+        zones=[zone],
+    )
+
+    grid.show(z_scale=5)
+    grid.to_grdecl("model.GRDECL")
+    """
+
     deck.add(
         CodeSnippet(
             header_left="STEP 03",
             header_right_first="Tutorials",
-            header_right_second="Zone Modeling",
-            title="Subdivide the Zone",
-            description="Divide the zone into three layers based on their relative thickness.",
-            code="""
-zone.divide(fractions=[0.3, 0.5, 0.2])
-
-zone.show(
-    x=np.linspace(0, 100, 50),
-    y=np.linspace(0, 100, 50)
-)
-            """,
+            header_right_second="Grid Modeling",
+            title="Build and Export the Grid",
+            description="Combine the zones and pillars to construct the Corner-Point grid and and export it to Eclipse GRDECL format.",
+            code=step3_code,
             context=step1_code + step2_code,
-            code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\zone_modeling\assets\layering.png",
+            code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\grid.png",
             footer_right="3 / 3",
             theme="light",
         )
     )
+
+
     deck.add(
         Outro(
             title="Explore Further",
             theme="dark",
             logo=True,
             footer_left="petres.io",
-
             footer_left_title="TUTORIALS & DOCUMENTATION",
             footer_right_title="SOURCE CODE",
             footer_right="github.com/jamalbaylit/petres",
