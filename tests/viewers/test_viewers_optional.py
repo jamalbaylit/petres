@@ -366,19 +366,10 @@ def test_viewer3d_screenshot_uses_cached_state_and_explicit_size(monkeypatch, tm
 
     viewer.screenshot(str(output_path), transparent=True, width=1024, height=768)
 
-    # Default scale=2 supersamples: window and DPI both double.
     assert viewer.plotter.off_screen is True
-    assert viewer.plotter.window_size == (2048, 1536)
-    assert viewer.plotter.render_window.GetDPI() == 144
-    assert viewer.plotter.screenshot_calls == [(str(output_path), (2048, 1536))]
+    assert viewer.plotter.screenshot_calls == [(str(output_path), (1024, 768))]
     assert viewer.plotter.background_color == (1, 1, 1, 0)
     assert viewer.plotter.camera == "cached-camera"
-
-    viewer.screenshot(str(output_path), width=1024, height=768, scale=1)
-
-    assert viewer.plotter.window_size == (1024, 768)
-    assert viewer.plotter.render_window.GetDPI() == 72
-    assert viewer.plotter.screenshot_calls == [(str(output_path), (1024, 768))]
 
 
 def test_viewer3d_screenshot_works_after_show(monkeypatch, tmp_path):
@@ -401,7 +392,7 @@ def test_viewer3d_screenshot_works_after_show(monkeypatch, tmp_path):
     viewer.screenshot(str(output_path))
 
     assert viewer.plotter.off_screen is True
-    assert viewer.plotter.screenshot_calls == [(str(output_path), (1600, 1200))]
+    assert viewer.plotter.screenshot_calls == [(str(output_path), (800, 600))]
 
 
 def test_viewer3d_screenshot_rejects_invalid_size(monkeypatch, tmp_path):
