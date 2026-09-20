@@ -10,8 +10,9 @@ deck = SlideDeck(width=1350, height=1080)
 deck.add(
     MainPage(
         title="Grid Modeling",
-        description="Build a Corner-Point grid from horizons, zones, and pillars.",
-        theme="dark",
+        description="Build and export a Corner-Point grid from horizons, zones, and pillars.",
+        image=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\grid-preview.png",
+        theme="light",
         logo=True,
         footer_left="petres.io",
         footer_right="Swipe →",
@@ -90,7 +91,7 @@ deck.add(
         header_right_first="Tutorials",
         header_right_second="Grid Modeling",
         title="Build and Export the Grid",
-        description="Build the Corner-Point grid, visualize it, and export it to Eclipse GRDECL format.",
+        description="Combine the zones and pillars to construct the Corner-Point grid and and export it to Eclipse GRDECL format.",
         code=step3_code,
         context=step1_code + step2_code,
         code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\grid.png",

@@ -24,7 +24,9 @@ def get_template(name: str):
     return _env.get_template(name)
 
 
-def assemble_document(sections: list[str], css_files: list[str], *, width: int, height: int) -> str:
+def assemble_document(
+    sections: list[str], css_files: list[str], *, width: int, height: int, title: str = "Slide Deck"
+) -> str:
     """Wrap already-rendered page fragments in the shared document shell.
 
     base.css always loads; css_files are the per-page-type stylesheets
@@ -34,4 +36,6 @@ def assemble_document(sections: list[str], css_files: list[str], *, width: int, 
     base_css = (_CSS_DIR / "base.css").read_text(encoding="utf-8")
     page_css = "\n".join((_CSS_DIR / name).read_text(encoding="utf-8") for name in css_files if name != "base.css")
     css = build_font_face_css(_FONTS_DIR) + "\n" + base_css + "\n" + page_css
-    return get_template("document.html").render(width=width, height=height, css=css, sections=sections)
+    return get_template("document.html").render(
+        width=width, height=height, css=css, sections=sections, title=title
+    )

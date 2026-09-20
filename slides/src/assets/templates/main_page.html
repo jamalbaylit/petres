@@ -1,4 +1,7 @@
 <section class="slide-page main-page {{ theme }}">
+    {% if image_src %}
+        <img class="image" src="{{ image_src }}" alt="">
+    {% endif %}
     <div class="header">
         {% if logo_src %}
             <img class="logo" src="{{ logo_src }}" alt="logo">

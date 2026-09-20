@@ -170,29 +170,29 @@ class PyVista3DViewer(Base3DViewer):
 
         p = plotter
 
-        x_scale, y_scale, z_scale = theme.scale
-        axes_ranges = [
-            p.bounds[0] / x_scale,
-            p.bounds[1] / x_scale,
-            p.bounds[2] / y_scale,
-            p.bounds[3] / y_scale,
-            p.bounds[4] / z_scale,
-            p.bounds[5] / z_scale,
-        ]
+        if theme.show_coordinate_axes:
+            x_scale, y_scale, z_scale = theme.scale
+            axes_ranges = [
+                p.bounds[0] / x_scale,
+                p.bounds[1] / x_scale,
+                p.bounds[2] / y_scale,
+                p.bounds[3] / y_scale,
+                p.bounds[4] / z_scale,
+                p.bounds[5] / z_scale,
+            ]
 
-        p.show_bounds(
-            grid='back',
-            location='outer',
-            ticks='outside',
-            minor_ticks=True,
-            fmt="%.0f",
-            use_2d=False,
-            
-            axes_ranges=axes_ranges,
-            xtitle='X',
-            ytitle='Y',
-            ztitle='Z',
-        )
+            p.show_bounds(
+                grid='back',
+                location='outer',
+                ticks='outside',
+                minor_ticks=True,
+                fmt="%.0f",
+                use_2d=False,
+                axes_ranges=axes_ranges,
+                xtitle='X',
+                ytitle='Y',
+                ztitle='Z',
+            )
         p.show_axes() if theme.show_orientation_widget else p.hide_axes()
         if theme.background:
             p.set_background(theme.background, top=theme.background)

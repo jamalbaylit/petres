@@ -118,7 +118,13 @@ grid = CornerPointGrid.from_zones(
 )
 # grid.show(z_scale=z_scale)
 
-viewer = Viewer3D(z_scale=z_scale)
-viewer.add_grid(grid, scalars='thickness')
+
+
+from petres.viewers import Viewer3DTheme
+viewer = Viewer3D(z_scale=z_scale, theme=Viewer3DTheme(
+    show_orientation_widget = False,
+    show_coordinate_axes = False
+))
+viewer.add_grid(grid, scalars='thickness', show_colorbar=False)
 viewer.show()
 viewer.screenshot("./assets/grid.png", transparent=True)
