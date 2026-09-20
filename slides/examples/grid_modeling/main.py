@@ -12,7 +12,7 @@ deck.add(
         title="Grid Modeling",
         description="Build and export a Corner-Point grid from horizons, zones, and pillars.",
         image=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\grid-preview.png",
-        theme="dark",
+        theme="light",
         logo=True,
         footer_left="petres.io",
         footer_right="Swipe →",
