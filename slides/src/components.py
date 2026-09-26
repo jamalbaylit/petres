@@ -31,6 +31,7 @@ class MainPage:
         logo: bool = False,
         footer_left: str | None = None,
         footer_right: str | None = None,
+        image: str | Path | None = None,
     ):
         self.title = title
         self.description = description
@@ -38,15 +39,23 @@ class MainPage:
         self.logo = logo
         self.footer_left = footer_left
         self.footer_right = footer_right
+        self.image = Path(image) if image else None
 
     def _template_context(self) -> dict:
         logo_path = _LOGOS.get(self.theme) if self.logo else None
         logo_src = to_data_uri(logo_path) if logo_path and logo_path.exists() else None
+        image_src = None
+        if self.image:
+            if self.image.exists():
+                image_src = to_data_uri(self.image)
+            else:
+                warnings.warn(f"MainPage image not found, skipping: {self.image}")
         return {
             "title": self.title,
             "description": self.description,
             "theme": self.theme,
             "logo_src": logo_src,
+            "image_src": image_src,
             "footer_left": self.footer_left,
             "footer_right": self.footer_right,
         }

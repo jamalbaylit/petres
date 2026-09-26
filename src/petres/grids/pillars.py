@@ -337,7 +337,12 @@ class PillarGrid:
             Forwarded to the viewer's pillar layer renderer. Notable options:
             ``show_arrows`` (default ``False``) to cap pillars with direction
             cones, ``show_grid_lines`` / ``show_pillars`` to draw only one
+<<<<<<< HEAD
             part, and ``max_pillars_per_axis`` to control pillar thinning.
+=======
+            part, and ``max_pillars_per_axis`` to thin the pillars to an
+            evenly spaced subset (all are drawn by default).
+>>>>>>> 796d3821ecda53c179745389b79ef383ad52b520
 
         Returns
         -------

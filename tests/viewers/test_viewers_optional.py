@@ -26,9 +26,16 @@ class _DummyCamera:
 class _DummyRenderWindow:
     def __init__(self, size=(800, 600)):
         self._size = size
+        self.dpi = 72
 
     def GetSize(self):
         return self._size
+
+    def GetDPI(self):
+        return self.dpi
+
+    def SetDPI(self, dpi):
+        self.dpi = dpi
 
 
 class _DummyInteractor:
@@ -44,12 +51,31 @@ class _DummyIren:
         self.interactor = _DummyInteractor()
 
 
+class _DummyCubeAxes:
+    def __init__(self):
+        self.label_offset = 20.0
+        self.title_offset = (0.0, 20.0)
+
+    def GetLabelOffset(self):
+        return self.label_offset
+
+    def SetLabelOffset(self, value):
+        self.label_offset = value
+
+    def GetTitleOffset(self):
+        return self.title_offset
+
+    def SetTitleOffset(self, value):
+        self.title_offset = tuple(value)
+
+
 class _DummyPlotter:
-    def __init__(self, off_screen=False):
+    def __init__(self, off_screen=False, window_size=(800, 600)):
         self.off_screen = off_screen
+        self.window_size = tuple(window_size)
         self.theme = type("Theme", (), {"allow_empty_mesh": True})()
         self.camera = _DummyCamera()
-        self.render_window = _DummyRenderWindow()
+        self.render_window = _DummyRenderWindow(self.window_size)
         self.iren = _DummyIren()
         self.bounds = (0.0, 100.0, 0.0, 200.0, 0.0, 300.0)
         self.background_color = None
@@ -68,7 +94,8 @@ class _DummyPlotter:
         return None
 
     def show_bounds(self, *args, **kwargs):
-        return None
+        self.show_bounds_kwargs = kwargs
+        return _DummyCubeAxes()
 
     def show_axes(self):
         return None

@@ -118,6 +118,7 @@ def _add_corner_point_grid(
             scalars="values",
             cmap=cmap or DEFAULT_CMAP,
             show_edges=True,
+            show_scalar_bar=show_colorbar,
             scalar_bar_args=scalar_bar_args,
             **kwargs
         )
@@ -126,7 +127,6 @@ def _add_corner_point_grid(
             mesh,
             color=Color(color).as_rgb() if color is not None else DEFAULT_COLOR,
             show_edges=True,
-            scalar_bar_args=scalar_bar_args,
             **kwargs
         )
 

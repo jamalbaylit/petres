@@ -1128,13 +1128,19 @@ class CornerPointGrid:
     def _cell_thickness(self) -> np.ndarray:
         """Compute geometric thickness for each cell.
 
+        Thickness is the mean of the bottom-minus-top depth difference taken
+        along each of the cell's four pillars. Using the bounding box
+        (``max(bottom) - min(top)``) instead would add the structural relief
+        across a dipping cell to its thickness.
+
         Returns
         -------
         np.ndarray
-            Absolute difference between bottom and top depth per cell.
+            Mean absolute pillar-wise thickness per cell, shaped ``(nk, nj, ni)``.
         """
-        z_top, z_bottom = self._cell_top_bottom_depths()
-        return np.abs(z_bottom - z_top)
+        zcorn = self._compute_cell_corners()[..., 2]
+        # Corner k (top, 0-3) and corner k+4 (bottom, 4-7) share the same pillar.
+        return np.abs(zcorn[..., 4:] - zcorn[..., :4]).mean(axis=-1)
 
     def _target_mask(
         self,

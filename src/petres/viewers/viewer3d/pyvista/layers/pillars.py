@@ -154,7 +154,11 @@ def _add_pillars(
     show_pillars: bool = True,
     show_arrows: bool = False,
     pillar_opacity: float = 0.5,
+<<<<<<< HEAD
     max_pillars_per_axis: int = 12,
+=======
+    max_pillars_per_axis: int | None = None,
+>>>>>>> 796d3821ecda53c179745389b79ef383ad52b520
     opacity: float = 1.0,
     lattice_mode: str = "both",
     base_fade: float = 0.45,
@@ -169,6 +173,7 @@ def _add_pillars(
     Draws the top and base lattices as i/j grid lines with the pillars
     connecting them, so the grid structure reads directly.
 
+<<<<<<< HEAD
     Three things keep it legible on a fine grid. The pillars are thinned,
     since drawing all of them renders the volume as an opaque mass. The
     lattice is drawn twice -- a strong cage on exactly the rows and columns
@@ -177,6 +182,16 @@ def _add_pillars(
     arbitrary node. And the base lattice is lighter and thinner than the
     top, which separates the two in projection instead of letting them
     moire against each other.
+=======
+    Every pillar is drawn by default. On a fine grid that can render the
+    volume as an opaque mass; ``max_pillars_per_axis`` thins them to an
+    evenly spaced subset, and the lattice is then drawn twice -- a strong
+    cage on exactly the rows and columns that carry a pillar, over a faded
+    full-resolution lattice -- so every visible pillar sits on a visible
+    intersection rather than on an arbitrary node. The base lattice is
+    always lighter and thinner than the top, which separates the two in
+    projection instead of letting them moire against each other.
+>>>>>>> 796d3821ecda53c179745389b79ef383ad52b520
 
     Parameters
     ----------
@@ -201,16 +216,28 @@ def _add_pillars(
     pillar_opacity : float, default=0.5
         Visual weight of the pillars relative to the cage. Applied as a
         colour blend when ``use_fade`` is True, otherwise as true alpha.
+<<<<<<< HEAD
     max_pillars_per_axis : int, default=12
         Cap on how many pillars are drawn along each axis. The outermost
         pillars are always kept so the silhouette stays closed.
+=======
+    max_pillars_per_axis : int or None, default=None
+        Cap on how many pillars are drawn along each axis; ``None`` draws
+        them all. When thinning, the outermost pillars are always kept so
+        the silhouette stays closed.
+>>>>>>> 796d3821ecda53c179745389b79ef383ad52b520
     opacity : float, default=1.0
         Weight of the top cage lines, applied the same way as
         ``pillar_opacity``.
     lattice_mode : {"both", "cage", "full"}, default="both"
         ``"cage"`` draws grid lines only where pillars are, ``"full"`` draws
         the fine lattice only, ``"both"`` draws the cage over a faded fine
+<<<<<<< HEAD
         lattice.
+=======
+        lattice. Without thinning the cage already covers every node, so
+        ``"both"`` collapses to ``"cage"``.
+>>>>>>> 796d3821ecda53c179745389b79ef383ad52b520
     base_fade : float, default=0.45
         How far the base lattice is blended toward the background relative
         to the top lattice. Cheap depth cue; set to 0 to match them.
@@ -284,10 +311,27 @@ def _add_pillars(
 
     # Pillars, their arrow caps and the cage all use this same subset, so
     # every drawn pillar lands on a drawn intersection.
+<<<<<<< HEAD
     jj = _sample_indices(pillar_top.shape[0], max_pillars_per_axis)
     ii = _sample_indices(pillar_top.shape[1], max_pillars_per_axis)
     sel = np.ix_(jj, ii)
 
+=======
+    nj1, ni1 = pillar_top.shape[:2]
+    if max_pillars_per_axis is None:
+        jj, ii = np.arange(nj1), np.arange(ni1)
+    else:
+        jj = _sample_indices(nj1, max_pillars_per_axis)
+        ii = _sample_indices(ni1, max_pillars_per_axis)
+    sel = np.ix_(jj, ii)
+
+    # With no thinning the cage is the full lattice; drawing the faded
+    # texture underneath it would just double every line.
+    thinned = len(jj) < nj1 or len(ii) < ni1
+    if lattice_mode == "both" and not thinned:
+        lattice_mode = "cage"
+
+>>>>>>> 796d3821ecda53c179745389b79ef383ad52b520
     top = pillar_top[sel]
     bot = pillar_bottom[sel]
     top_flat = top.reshape(-1, 3)

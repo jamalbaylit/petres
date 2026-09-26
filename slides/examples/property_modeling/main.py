@@ -91,7 +91,11 @@ deck.add(
         header_right_first="Tutorials",
         header_right_second="Grid Modeling",
         title="Build and Export the Grid",
+<<<<<<< HEAD
+        description="Build the Corner-Point grid, visualize it, and export it to Eclipse GRDECL format.",
+=======
         description="Combine the zones and pillars to construct the Corner-Point grid and and export it to Eclipse GRDECL format.",
+>>>>>>> 796d3821ecda53c179745389b79ef383ad52b520
         code=step3_code,
         context=step1_code + step2_code,
         code_preview=r"C:\Users\Tayfun\Desktop\GitHub\Personal\petres\slides\examples\grid_modeling\assets\grid.png",

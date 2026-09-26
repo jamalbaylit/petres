@@ -77,3 +77,23 @@ def test_set_zones_warns_about_unused_names(simple_cornerpoint_grid):
     zone_index = np.ones(simple_cornerpoint_grid.shape, dtype=int)
     with pytest.warns(UserWarning, match="Unused zone ids"):
         simple_cornerpoint_grid.set_zones(zone_index=zone_index, zone_names={1: "A", 2: "Unused"})
+
+
+def test_thickness_ignores_dip():
+    # A uniformly 10 m thick layer dipping 20 m across each cell in x. The
+    # bounding-box height (max bottom - min top) would be 30 m; the real
+    # thickness is 10 m regardless of dip.
+    x = np.array([0.0, 100.0, 200.0])
+    y = np.array([0.0, 100.0])
+    grid = CornerPointGrid.from_rectilinear(x=x, y=y, z=np.array([0.0, 10.0]))
+
+    dip = 0.2 * grid.pillars.pillar_top[..., 0]  # (nj+1, ni+1)
+    zcorn = grid.zcorn.copy()
+    for k2 in range(zcorn.shape[0]):
+        zcorn[k2, 0::2, 0::2] += dip[:-1, :-1]
+        zcorn[k2, 0::2, 1::2] += dip[:-1, 1:]
+        zcorn[k2, 1::2, 0::2] += dip[1:, :-1]
+        zcorn[k2, 1::2, 1::2] += dip[1:, 1:]
+    grid = CornerPointGrid(pillars=grid.pillars, zcorn=zcorn)
+
+    np.testing.assert_allclose(grid._cell_thickness(), 10.0)
